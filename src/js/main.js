@@ -11,6 +11,8 @@ const SUPABASE_URL = 'https://mlhtvxoricudzstpzquh.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_SemT5e_eSp8FqkONPGTr0g_HWWtgRT2';
 const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let _currentUser = null;
+const ADMIN_EMAIL = 'hangcong.nguyen@thaodancenter.org.vn';
+function isAdmin() { return _currentUser?.email === ADMIN_EMAIL; }
 
 // ── STATE ──
 let D = null;
@@ -310,9 +312,11 @@ function saveCases(c) {
   updateStaleBadge();
   if (_currentUser) {
     Object.values(_cases).forEach(cs => {
+      if (isAdmin() && cs._ownerId && cs._ownerId !== _currentUser.id) return;
       const risk = cs.lastAnalysis?._report?.risk?.level || cs.lastAnalysis?._report?.risk_level || null;
+      if (!cs._ownerId) { cs._ownerId = _currentUser.id; cs._ownerEmail = _currentUser.email; }
       _supabase.from('cases_v2').upsert({
-        id: cs.id, user_id: _currentUser.id, name: cs.name || 'Ca mới',
+        id: cs.id, user_id: cs._ownerId, name: cs.name || 'Ca mới',
         status: cs.status || 'open', stage: cs.currentStage || 1,
         risk_level: ['Cao','Trung bình','Thấp'].includes(risk) ? risk : null,
         child_name: cs.lastAnalysis?.co_ban?.ho_ten || '',
@@ -328,10 +332,12 @@ function saveCases(c) {
 function saveOneCase(caseId) {
   const cs = _cases[caseId];
   if (!cs) return;
+  if (isAdmin() && cs._ownerId && cs._ownerId !== _currentUser.id) return;
   if (_currentUser) {
     const risk = cs.lastAnalysis?._report?.risk?.level || cs.lastAnalysis?._report?.risk_level || null;
+    if (!cs._ownerId) { cs._ownerId = _currentUser.id; cs._ownerEmail = _currentUser.email; }
     _supabase.from('cases_v2').upsert({
-      id: cs.id, user_id: _currentUser.id, name: cs.name || 'Ca mới',
+      id: cs.id, user_id: cs._ownerId, name: cs.name || 'Ca mới',
       status: cs.status || 'open', stage: cs.currentStage || 1,
       risk_level: ['Cao','Trung bình','Thấp'].includes(risk) ? risk : null,
       child_name: cs.lastAnalysis?.co_ban?.ho_ten || '',
@@ -346,12 +352,17 @@ function saveOneCase(caseId) {
 async function initStorage() {
   if (_currentUser) {
     try {
-      const { data } = await _supabase.from('cases_v2')
-        .select('id, data').eq('user_id', _currentUser.id)
-        .order('updated_at', { ascending: false });
+      let query = _supabase.from('cases_v2').select('id, data, user_id');
+      if (!isAdmin()) query = query.eq('user_id', _currentUser.id);
+      const { data } = await query.order('updated_at', { ascending: false });
       if (data?.length) {
         _cases = {};
-        data.forEach(row => { if (row.data) _cases[row.id] = row.data; });
+        data.forEach(row => {
+          if (row.data) {
+            row.data._ownerId = row.user_id;
+            _cases[row.id] = row.data;
+          }
+        });
       }
     } catch(e) { console.warn('Supabase load error:', e); }
   }
@@ -359,7 +370,9 @@ async function initStorage() {
 
 async function deleteCaseFromDB(caseId) {
   if (_currentUser) {
-    await _supabase.from('cases_v2').delete().eq('id', caseId).eq('user_id', _currentUser.id);
+    let q = _supabase.from('cases_v2').delete().eq('id', caseId);
+    if (!isAdmin()) q = q.eq('user_id', _currentUser.id);
+    await q;
   }
 }
 
@@ -2750,6 +2763,7 @@ function renderCaseList() {
           fupBadge = `<span class="fup-ci-badge fup-ci-due">TD ${dl}n</span>`;
       }
     }
+    const ownerTag = isAdmin() && c._ownerId ? `<div class="ci-owner">👤 ${esc(c._ownerEmail || c._ownerId.slice(0,8))}</div>` : '';
     return `<div class="case-item${c.id===curCaseId?' active':''}${isStale?' stale':''}${isDraft?' draft':''}" onclick="selectCase('${c.id}')">
       <div class="ci-top">
         <div class="ci-name">${esc(c.name||'?')}</div>
@@ -2758,7 +2772,8 @@ function renderCaseList() {
           <span class="ci-badge ${isDraft?'ci-draft':c.status==='open'?'ci-open':'ci-closed'}">${isDraft?'✏️ Chưa lưu':c.status==='open'?'Mở':'Đóng'}</span>
         </div>
       </div>
-      ${childName ? `<div class="ci-child">👤 <b>${esc(childName)}</b>${childDob ? ' · '+childDob : ''}</div>` : ''}
+      ${ownerTag}
+      ${childName ? `<div class="ci-child">👧 <b>${esc(childName)}</b>${childDob ? ' · '+childDob : ''}</div>` : ''}
       <div class="ci-meta">
         <span>GĐ ${stage}/5</span>
         ${riskClass ? `<span class="ci-risk ${riskClass}">${risk === 'Cao' ? '🔴' : risk === 'Trung bình' ? '🟡' : '🟢'} ${risk}</span>` : ''}
