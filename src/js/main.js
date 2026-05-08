@@ -265,6 +265,7 @@ function _onLogin(user) {
   initStorage().then(() => {
     updateCasesCount();
     renderCaseList();
+    if (isAdmin()) showNotif('👑 Chế độ Admin — hiển thị ' + Object.keys(_cases).length + ' ca toàn hệ thống', 'info');
     // Reset dashboard về trạng thái sạch (không auto-load ca cũ)
     D = null; curCaseId = null; currentStage = 1; chatHistory = []; _editingEntryIdx = null;
     document.getElementById('dash-notes').value = '';
