@@ -2934,6 +2934,7 @@ function showCaseDetail(id) {
         <div class="cd-kv"><span class="cd-k">Ghi chép</span><span class="cd-v">${(c.entries||[]).length}</span></div>
         <div class="cd-kv"><span class="cd-k">Giai đoạn</span><span class="cd-v">GĐ ${stage} — ${stageLabels[stage]||''}</span></div>
         ${isClosed ? `<div class="cd-kv"><span class="cd-k">Đóng ca</span><span class="cd-v">${fmtVN(c.closedAt)}</span></div>` : ''}
+        ${isAdmin() ? `<div class="cd-kv"><span class="cd-k">Đội/nhóm</span><span class="cd-v"><input type="text" value="${esc(c.team_id||'')}" placeholder="(chưa gán)" style="border:1px solid var(--bd);border-radius:5px;padding:3px 6px;font-size:11px;font-family:inherit;width:140px;" onchange="_setCaseTeam('${id}', this.value.trim())"></span></div>` : ''}
       </div>
     </div>
     <div class="cd-section">
@@ -3066,6 +3067,22 @@ function _reopenCaseFromList(id) {
       renderCaseList(); showCaseDetail(id);
       showNotif('🔓 Đã mở lại ca');
     }
+  });
+}
+
+// Gán ca vào 1 đội/nhóm (chỉ admin) — dùng cho RLS "trưởng nhóm xem ca cùng team" (migration
+// 0011). Chưa có màn quản lý nhóm/gán officer vào nhóm riêng — admin tự gán team_id cho profile
+// qua SQL Editor cho tới khi có UI riêng (xem ghi chú trong migration 0011).
+function _setCaseTeam(caseId, teamId) {
+  if (!isAdmin()) return;
+  const cases = loadCases();
+  const c = cases[caseId];
+  if (!c) return;
+  c.team_id = teamId || null;
+  _cases = cases;
+  _supabase.from('cases_v2').update({ team_id: c.team_id }).eq('id', caseId).then(({ error }) => {
+    if (error) showNotif('❌ Lỗi lưu đội/nhóm: ' + error.message, 'err');
+    else showNotif('✅ Đã cập nhật đội/nhóm cho ca');
   });
 }
 
