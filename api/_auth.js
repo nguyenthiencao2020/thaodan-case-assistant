@@ -16,10 +16,16 @@ export async function requireUser(req, res) {
     res.status(401).json({ error: { message: 'Thiếu token đăng nhập' } });
     return null;
   }
-  const { data, error } = await _authClient.auth.getUser(token);
-  if (error || !data?.user) {
-    res.status(401).json({ error: { message: 'Token không hợp lệ hoặc đã hết hạn' } });
+  try {
+    const { data, error } = await _authClient.auth.getUser(token);
+    if (error || !data?.user) {
+      res.status(401).json({ error: { message: 'Token không hợp lệ hoặc đã hết hạn' } });
+      return null;
+    }
+    return data.user;
+  } catch (e) {
+    // Không để lỗi mạng/nội bộ khi xác thực rò rỉ chi tiết ra ngoài
+    res.status(401).json({ error: { message: 'Không xác thực được' } });
     return null;
   }
-  return data.user;
 }

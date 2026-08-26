@@ -4380,6 +4380,11 @@ function importCaseJSON() {
         showNotif('❌ File không hợp lệ — không phải backup Thảo Đàn', 'err');
         return;
       }
+      // ID trong file backup có thể bị chỉnh sửa thủ công (file JSON là text thường) — id được
+      // chèn thẳng vào thuộc tính onclick="...('${id}')" khi render danh sách ca, nên KHÔNG được
+      // tin theo nguyên văn. Chỉ nhận id nếu đúng khuôn dạng an toàn do app tự sinh (genCaseId()),
+      // ngược lại luôn cấp id mới để chặn chèn mã qua thuộc tính HTML.
+      if (!/^[A-Za-z0-9_-]{1,64}$/.test(caseData.id)) caseData.id = genCaseId();
       const cases = loadCases();
       // Nếu ca đã tồn tại → hỏi trước
       if (cases[caseData.id]) {
