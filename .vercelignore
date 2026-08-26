@@ -1,0 +1,14 @@
+# Không public hóa các file/thư mục không cần cho runtime của app —
+# outputDirectory của Vercel là "." (serve thẳng thư mục gốc), nên bất cứ
+# thứ gì không nằm trong danh sách loại trừ này đều bị public.
+index.html.bak
+*.bak
+docs/
+supabase/
+scripts/
+.git/
+.github/
+node_modules/
+dist/
+.vite/
+*.log

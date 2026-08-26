@@ -266,6 +266,10 @@ function _onLogin(user) {
     updateCasesCount();
     renderCaseList();
     if (isAdmin()) showNotif('👑 Chế độ Admin — hiển thị ' + Object.keys(_cases).length + ' ca toàn hệ thống', 'info');
+    // Nếu initStorage() chạy lâu (mạng chậm) và trong lúc đó NVXH đã mở/tạo ca hoặc
+    // đã gõ ghi chép rồi — KHÔNG reset dashboard, tránh xóa mất công việc đang làm.
+    const notesEl = document.getElementById('dash-notes');
+    if (curCaseId || (notesEl && notesEl.value.trim())) return;
     // Reset dashboard về trạng thái sạch (không auto-load ca cũ)
     D = null; curCaseId = null; currentStage = 1; chatHistory = []; _editingEntryIdx = null;
     document.getElementById('dash-notes').value = '';
@@ -477,7 +481,13 @@ function genCaseId() { return 'c_'+Date.now()+'_'+Math.random().toString(36).sub
 // ════════════════════════════════════════════════════════════
 function maskPhonesInText(text) {
   if (typeof text !== 'string') return text;
-  return text.replace(/(\b0\d{9}\b|\+84\d{9}\b|\b0\d{2}[\s.-]\d{3}[\s.-]\d{4}\b)/g, '***');
+  return text
+    // Số điện thoại VN
+    .replace(/(\b0\d{9}\b|\+84\d{9}\b|\b0\d{2}[\s.-]\d{3}[\s.-]\d{4}\b)/g, '***')
+    // CCCD/CMND (9 hoặc 12 số liên tiếp) — không khớp số điện thoại đã thay bằng '***' ở trên
+    .replace(/\b\d{12}\b|\b\d{9}\b/g, '***')
+    // Email
+    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '***');
 }
 
 function maskStringsInObj(obj) {
@@ -492,57 +502,67 @@ function maskStringsInObj(obj) {
   return obj;
 }
 
+// Bất kỳ field nào có tên khớp mẫu này sẽ bị ẩn danh hóa trước khi gửi cho AI —
+// dùng regex theo field-name để không phụ thuộc vào việc liệt kê thủ công từng schema form
+// (schema thật nằm ở prompts.js: sdt_tre, sdt_nguoi_than, dia_chi_thuong_tru, dia_chi_hien_tai,
+// sdt, sdt_nd, sdt_nvxh, sdt_chuyen, sdt_nhan, email_chuyen, email_nhan, ...)
+const _PII_KEY_RE = /^(sdt\w*|email\w*|dia_chi\w*|cccd$|ma_so_bhxh$|so_dien_thoai$)$/i;
+
+function _maskPiiKeys(obj) {
+  if (Array.isArray(obj)) return obj.map(_maskPiiKeys);
+  if (obj && typeof obj === 'object') {
+    const out = {};
+    for (const k of Object.keys(obj)) {
+      const v = obj[k];
+      if (_PII_KEY_RE.test(k) && typeof v === 'string' && v) {
+        if (/^dia_chi/i.test(k)) {
+          // Giữ lại phần cuối (quận/tỉnh) — vẫn hữu ích cho phân tích, bỏ số nhà/tên đường cụ thể
+          const parts = v.split(',').map(s => s.trim()).filter(Boolean);
+          out[k] = parts[parts.length - 1] || '';
+        } else {
+          out[k] = '***';
+        }
+      } else {
+        out[k] = _maskPiiKeys(v);
+      }
+    }
+    return out;
+  }
+  return obj;
+}
+
 function pseudonymizeForAI(data) {
   if (!data) return data;
-  const d = maskStringsInObj(JSON.parse(JSON.stringify(data)));
-  // Tên trẻ
-  if (d.co_ban) {
-    if (d.co_ban.ho_ten) d.co_ban.ho_ten = 'Trẻ';
-    if (d.co_ban.ngay_sinh) {
-      const yr = String(d.co_ban.ngay_sinh).match(/\d{4}/);
-      d.co_ban.ngay_sinh = yr ? yr[0] : 'N/A';
+  let d = maskStringsInObj(JSON.parse(JSON.stringify(data)));
+  d = _maskPiiKeys(d);
+  // Tên và năm sinh của trẻ — ẩn danh hoàn toàn (co_ban lồng nhau, hoặc đã trải phẳng ra top-level)
+  [d, d.co_ban].filter(Boolean).forEach(o => {
+    if (o.ho_ten) o.ho_ten = 'Trẻ';
+    if (o.ngay_sinh) {
+      const yr = String(o.ngay_sinh).match(/\d{4}/);
+      o.ngay_sinh = yr ? yr[0] : '';
     }
-    if (d.co_ban.dia_chi) {
-      const parts = String(d.co_ban.dia_chi).split(',').map(s=>s.trim()).filter(Boolean);
-      d.co_ban.dia_chi = parts[parts.length - 1] || d.co_ban.dia_chi;
-    }
-    if (d.co_ban.so_dien_thoai) d.co_ban.so_dien_thoai = '***';
-    if (d.co_ban.cccd) d.co_ban.cccd = '***';
-    if (d.co_ban.ma_so_bhxh) d.co_ban.ma_so_bhxh = '***';
-  }
-  // Người chăm sóc — giữ nguyên tên (cần cho phân tích), chỉ ẩn SĐT/CCCD
-  if (d.gia_dinh?.nguoi_cham_soc) {
-    const nc = d.gia_dinh.nguoi_cham_soc;
-    if (nc.so_dien_thoai) nc.so_dien_thoai = '***';
-    if (nc.cccd) nc.cccd = '***';
-    if (nc.dia_chi) {
-      const parts = String(nc.dia_chi).split(',').map(s=>s.trim()).filter(Boolean);
-      nc.dia_chi = parts[parts.length - 1] || nc.dia_chi;
-    }
-  }
-  // Thành viên gia đình — giữ nguyên tên (cần cho phân tích), chỉ ẩn SĐT/CCCD
-  if (Array.isArray(d.gia_dinh?.thanh_vien)) {
-    d.gia_dinh.thanh_vien = d.gia_dinh.thanh_vien.map(m => {
-      if (!m) return m;
-      if (m.so_dien_thoai) m.so_dien_thoai = '***';
-      if (m.cccd) m.cccd = '***';
-      if (m.dia_chi) {
-        const parts = String(m.dia_chi).split(',').map(s=>s.trim()).filter(Boolean);
-        m.dia_chi = parts[parts.length - 1] || m.dia_chi;
-      }
-      return m;
-    });
-  }
+  });
   return d;
 }
 
 // ════════════════════════════════════════════════════════════
 // API CALLS — qua Cloudflare Worker proxy (không cần key phía client)
 // ════════════════════════════════════════════════════════════
+// API /api/chat và /api/rag yêu cầu access token Supabase của người dùng đã đăng nhập
+// (chặn gọi trực tiếp bằng curl/script để lạm dụng key Groq/OpenAI của tổ chức).
+async function _authHeader() {
+  try {
+    const { data: { session } } = await _supabase.auth.getSession();
+    return session?.access_token ? { 'Authorization': 'Bearer ' + session.access_token } : {};
+  } catch { return {}; }
+}
+
 async function _fetchWithRetry(body, maxTok) {
   const TIMEOUT_MS = 45000;
   const MAX_RETRIES = 3;
   let lastErr;
+  const authHeader = await _authHeader();
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
     const ctrl = new AbortController();
@@ -550,7 +570,7 @@ async function _fetchWithRetry(body, maxTok) {
     try {
       const res = await fetch(GURL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeader },
         body,
         signal: ctrl.signal
       });
@@ -598,9 +618,10 @@ async function callGroqChat(messages, temp=0.4) {
 // ── RAG: lấy tài liệu liên quan từ Supabase pgvector ──
 async function fetchRagContext(query) {
   try {
+    const authHeader = await _authHeader();
     const res = await fetch('/api/rag', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeader },
       body: JSON.stringify({ query: query.slice(0, 1000), top_k: 3 }),
     });
     if (!res.ok) return '';
@@ -1170,7 +1191,8 @@ async function runAnalysis() {
 
       // ★ Thêm báo cáo AI cho GĐ 4
       try {
-        const report4Raw = await callAI(SYS_REPORT_4, 'Ghi chép NVXH (Tiến trình):\n\n' + notesAI + '\n\nDữ liệu hiện tại:\n' + JSON.stringify({cap_nhat: (D.cap_nhat||[]).slice(-3), ke_hoach: D.ke_hoach}).substring(0, 600), 0.3, 2000);
+        const p4 = pseudonymizeForAI({cap_nhat: (D.cap_nhat||[]).slice(-3), ke_hoach: D.ke_hoach}); // ẩn danh hóa trước khi gửi AI
+        const report4Raw = await callAI(SYS_REPORT_4, 'Ghi chép NVXH (Tiến trình):\n\n' + notesAI + '\n\nDữ liệu hiện tại:\n' + JSON.stringify(p4).substring(0, 600), 0.3, 2000);
         const report4 = robustJSON(report4Raw);
         D._report = report4;
         D._report._stage = 4;
@@ -2090,23 +2112,24 @@ async function sendChat() {
   el.scrollTop = el.scrollHeight;
   document.getElementById('btn-send').disabled = true;
 
-  chatHistory.push({role:'user',content:msg});
+  chatHistory.push({role:'user',content:maskPhonesInText(msg)});
   const stageLabel = ['','Tiếp cận ban đầu','Vãng gia & Đánh giá','Kế hoạch can thiệp','Tiến trình','Kết thúc ca'][currentStage] || '';
   
   // ── ENHANCED CONTEXT: gửi data nếu có, hoặc chế độ tư vấn chung ──
   let ctx = `\n\nGiai đoạn hiện tại: GĐ ${currentStage} — ${stageLabel}`;
   let sysPrompt = SYS_CHAT;
   if (D) {
+    const pD = pseudonymizeForAI(D); // ẩn danh hóa trước khi gửi AI
     const parts = [];
-    if (D.co_ban) parts.push('Thông tin trẻ: ' + JSON.stringify(D.co_ban).substring(0,500));
-    if (D.gia_dinh) parts.push('Gia đình: ' + JSON.stringify(D.gia_dinh).substring(0,400));
-    if (D.tinh_trang) parts.push('Tình trạng: ' + JSON.stringify(D.tinh_trang).substring(0,300));
-    if (D.danh_gia) parts.push('Đánh giá: ' + JSON.stringify(D.danh_gia).substring(0,500));
-    if (D.ke_hoach) parts.push('Kế hoạch: ' + JSON.stringify(D.ke_hoach).substring(0,500));
-    if (D.vang_gia) parts.push('Vãng gia: ' + JSON.stringify(D.vang_gia).substring(0,400));
-    if (D.cap_nhat?.length) parts.push('Cập nhật gần nhất: ' + JSON.stringify(D.cap_nhat.slice(-2)).substring(0,500));
-    if (D._report) {
-      const r = D._report;
+    if (pD.co_ban) parts.push('Thông tin trẻ: ' + JSON.stringify(pD.co_ban).substring(0,500));
+    if (pD.gia_dinh) parts.push('Gia đình: ' + JSON.stringify(pD.gia_dinh).substring(0,400));
+    if (pD.tinh_trang) parts.push('Tình trạng: ' + JSON.stringify(pD.tinh_trang).substring(0,300));
+    if (pD.danh_gia) parts.push('Đánh giá: ' + JSON.stringify(pD.danh_gia).substring(0,500));
+    if (pD.ke_hoach) parts.push('Kế hoạch: ' + JSON.stringify(pD.ke_hoach).substring(0,500));
+    if (pD.vang_gia) parts.push('Vãng gia: ' + JSON.stringify(pD.vang_gia).substring(0,400));
+    if (pD.cap_nhat?.length) parts.push('Cập nhật gần nhất: ' + JSON.stringify(pD.cap_nhat.slice(-2)).substring(0,500));
+    if (pD._report) {
+      const r = pD._report;
       if (r.risk) parts.push('Rủi ro: ' + JSON.stringify(r.risk).substring(0,300));
       if (r.strengths) parts.push('Điểm mạnh: ' + JSON.stringify(r.strengths).substring(0,300));
       if (r.recommendations) parts.push('Đề xuất: ' + JSON.stringify(r.recommendations).substring(0,300));
@@ -2192,7 +2215,7 @@ function showForm(idx) {
 function F(lbl, val, ic='-', path='') {
   const s = fmtDate(clean(val));
   const extra = path ? ` fl-editable" onclick="inlineEdit(this,'${path}')" title="Bấm để chỉnh sửa"` : '"';
-  return `<div class="fl"><div class="fl-ico">${ic}</div><div class="fl-bd"><div class="fl-lb">${lbl}</div><div class="fl-vl ${s?'ok':'no'}${extra}>${s||'—'}</div></div></div>`;
+  return `<div class="fl"><div class="fl-ico">${ic}</div><div class="fl-bd"><div class="fl-lb">${lbl}</div><div class="fl-vl ${s?'ok':'no'}${extra}>${esc(s)||'—'}</div></div></div>`;
 }
 
 function toggleFvEditMode(idx) {
@@ -2479,8 +2502,12 @@ function renderFormTab(idx) {
 // ════════════════════════════════════════════════════════════
 function toggleFEC() {} // no-op — FEC is now a persistent chat panel
 
+const _UNSAFE_KEY_RE = /^(__proto__|constructor|prototype)$/;
+
 function setNested(obj, path, val) {
   const keys = path.split('.');
+  // path này có thể do AI (từ lệnh chat tự do của người dùng) sinh ra — chặn prototype pollution
+  if (keys.some(k => _UNSAFE_KEY_RE.test(k.replace(/\[-?\d+\]$/, '')))) return;
   let cur = obj;
   for (let i=0; i<keys.length-1; i++) {
     const m = keys[i].match(/^(.+)\[(-?\d+)\]$/);
@@ -2523,7 +2550,7 @@ function _getFecContext(fi) {
     10:{ root:'all', data: () => ({co_ban:D.co_ban,danh_gia:D.danh_gia,ke_hoach:D.ke_hoach,ket_thuc:D.ket_thuc}) }
   };
   const map = FORM_DATA_MAP[fi] || FORM_DATA_MAP[0];
-  const data = map.data();
+  const data = pseudonymizeForAI(map.data()); // ẩn danh hóa trước khi gửi AI
   const snippet = JSON.stringify(data).substring(0, 1200);
   return { rootKeys: map.root, snippet };
 }
@@ -4353,6 +4380,11 @@ function importCaseJSON() {
         showNotif('❌ File không hợp lệ — không phải backup Thảo Đàn', 'err');
         return;
       }
+      // ID trong file backup có thể bị chỉnh sửa thủ công (file JSON là text thường) — id được
+      // chèn thẳng vào thuộc tính onclick="...('${id}')" khi render danh sách ca, nên KHÔNG được
+      // tin theo nguyên văn. Chỉ nhận id nếu đúng khuôn dạng an toàn do app tự sinh (genCaseId()),
+      // ngược lại luôn cấp id mới để chặn chèn mã qua thuộc tính HTML.
+      if (!/^[A-Za-z0-9_-]{1,64}$/.test(caseData.id)) caseData.id = genCaseId();
       const cases = loadCases();
       // Nếu ca đã tồn tại → hỏi trước
       if (cases[caseData.id]) {
