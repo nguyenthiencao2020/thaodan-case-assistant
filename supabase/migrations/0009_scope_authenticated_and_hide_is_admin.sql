@@ -5,7 +5,21 @@
 --    Không đổi SECURITY DEFINER (không dùng SECURITY INVOKER — sẽ gây đệ quy vì is_admin() tự
 --    query lại profiles, mà chính profiles lại dùng is_admin() trong policy của nó).
 create schema if not exists private;
-alter function public.is_admin(uuid) set schema private;
+
+-- Bọc trong DO block để chạy lại được nhiều lần an toàn — ALTER FUNCTION ... SET SCHEMA không
+-- có "if exists" nên nếu hàm đã được dời sang private từ trước (VD: chạy migration này 2 lần),
+-- chạy thẳng câu ALTER sẽ báo lỗi "function public.is_admin(uuid) does not exist". Chỉ dời khi
+-- nó thật sự còn nằm trong public.
+do $$
+begin
+  if exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where p.proname = 'is_admin' and n.nspname = 'public'
+      and pg_get_function_identity_arguments(p.oid) = 'uid uuid'
+  ) then
+    alter function public.is_admin(uuid) set schema private;
+  end if;
+end $$;
 
 -- Cập nhật lại 2 policy của profiles để trỏ đúng vị trí mới của hàm.
 drop policy if exists "admin_manage_profiles" on profiles;
