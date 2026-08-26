@@ -177,8 +177,9 @@
   </div>
 </div>
 
-<div class="tab-panel" id="panel-cases">
-  <div class="cases-tab">
+<div class="tab-panel" id="panel-cases" style="flex-direction:column;">
+  <div id="cases-stats-row" style="display:flex;gap:10px;padding:12px 16px 0;flex-shrink:0;"></div>
+  <div class="cases-tab" style="flex:1;min-height:0;">
     <div class="cases-sidebar">
       <div class="cases-search-row"><input type="text" id="cases-search" class="cases-search" placeholder="Tìm theo tên ca, tên trẻ..." oninput="renderCaseList()"><button class="btn-new-case" onclick="newCase()">＋ Mới</button></div>
       <div style="display:flex;gap:6px;padding:6px 12px;">
