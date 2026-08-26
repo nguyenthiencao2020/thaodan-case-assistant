@@ -3069,10 +3069,17 @@ function _reopenCaseFromList(id) {
   });
 }
 
+// Ghi audit log — best-effort, không chặn UI nếu lỗi (VD: mất mạng, hết phiên).
+function _logAudit(caseId, action) {
+  if (!_currentUser || !caseId) return;
+  _supabase.from('audit_logs').insert({ user_id: _currentUser.id, case_id: caseId, action }).then(() => {}, () => {});
+}
+
 function loadCaseIntoApp(id) {
   if (id !== _draftCaseId) _discardDraft(); // rời khỏi draft mà không làm gì → xóa
   const c = loadCases()[id];
   if (!c) return;
+  _logAudit(id, 'view');
   curCaseId = id;
   _editingEntryIdx = null;
   // ★ Khôi phục giai đoạn đã lưu
