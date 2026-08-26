@@ -187,6 +187,7 @@ async function loginEmail() {
   const btn = document.getElementById('login-btn');
   errEl.textContent = '';
   if (!email || !pass) { errEl.textContent = 'Vui lòng nhập email và mật khẩu'; return; }
+  if (!document.getElementById('login-commit')?.checked) { errEl.textContent = 'Vui lòng xác nhận cam kết trước khi đăng nhập'; return; }
   btn.disabled = true;
   btn.innerHTML = '<span class="login-spinner"></span>Đang đăng nhập...';
   try {
@@ -248,7 +249,8 @@ async function logoutUser() {
   document.getElementById('login-email').value = '';
   document.getElementById('login-pass').value = '';
   document.getElementById('login-err').textContent = '';
-  const lb = document.getElementById('login-btn'); if (lb) { lb.disabled = false; lb.textContent = 'Đăng nhập'; }
+  const commitCk = document.getElementById('login-commit'); if (commitCk) commitCk.checked = false;
+  const lb = document.getElementById('login-btn'); if (lb) { lb.disabled = true; lb.textContent = 'Đăng nhập'; }
   document.getElementById('user-bar').style.display = 'none';
   // Xóa cache
 	_stageDataCache = { 1: null, 2: null, 3: null, 4: null, 5: null };
@@ -994,6 +996,26 @@ function previewStage(s) {
 // No-op: giữ lại để các chỗ gọi legacy không vỡ
 function closeStagePreview() {}
 
+// Trường bắt buộc tối thiểu để coi 1 giai đoạn là "đủ dữ liệu" — cảnh báo (không khóa cứng)
+// vì dữ liệu đến từ AI trích xuất ghi chép tự do, có thể AI bỏ sót dù NVXH đã ghi đủ.
+const _STAGE_REQUIRED_FIELDS = {
+  1: [['co_ban.ho_ten', 'Họ tên trẻ'], ['co_ban.ngay_tiep_can', 'Ngày tiếp cận']],
+  2: [['vang_gia.ngay_vang_gia', 'Ngày vãng gia'], ['vang_gia.danh_gia_chung', 'Đánh giá chung vãng gia']],
+  3: [['ke_hoach.nhu_cau_ho_tro', 'Nhu cầu hỗ trợ trong kế hoạch']],
+  4: [['cap_nhat', 'Ít nhất 1 bản ghi cập nhật tiến trình']],
+  5: [['ket_thuc.ket_qua_dat', 'Kết quả đạt được khi kết thúc ca']]
+};
+function _getMissingRequiredFields(stage) {
+  const list = _STAGE_REQUIRED_FIELDS[stage] || [];
+  const missing = [];
+  list.forEach(([path, label]) => {
+    const val = path.split('.').reduce((o, k) => (o == null ? o : o[k]), D);
+    const empty = Array.isArray(val) ? val.length === 0 : !val;
+    if (empty) missing.push(label);
+  });
+  return missing;
+}
+
 function completeStage() {
   if (!D) { showNotif('⚠️ Hãy phân tích ghi chép trước khi hoàn thành giai đoạn', 'warn'); return; }
 
@@ -1040,7 +1062,12 @@ function completeStage() {
     return;
   }
 
-  if (!confirm(`Sau khi hoàn thành GĐ ${currentStage}, các form giai đoạn này sẽ bị khóa.\nBạn có chắc muốn tiếp tục?`)) return;
+  const _missingFields = _getMissingRequiredFields(currentStage);
+  const _lockMsg = `Sau khi hoàn thành GĐ ${currentStage}, các form giai đoạn này sẽ bị khóa.\nBạn có chắc muốn tiếp tục?`;
+  const _confirmMsg = _missingFields.length
+    ? `⚠️ Thiếu thông tin bắt buộc:\n• ${_missingFields.join('\n• ')}\n\n${_lockMsg}`
+    : _lockMsg;
+  if (!confirm(_confirmMsg)) return;
 
   const nextStage = currentStage + 1;
   const cfg = STAGE_CONFIG[currentStage];
@@ -1196,6 +1223,7 @@ async function runAnalysis() {
         const report4 = robustJSON(report4Raw);
         D._report = report4;
         D._report._stage = 4;
+        _checkUrgentPopup(report4);
       } catch(e) { console.warn('Report GĐ4 error:', e); }
 
       prog.style.transition = 'width .3s'; prog.style.width = '100%';
@@ -1232,6 +1260,7 @@ async function runAnalysis() {
       if (!D.co_ban) D.co_ban = {};
 
       _validateData(D);
+      _checkUrgentPopup(report);
 
       prog.style.transition = 'width .3s'; prog.style.width = '100%';
       setTimeout(() => { prog.style.width = '0'; prog.style.transition = 'none'; }, 600);
@@ -2641,11 +2670,23 @@ function _commitDraft() {
   }
 }
 
+// Mã số ca dạng "CA-YYYY-MM-STT" để dễ tra cứu/báo cáo (khác với id nội bộ dùng làm khóa DB).
+// STT đếm theo số ca đã có trong tháng đó — đếm trên _cases hiện đang tải cho user này (không
+// phải đếm toàn hệ thống), nên chỉ mang tính tham khảo/hiển thị, KHÔNG dùng làm khóa duy nhất.
+function genCaseCode() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const prefix = `CA-${yyyy}-${mm}-`;
+  const countThisMonth = Object.values(_cases).filter(c => (c.caseCode || '').startsWith(prefix)).length;
+  return prefix + String(countThisMonth + 1).padStart(4, '0');
+}
+
 function newCase() {
   _discardDraft(); // xóa draft cũ nếu chưa dùng gì
   const id = genCaseId();
   // Tạo trong memory THÔI, chưa lưu xuống DB
-  _cases[id] = { id, name:'Ca mới '+new Date().toLocaleDateString('vi-VN'), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), status:'open', entries:[], currentStage:1, stageData:{1:null,2:null,3:null,4:null,5:null}, stageHistory:{1:[],2:[],3:[],4:[],5:[]} };
+  _cases[id] = { id, caseCode: genCaseCode(), name:'Ca mới '+new Date().toLocaleDateString('vi-VN'), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), status:'open', entries:[], currentStage:1, stageData:{1:null,2:null,3:null,4:null,5:null}, stageHistory:{1:[],2:[],3:[],4:[],5:[]} };
   _draftCaseId = id;
   curCaseId = id; D = null; chatHistory = []; _editingEntryIdx = null;
   currentStage = 1;
@@ -2738,7 +2779,7 @@ function saveCaseNow() {
 function updateHeader() {
   const c = curCaseId ? loadCases()[curCaseId] : null;
   const isDraft = curCaseId && curCaseId === _draftCaseId;
-  document.getElementById('hdr-case-name').textContent = c?.name || '';
+  document.getElementById('hdr-case-name').textContent = c ? (c.caseCode ? `${c.caseCode} · ${c.name}` : c.name) : '';
   document.getElementById('hdr-case-date').textContent = isDraft ? ' — ✏️ Chưa lưu' : (c ? ' — '+fmtVN(c.updatedAt) : '');
   const dl = document.getElementById('dash-case-label');
   if (dl) dl.textContent = c ? (isDraft ? '📋 '+c.name+' (chưa lưu)' : '📁 '+c.name) : '';
@@ -2755,6 +2796,27 @@ function _timeAgo(dateStr) {
   if (days < 30) return days + ' ngày trước';
   if (days < 365) return Math.floor(days/30) + ' tháng trước';
   return Math.floor(days/365) + ' năm trước';
+}
+
+// 3 card thống kê: Đang xử lý / Quá hạn (mở >30 ngày chưa cập nhật) / Hoàn thành
+function renderCasesStats() {
+  const el = document.getElementById('cases-stats-row');
+  if (!el) return;
+  const cases = Object.values(loadCases());
+  const now = new Date();
+  const active = cases.filter(c => (c.status || 'open') === 'open');
+  const overdue = active.filter(c => Math.floor((now - new Date(c.updatedAt)) / 86400000) > 30);
+  const done = cases.filter(c => c.status === 'closed');
+  const card = (icon, label, count, color) => `
+    <div style="flex:1;background:#fff;border:1px solid #e5e7eb;border-left:3px solid ${color};border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+      <div style="font-size:20px;">${icon}</div>
+      <div><div style="font-size:18px;font-weight:800;color:${color};line-height:1.1;">${count}</div>
+      <div style="font-size:10px;color:var(--t3);font-weight:600;">${label}</div></div>
+    </div>`;
+  el.innerHTML =
+    card('📂', 'Đang xử lý', active.length, '#2563eb') +
+    card('⏰', 'Quá hạn (>30 ngày)', overdue.length, '#dc2626') +
+    card('✅', 'Hoàn thành', done.length, '#16a34a');
 }
 
 function renderCaseList() {
@@ -2804,7 +2866,7 @@ function renderCaseList() {
     const ownerTag = isAdmin() && c._ownerId ? `<div class="ci-owner">👤 ${esc(c._ownerEmail || c._ownerId.slice(0,8))}</div>` : '';
     return `<div class="case-item${c.id===curCaseId?' active':''}${isStale?' stale':''}${isDraft?' draft':''}" onclick="selectCase('${c.id}')">
       <div class="ci-top">
-        <div class="ci-name">${esc(c.name||'?')}</div>
+        <div class="ci-name">${c.caseCode ? `<span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--t3);margin-right:5px;">${esc(c.caseCode)}</span>` : ''}${esc(c.name||'?')}</div>
         <div style="display:flex;gap:4px;align-items:center;">
           ${fupBadge}
           <span class="ci-badge ${isDraft?'ci-draft':c.status==='open'?'ci-open':'ci-closed'}">${isDraft?'✏️ Chưa lưu':c.status==='open'?'Mở':'Đóng'}</span>
@@ -2821,6 +2883,7 @@ function renderCaseList() {
       <div class="ci-stage-bar">${stageDots}</div>
     </div>`;
   }).join('');
+  renderCasesStats();
 }
 
 function selectCase(id) {
@@ -2871,6 +2934,7 @@ function showCaseDetail(id) {
         <div class="cd-kv"><span class="cd-k">Ghi chép</span><span class="cd-v">${(c.entries||[]).length}</span></div>
         <div class="cd-kv"><span class="cd-k">Giai đoạn</span><span class="cd-v">GĐ ${stage} — ${stageLabels[stage]||''}</span></div>
         ${isClosed ? `<div class="cd-kv"><span class="cd-k">Đóng ca</span><span class="cd-v">${fmtVN(c.closedAt)}</span></div>` : ''}
+        ${isAdmin() ? `<div class="cd-kv"><span class="cd-k">Đội/nhóm</span><span class="cd-v"><input type="text" value="${esc(c.team_id||'')}" placeholder="(chưa gán)" style="border:1px solid var(--bd);border-radius:5px;padding:3px 6px;font-size:11px;font-family:inherit;width:140px;" onchange="_setCaseTeam('${id}', this.value.trim())"></span></div>` : ''}
       </div>
     </div>
     <div class="cd-section">
@@ -3006,10 +3070,33 @@ function _reopenCaseFromList(id) {
   });
 }
 
+// Gán ca vào 1 đội/nhóm (chỉ admin) — dùng cho RLS "trưởng nhóm xem ca cùng team" (migration
+// 0011). Chưa có màn quản lý nhóm/gán officer vào nhóm riêng — admin tự gán team_id cho profile
+// qua SQL Editor cho tới khi có UI riêng (xem ghi chú trong migration 0011).
+function _setCaseTeam(caseId, teamId) {
+  if (!isAdmin()) return;
+  const cases = loadCases();
+  const c = cases[caseId];
+  if (!c) return;
+  c.team_id = teamId || null;
+  _cases = cases;
+  _supabase.from('cases_v2').update({ team_id: c.team_id }).eq('id', caseId).then(({ error }) => {
+    if (error) showNotif('❌ Lỗi lưu đội/nhóm: ' + error.message, 'err');
+    else showNotif('✅ Đã cập nhật đội/nhóm cho ca');
+  });
+}
+
+// Ghi audit log — best-effort, không chặn UI nếu lỗi (VD: mất mạng, hết phiên).
+function _logAudit(caseId, action) {
+  if (!_currentUser || !caseId) return;
+  _supabase.from('audit_logs').insert({ user_id: _currentUser.id, case_id: caseId, action }).then(() => {}, () => {});
+}
+
 function loadCaseIntoApp(id) {
   if (id !== _draftCaseId) _discardDraft(); // rời khỏi draft mà không làm gì → xóa
   const c = loadCases()[id];
   if (!c) return;
+  _logAudit(id, 'view');
   curCaseId = id;
   _editingEntryIdx = null;
   // ★ Khôi phục giai đoạn đã lưu
@@ -3064,6 +3151,22 @@ function _doConfirm() {
 function _cancelConfirm() {
   document.getElementById('confirm-overlay').classList.remove('show');
   _confirmCb = null;
+}
+
+// Popup cảnh báo chủ động ngay khi AI phát hiện rủi ro Cao / tình huống khẩn cấp —
+// không chờ NVXH tự đọc report mới biết (khác với chỉ hiển thị banner trong report).
+function _checkUrgentPopup(report) {
+  if (!report) return;
+  const risk = report.risk || report.risk_current;
+  if (risk !== 'Cao' && !report.urgent) return;
+  showConfirm({
+    icon: '🚨',
+    title: risk === 'Cao' ? 'CẢNH BÁO: Rủi ro mức CAO' : 'CẢNH BÁO KHẨN CẤP',
+    body: report.urgent_reason || report.risk_reason || 'AI phát hiện dấu hiệu rủi ro cao trong ghi chép vừa phân tích — cần NVXH xem xét và xử lý ngay.',
+    okText: 'Đã hiểu',
+    okClass: 'cmb-ok-red',
+    onConfirm: null
+  });
 }
 
 function deleteCase(id) {
@@ -4414,6 +4517,17 @@ function openPrint() {
   document.getElementById('pov').style.display = 'block';
 }
 function closePov() { document.getElementById('pov').style.display = 'none'; }
+
+// Xuất PDF báo cáo tổng hợp — dùng lại cơ chế in sẵn có (window.print → chọn "Lưu dưới dạng PDF"
+// trong hộp thoại in của trình duyệt), không cần thêm thư viện JS mới (không có bước build cho
+// main.js nên khó nhúng npm package an toàn — xem ghi chú trong index.html về CDN bị chặn).
+let _lastEvalReportHtml = '';
+function exportEvalPDF() {
+  if (!_lastEvalReportHtml) { showNotif('⚠️ Chưa có báo cáo để xuất', 'warn'); return; }
+  document.getElementById('ph-body').innerHTML = `<div style="font-family:'Be Vietnam Pro',sans-serif;font-size:13px;line-height:1.75;color:#1a1a2e;padding:10px;">${_lastEvalReportHtml}</div>`;
+  document.getElementById('pov').style.display = 'block';
+  showNotif('💡 Trong hộp thoại in, chọn đích đến "Lưu dưới dạng PDF" để xuất file', 'ok');
+}
 // ════════════════════════════════════════════════════════════
 // PRINT FULL CASE — In toàn bộ form có dữ liệu
 // ════════════════════════════════════════════════════════════
@@ -4834,6 +4948,11 @@ async function generateComprehensiveEval() {
     showNotif('⚠️ Chưa có dữ liệu phân tích — hãy chạy phân tích ở tab Dashboard trước', 'warn');
     return;
   }
+  // Báo cáo tổng hợp chỉ nên tạo khi ca đã đi hết 5 giai đoạn (đóng ca) — tránh tổng kết
+  // sớm khi tiến trình chưa đầy đủ. Ca chưa đóng vẫn cho tạo nhưng cảnh báo rõ.
+  if (c && c.status !== 'closed') {
+    if (!confirm('Ca này CHƯA đóng (chưa hoàn thành hết 5 giai đoạn).\nBáo cáo tổng hợp tạo lúc này có thể chưa đầy đủ. Vẫn tạo?')) return;
+  }
 
   const btn = document.getElementById('btn-gen-eval');
   const out = document.getElementById('eval-output');
@@ -4870,7 +4989,11 @@ async function generateComprehensiveEval() {
       `Dữ liệu ca cần phân tích và đánh giá:\n\n${caseContext}`,
       0.4, 2500);
 
-    out.innerHTML = `<div style="font-family:'Be Vietnam Pro',sans-serif;font-size:13px;line-height:1.75;color:var(--text)">${_formatEvalReport(result)}</div>`;
+    _lastEvalReportHtml = _formatEvalReport(result);
+    out.innerHTML = `<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px;">
+        <button class="btn-hdr" style="background:var(--navy);color:#fff;" onclick="exportEvalPDF()">📄 Xuất PDF</button>
+      </div>
+      <div style="font-family:'Be Vietnam Pro',sans-serif;font-size:13px;line-height:1.75;color:var(--text)">${_lastEvalReportHtml}</div>`;
   } catch(e) {
     out.innerHTML = `<div style="color:#dc2626;padding:20px;text-align:center;font-size:13px">❌ ${esc(e.message)}</div>`;
     showNotif('❌ Lỗi tạo báo cáo: ' + e.message, 'err');

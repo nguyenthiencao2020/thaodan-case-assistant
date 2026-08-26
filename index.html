@@ -117,6 +117,9 @@
     <div class="dash-right">
       <div class="chat-panel">
         <div class="chat-hd"><span>💬</span> Chat chuyên gia CTXH<span class="chat-hd-right" id="chat-model">Groq GPT-OSS 120B</span></div>
+        <div style="padding:6px 12px;font-size:9.5px;line-height:1.5;color:#92400e;background:#fffbeb;border-bottom:1px solid #fde68a;">
+          ⚠️ Đề xuất từ AI chỉ mang tính tham khảo. Quyết định can thiệp cuối cùng phải dựa trên <strong>Điều 45 Luật Trẻ em 2016</strong> và <strong>Thông tư 35/2018/TT-BLĐTBXH</strong>, đối chiếu với thực tế gia đình.
+        </div>
         <div class="chat-msgs" id="chat-msgs">
           <div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;margin-bottom:4px;">Chuyên gia CTXH sẵn sàng</div><div>Hỏi bất kỳ điều gì về công tác xã hội hoặc phân tích ca sau khi nhập ghi chép.</div></div>
         </div>
@@ -174,8 +177,9 @@
   </div>
 </div>
 
-<div class="tab-panel" id="panel-cases">
-  <div class="cases-tab">
+<div class="tab-panel" id="panel-cases" style="flex-direction:column;">
+  <div id="cases-stats-row" style="display:flex;gap:10px;padding:12px 16px 0;flex-shrink:0;"></div>
+  <div class="cases-tab" style="flex:1;min-height:0;">
     <div class="cases-sidebar">
       <div class="cases-search-row"><input type="text" id="cases-search" class="cases-search" placeholder="Tìm theo tên ca, tên trẻ..." oninput="renderCaseList()"><button class="btn-new-case" onclick="newCase()">＋ Mới</button></div>
       <div style="display:flex;gap:6px;padding:6px 12px;">
@@ -227,7 +231,11 @@
     <div class="login-sub">Case Management Assistant · Đăng nhập để tiếp tục</div>
     <input id="login-email" class="login-input" type="email" placeholder="Email công tác" autocomplete="email">
     <input id="login-pass" class="login-input" type="password" placeholder="Mật khẩu" onkeydown="if(event.key==='Enter')loginEmail()" autocomplete="current-password">
-    <button class="login-btn login-btn-primary" id="login-btn" onclick="loginEmail()">Đăng nhập</button>
+    <label style="display:flex;align-items:flex-start;gap:8px;margin:10px 0 4px;font-size:11px;line-height:1.5;color:#475569;text-align:left;cursor:pointer;">
+      <input type="checkbox" id="login-commit" style="margin-top:2px;flex-shrink:0;" onchange="document.getElementById('login-btn').disabled=!this.checked">
+      <span>Tôi xác nhận đã đọc và cam kết thực hiện theo <strong>Luật Trẻ em 2016</strong>, <strong>Nghị định 56/2017/NĐ-CP</strong>. Mọi thông tin được bảo mật và chỉ sử dụng cho mục đích can thiệp công tác xã hội.</span>
+    </label>
+    <button class="login-btn login-btn-primary" id="login-btn" onclick="loginEmail()" disabled>Đăng nhập</button>
     <div id="login-err" class="login-err"></div>
     <div class="login-footer">🔒 Dữ liệu được mã hóa và bảo mật · Liên hệ quản trị viên nếu chưa có tài khoản</div>
   </div>
@@ -244,6 +252,10 @@
   <div style="font-size:11px;color:rgba(255,255,255,.7);margin-bottom:4px">Không có hoạt động trong 25 phút. Hệ thống sẽ tự đăng xuất.</div>
   <div class="sw-timer" id="sw-timer">5:00</div>
   <div class="sw-btns"><button class="sw-btn-stay" onclick="_sessionKeepAlive()">Tiếp tục làm việc</button><button class="sw-btn-out" onclick="logoutUser()">Đăng xuất ngay</button></div>
+</div>
+
+<div class="app-footer-policy" style="padding:8px 20px;font-size:10px;line-height:1.6;color:#94a3b8;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+  🔒 Chính sách bảo mật nội bộ: 1) Nghiêm cấm chia sẻ thông tin thân chủ. 2) Hệ thống ghi lại log truy cập. 3) Dữ liệu được mã hóa và bảo mật theo quy định.
 </div>
 
 <script src="/src/js/config.js?v=23"></script>
