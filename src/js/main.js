@@ -187,6 +187,7 @@ async function loginEmail() {
   const btn = document.getElementById('login-btn');
   errEl.textContent = '';
   if (!email || !pass) { errEl.textContent = 'Vui lòng nhập email và mật khẩu'; return; }
+  if (!document.getElementById('login-commit')?.checked) { errEl.textContent = 'Vui lòng xác nhận cam kết trước khi đăng nhập'; return; }
   btn.disabled = true;
   btn.innerHTML = '<span class="login-spinner"></span>Đang đăng nhập...';
   try {
@@ -248,7 +249,8 @@ async function logoutUser() {
   document.getElementById('login-email').value = '';
   document.getElementById('login-pass').value = '';
   document.getElementById('login-err').textContent = '';
-  const lb = document.getElementById('login-btn'); if (lb) { lb.disabled = false; lb.textContent = 'Đăng nhập'; }
+  const commitCk = document.getElementById('login-commit'); if (commitCk) commitCk.checked = false;
+  const lb = document.getElementById('login-btn'); if (lb) { lb.disabled = true; lb.textContent = 'Đăng nhập'; }
   document.getElementById('user-bar').style.display = 'none';
   // Xóa cache
 	_stageDataCache = { 1: null, 2: null, 3: null, 4: null, 5: null };
@@ -994,6 +996,26 @@ function previewStage(s) {
 // No-op: giữ lại để các chỗ gọi legacy không vỡ
 function closeStagePreview() {}
 
+// Trường bắt buộc tối thiểu để coi 1 giai đoạn là "đủ dữ liệu" — cảnh báo (không khóa cứng)
+// vì dữ liệu đến từ AI trích xuất ghi chép tự do, có thể AI bỏ sót dù NVXH đã ghi đủ.
+const _STAGE_REQUIRED_FIELDS = {
+  1: [['co_ban.ho_ten', 'Họ tên trẻ'], ['co_ban.ngay_tiep_can', 'Ngày tiếp cận']],
+  2: [['vang_gia.ngay_vang_gia', 'Ngày vãng gia'], ['vang_gia.danh_gia_chung', 'Đánh giá chung vãng gia']],
+  3: [['ke_hoach.nhu_cau_ho_tro', 'Nhu cầu hỗ trợ trong kế hoạch']],
+  4: [['cap_nhat', 'Ít nhất 1 bản ghi cập nhật tiến trình']],
+  5: [['ket_thuc.ket_qua_dat', 'Kết quả đạt được khi kết thúc ca']]
+};
+function _getMissingRequiredFields(stage) {
+  const list = _STAGE_REQUIRED_FIELDS[stage] || [];
+  const missing = [];
+  list.forEach(([path, label]) => {
+    const val = path.split('.').reduce((o, k) => (o == null ? o : o[k]), D);
+    const empty = Array.isArray(val) ? val.length === 0 : !val;
+    if (empty) missing.push(label);
+  });
+  return missing;
+}
+
 function completeStage() {
   if (!D) { showNotif('⚠️ Hãy phân tích ghi chép trước khi hoàn thành giai đoạn', 'warn'); return; }
 
@@ -1040,7 +1062,12 @@ function completeStage() {
     return;
   }
 
-  if (!confirm(`Sau khi hoàn thành GĐ ${currentStage}, các form giai đoạn này sẽ bị khóa.\nBạn có chắc muốn tiếp tục?`)) return;
+  const _missingFields = _getMissingRequiredFields(currentStage);
+  const _lockMsg = `Sau khi hoàn thành GĐ ${currentStage}, các form giai đoạn này sẽ bị khóa.\nBạn có chắc muốn tiếp tục?`;
+  const _confirmMsg = _missingFields.length
+    ? `⚠️ Thiếu thông tin bắt buộc:\n• ${_missingFields.join('\n• ')}\n\n${_lockMsg}`
+    : _lockMsg;
+  if (!confirm(_confirmMsg)) return;
 
   const nextStage = currentStage + 1;
   const cfg = STAGE_CONFIG[currentStage];
@@ -1196,6 +1223,7 @@ async function runAnalysis() {
         const report4 = robustJSON(report4Raw);
         D._report = report4;
         D._report._stage = 4;
+        _checkUrgentPopup(report4);
       } catch(e) { console.warn('Report GĐ4 error:', e); }
 
       prog.style.transition = 'width .3s'; prog.style.width = '100%';
@@ -1232,6 +1260,7 @@ async function runAnalysis() {
       if (!D.co_ban) D.co_ban = {};
 
       _validateData(D);
+      _checkUrgentPopup(report);
 
       prog.style.transition = 'width .3s'; prog.style.width = '100%';
       setTimeout(() => { prog.style.width = '0'; prog.style.transition = 'none'; }, 600);
@@ -3064,6 +3093,22 @@ function _doConfirm() {
 function _cancelConfirm() {
   document.getElementById('confirm-overlay').classList.remove('show');
   _confirmCb = null;
+}
+
+// Popup cảnh báo chủ động ngay khi AI phát hiện rủi ro Cao / tình huống khẩn cấp —
+// không chờ NVXH tự đọc report mới biết (khác với chỉ hiển thị banner trong report).
+function _checkUrgentPopup(report) {
+  if (!report) return;
+  const risk = report.risk || report.risk_current;
+  if (risk !== 'Cao' && !report.urgent) return;
+  showConfirm({
+    icon: '🚨',
+    title: risk === 'Cao' ? 'CẢNH BÁO: Rủi ro mức CAO' : 'CẢNH BÁO KHẨN CẤP',
+    body: report.urgent_reason || report.risk_reason || 'AI phát hiện dấu hiệu rủi ro cao trong ghi chép vừa phân tích — cần NVXH xem xét và xử lý ngay.',
+    okText: 'Đã hiểu',
+    okClass: 'cmb-ok-red',
+    onConfirm: null
+  });
 }
 
 function deleteCase(id) {
