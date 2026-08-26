@@ -37,23 +37,11 @@ create policy "admin_all_notifications" on notifications
   );
 
 -- ═══ case_stats ═══
--- Nếu bảng này thực chất là VIEW (không phải table thật) thì câu ALTER TABLE dưới sẽ báo lỗi
--- "case_stats is not a table" — khi đó bỏ qua đoạn này và xem hướng dẫn "case_stats là view" bên dưới.
-alter table if exists case_stats enable row level security;
-
-drop policy if exists "users_own_case_stats" on case_stats;
-drop policy if exists "admin_all_case_stats" on case_stats;
-
-create policy "users_own_case_stats" on case_stats
-  for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-
-create policy "admin_all_case_stats" on case_stats
-  for select
-  using (
-    (select email from auth.users where id = auth.uid()) = 'hangcong.nguyen@thaodancenter.org.vn'
-  );
+-- case_stats là VIEW (gom số liệu từ cases_v2 theo user_id), không phải table thật, nên
+-- không gắn policy trực tiếp được. security_invoker khiến view chạy bằng quyền của người
+-- ĐANG TRUY VẤN thay vì người TẠO view — nhờ đó RLS của cases_v2 (bảng gốc) tự áp dụng
+-- khi ai đó SELECT case_stats, không cần policy riêng cho view.
+alter view if exists case_stats set (security_invoker = true);
 
 -- ═══ Storage bucket "case-files" — file vật lý (ảnh/PDF...), không phải bảng dữ liệu ═══
 -- Đường dẫn lưu file có dạng "<user_id>/<case_id>/<timestamp>.<ext>" (xem uploadCaseFile()),

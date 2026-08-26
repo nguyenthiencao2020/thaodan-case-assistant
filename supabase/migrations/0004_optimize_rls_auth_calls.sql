@@ -51,19 +51,10 @@ create policy "admin_all_notifications" on notifications
   );
 
 -- ═══ case_stats ═══
-drop policy if exists "users_own_case_stats" on case_stats;
-drop policy if exists "admin_all_case_stats" on case_stats;
-
-create policy "users_own_case_stats" on case_stats
-  for all
-  using ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
-
-create policy "admin_all_case_stats" on case_stats
-  for select
-  using (
-    (select email from auth.users where id = (select auth.uid())) = 'hangcong.nguyen@thaodancenter.org.vn'
-  );
+-- case_stats là VIEW (gom số liệu từ cases_v2 theo user_id) — không gắn policy được, chỉ cần
+-- security_invoker để nó chạy bằng quyền người truy vấn, tự áp dụng RLS của cases_v2.
+-- (Không dùng auth.uid() trực tiếp nên không có gì để tối ưu InitPlan ở đây.)
+alter view if exists case_stats set (security_invoker = true);
 
 -- ═══ storage.objects — bucket "case-files" ═══
 drop policy if exists "users_own_case_files_storage" on storage.objects;
