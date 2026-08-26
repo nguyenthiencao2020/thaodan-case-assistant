@@ -1,6 +1,6 @@
 import { requireUser } from './_auth.js';
 
-const ALLOWED_MODELS = new Set(['llama-3.3-70b-versatile']);
+const ALLOWED_MODELS = new Set(['openai/gpt-oss-120b']);
 const MAX_TOKENS_CAP = 4096;
 const MAX_MESSAGES = 20;
 const MAX_MSG_CHARS = 20000;
@@ -17,7 +17,7 @@ function sanitizeBody(body) {
     }
     if (!['system', 'user', 'assistant'].includes(m.role)) return { error: 'role không hợp lệ' };
   }
-  const model = ALLOWED_MODELS.has(body?.model) ? body.model : 'llama-3.3-70b-versatile';
+  const model = ALLOWED_MODELS.has(body?.model) ? body.model : 'openai/gpt-oss-120b';
   const temperature = typeof body?.temperature === 'number' ? Math.min(Math.max(body.temperature, 0), 1) : 0.4;
   const max_tokens = Math.min(Number(body?.max_tokens) || 1000, MAX_TOKENS_CAP);
   return { body: { model, temperature, max_tokens, messages } };

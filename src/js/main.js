@@ -600,7 +600,7 @@ async function _fetchWithRetry(body, maxTok) {
 
 async function callAI(sysPrompt, userMsg, temp=0.2, maxTok=3000) {
   const body = JSON.stringify({
-    model: 'llama-3.3-70b-versatile', temperature: temp, max_tokens: maxTok,
+    model: 'openai/gpt-oss-120b', temperature: temp, max_tokens: maxTok,
     messages: [{ role: 'system', content: sysPrompt + PRIVACY_PREFIX }, { role: 'user', content: userMsg }]
   });
   const res = await _fetchWithRetry(body, maxTok);
@@ -609,7 +609,7 @@ async function callAI(sysPrompt, userMsg, temp=0.2, maxTok=3000) {
 }
 
 async function callGroqChat(messages, temp=0.4) {
-  const body = JSON.stringify({ model: 'llama-3.3-70b-versatile', temperature: temp, max_tokens: 1000, messages });
+  const body = JSON.stringify({ model: 'openai/gpt-oss-120b', temperature: temp, max_tokens: 1000, messages });
   const res = await _fetchWithRetry(body, 1000);
   const data = await res.json();
   return data.choices?.[0]?.message?.content || 'Không có phản hồi.';
