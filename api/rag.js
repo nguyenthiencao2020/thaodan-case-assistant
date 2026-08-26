@@ -1,13 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { requireUser } from './_auth.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://thaodan.vercel.app');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const user = await requireUser(req, res);
+  if (!user) return; // requireUser đã gửi 401
 
   // Graceful degradation: if RAG not configured, return empty
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY || !process.env.OPENAI_API_KEY) {
