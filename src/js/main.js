@@ -3444,7 +3444,7 @@ async function dlReportDocx() {
         footerSection={default:new FC({children:[new Paragraph({children:[new ImageRun({data:imgs[1],transformation:{width:794,height:79},type:'png'})],alignment:AlignmentType.CENTER})]})};
       } catch(e){}
     }
-    const doc=new Document({sections:[{properties:{page:{size:{width:PW,height:16838},margin:{top:MG,right:MG,bottom:720,left:MG,footer:0}}},footers:footerSection,children:body}]});
+    const doc=new Document({sections:[{properties:{page:{size:{width:PW,height:16838},margin:{top:MG,right:MG,bottom:1400,left:MG,footer:0}}},footers:footerSection,children:body}]});
     const blob=await lib.Packer.toBlob(doc);
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
@@ -3568,7 +3568,7 @@ async function dlDocxBranded(fi){
       spacing:{before:100,after:400}
     }));
 
-    const pageProps = { page: { size:{width:PW,height:PH}, margin:{top:MG,right:MG,bottom:720,left:MG,footer:0} } };
+    const pageProps = { page: { size:{width:PW,height:PH}, margin:{top:MG,right:MG,bottom:1400,left:MG,footer:0} } };
     const doc = new Document({
       sections: [
         { properties: pageProps, footers: footerSection, children: cover },
@@ -4426,7 +4426,7 @@ async function buildDocx(fi,logoData,footerData,_collector){
 
   // _collector: nếu truyền vào array, ghi body+footer vào đó thay vì trả Document (dùng cho exportAllDocx)
   if (_collector) { _collector.push({ body, footerSection }); return null; }
-  return new Document({sections:[{properties:{page:{size:{width:PW,height:PH2},margin:{top:MG,right:MG,bottom:720,left:MG,footer:0}}},footers:footerSection,children:body}]});
+  return new Document({sections:[{properties:{page:{size:{width:PW,height:PH2},margin:{top:MG,right:MG,bottom:1400,left:MG,footer:0}}},footers:footerSection,children:body}]});
 }
 
 // ════════════════════════════════════════════════════════════
@@ -4446,7 +4446,7 @@ async function exportAllDocx() {
   showNotif('📄 Đang tạo bộ hồ sơ đầy đủ...');
   const imgs = await Promise.all([fetchImg(LOGO_URL), fetchImg(FOOTER_URL)]);
   try {
-    const pageProps = { size:{width:11906,height:16838}, margin:{top:1134,right:1134,bottom:720,left:1134,footer:0} };
+    const pageProps = { size:{width:11906,height:16838}, margin:{top:1134,right:1134,bottom:1400,left:1134,footer:0} };
     const sections = [];
     // Forms 0–9 (10 = báo cáo tổng hợp cuối danh sách)
     for (const fi of [0,1,2,3,4,5,6,7,8,9]) {
