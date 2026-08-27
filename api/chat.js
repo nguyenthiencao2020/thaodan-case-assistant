@@ -20,7 +20,11 @@ function sanitizeBody(body) {
   const model = ALLOWED_MODELS.has(body?.model) ? body.model : 'openai/gpt-oss-120b';
   const temperature = typeof body?.temperature === 'number' ? Math.min(Math.max(body.temperature, 0), 1) : 0.4;
   const max_tokens = Math.min(Number(body?.max_tokens) || 1000, MAX_TOKENS_CAP);
-  return { body: { model, temperature, max_tokens, messages } };
+  // openai/gpt-oss-120b là model có suy luận ẩn (reasoning) — mặc định có thể ăn hết ngân sách
+  // max_tokens vào phần "nghĩ" trước khi kịp xuất JSON đầy đủ cho các lệnh trích xuất/report,
+  // khiến JSON bị cắt cụt. Ép cứng "low" phía server (không cho client tự chọn) — model cũ
+  // (llama-3.3-*) không có tham số này nên Groq sẽ tự bỏ qua nếu model đổi lại sau này.
+  return { body: { model, temperature, max_tokens, reasoning_effort: 'low', messages } };
 }
 
 export default async function handler(req, res) {
