@@ -213,6 +213,7 @@ async function logoutUser() {
   D = null; curCaseId = null; currentStage = 1; chatHistory = []; curForm = 0; _editingEntryIdx = null;
   // Input & chat
   document.getElementById('dash-notes').value = '';
+  const _rn = document.getElementById('dash-real-name'); if (_rn) _rn.value = '';
   document.getElementById('dash-cc').textContent = '0 ký tự';
   document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;">Chuyên gia CTXH sẵn sàng</div><div>Hỏi bất kỳ điều gì về CTXH hoặc nhập ghi chép để phân tích ca.</div></div>';
   const ci = document.getElementById('chat-input'); if (ci) ci.value = '';
@@ -275,6 +276,7 @@ function _onLogin(user) {
     // Reset dashboard về trạng thái sạch (không auto-load ca cũ)
     D = null; curCaseId = null; currentStage = 1; chatHistory = []; _editingEntryIdx = null;
     document.getElementById('dash-notes').value = '';
+    const _rn = document.getElementById('dash-real-name'); if (_rn) _rn.value = '';
     document.getElementById('dash-cc').textContent = '0 ký tự';
     document.getElementById('btn-fill').disabled = true;
     document.getElementById('btn-send').disabled = false;
@@ -507,6 +509,60 @@ function maskPhonesInText(text) {
     .replace(/\b\d{12}\b|\b\d{9}\b/g, '***')
     // Email
     .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '***');
+}
+
+// ── Ẩn danh tên thật trước khi gửi AI (theo tên NVXH tự khai trong ô "Tên thật") ──
+// Khác với maskPhonesInText (regex nhận diện số điện thoại/CCCD/email — mẫu cố định), tên
+// người KHÔNG có khuôn dạng để tự nhận diện bằng regex. Cách đáng tin cậy: để NVXH tự nhập tên
+// thật vào 1 ô riêng (không gửi AI), hệ thống tìm-thay chính xác tên đó trong ghi chép trước
+// khi gửi AI, rồi khôi phục lại khi hiển thị cho NVXH (xem runAnalysis()).
+const REAL_NAME_PLACEHOLDER = '[TRẺ_ẨN_DANH]';
+function _escRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+function _getRealNames() {
+  const raw = (document.getElementById('dash-real-name')?.value || D?._realName || '').trim();
+  if (!raw) return [];
+  return raw.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function maskRealNamesInText(text) {
+  if (typeof text !== 'string' || !text) return text;
+  const names = _getRealNames();
+  let out = text;
+  names.forEach(name => {
+    // Thay nguyên cụm tên đầy đủ
+    out = out.replace(new RegExp(_escRegex(name), 'gi'), REAL_NAME_PLACEHOLDER);
+    // Thay cả từ cuối (thường là tên gọi hàng ngày, VD "Nguyễn Văn An" → gọi "An")
+    // nếu từ đó đủ dài để tránh ẩn nhầm âm tiết phổ biến.
+    const parts = name.split(/\s+/).filter(Boolean);
+    const lastPart = parts[parts.length - 1];
+    if (lastPart && lastPart.length >= 3) {
+      out = out.replace(new RegExp('\\b' + _escRegex(lastPart) + '\\b', 'gi'), REAL_NAME_PLACEHOLDER);
+    }
+  });
+  return out;
+}
+
+// Ẩn danh toàn diện (số điện thoại/CCCD/email + tên thật) — dùng thay maskPhonesInText ở mọi
+// nơi gửi ghi chép/tin nhắn tự do cho AI.
+function maskIdentityText(text) {
+  return maskRealNamesInText(maskPhonesInText(text));
+}
+
+// Khôi phục tên thật vào dữ liệu AI vừa trích xuất — AI thấy [TRẺ_ẨN_DANH] trong ghi chép nên
+// sẽ trả về đúng chuỗi đó ở field ho_ten; thay lại tên thật để NVXH xem form thấy đúng thông
+// tin (tên thật vẫn được lưu — đã mã hóa ở DB từ migration 0012/0013 — chỉ không gửi AI).
+function restoreRealNamesDeep(obj) {
+  const names = _getRealNames();
+  if (!names.length) return obj;
+  const realName = names[0];
+  const walk = (o) => {
+    if (typeof o === 'string') return o.split(REAL_NAME_PLACEHOLDER).join(realName);
+    if (Array.isArray(o)) return o.map(walk);
+    if (o && typeof o === 'object') { for (const k of Object.keys(o)) o[k] = walk(o[k]); return o; }
+    return o;
+  };
+  return walk(obj);
 }
 
 function maskStringsInObj(obj) {
@@ -1060,6 +1116,7 @@ function completeStage() {
         // Reset dashboard về trạng thái sạch
         D = null; curCaseId = null; currentStage = 1; chatHistory = []; _editingEntryIdx = null;
         document.getElementById('dash-notes').value = '';
+        const _rn = document.getElementById('dash-real-name'); if (_rn) _rn.value = '';
         document.getElementById('dash-cc').textContent = '0 ký tự';
         document.getElementById('btn-fill').disabled = true;
         document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
@@ -1173,7 +1230,7 @@ async function runAnalysis() {
   if (!notes) { showNotif('⚠️ Nhập ghi chép trước', 'warn'); return; }
   if (notes.length < 30) { showNotif('⚠️ Ghi chép quá ngắn — cần ít nhất 30 ký tự', 'warn'); return; }
   _commitDraft(); // lưu ca draft thành thật nếu chưa lưu
-  const notesAI = maskPhonesInText(notes); // mask phones before sending to AI
+  const notesAI = maskIdentityText(notes); // ẩn SĐT/CCCD/email + tên thật (nếu có khai) trước khi gửi AI
 
   const btn = document.getElementById('btn-analyze');
   btn.disabled = true;
@@ -1191,6 +1248,8 @@ async function runAnalysis() {
       nguon_luc_xa_hoi: {}, _report: null, _notes: notes, _currentStage: currentStage
     };
   }
+  const _realNameInput = document.getElementById('dash-real-name')?.value.trim();
+  if (_realNameInput) D._realName = _realNameInput;
 
   // Chọn prompt theo giai đoạn
   const stagePrompts = {
@@ -1206,6 +1265,7 @@ async function runAnalysis() {
       const formRaw = await callAI(extractPrompt, 'Ghi chép NVXH (Cập nhật tiến trình):\n\n' + notesAI, 0, 3000);
       let appendData = {};
       try { appendData = robustJSON(formRaw); } catch(e) { console.warn('Stage 4 JSON error:', e); }
+      restoreRealNamesDeep(appendData); // khôi phục tên thật vừa ẩn khi gửi AI
 
       // ★ APPEND MODE: nối thêm vào mảng cap_nhat
       if (appendData.cap_nhat_moi && Array.isArray(appendData.cap_nhat_moi)) {
@@ -1238,6 +1298,7 @@ async function runAnalysis() {
         const p4 = pseudonymizeForAI({cap_nhat: (D.cap_nhat||[]).slice(-3), ke_hoach: D.ke_hoach}); // ẩn danh hóa trước khi gửi AI
         const report4Raw = await callAI(SYS_REPORT_4, 'Ghi chép NVXH (Tiến trình):\n\n' + notesAI + '\n\nDữ liệu hiện tại:\n' + JSON.stringify(p4).substring(0, 600), 0.3, 2000);
         const report4 = robustJSON(report4Raw);
+        restoreRealNamesDeep(report4);
         D._report = report4;
         D._report._stage = 4;
         _checkUrgentPopup(report4);
@@ -1274,6 +1335,8 @@ async function runAnalysis() {
 
       // ★ DEEP MERGE — không bao giờ ghi đè D
       D = deepMerge(D, formData);
+      restoreRealNamesDeep(D); // khôi phục tên thật vừa ẩn khi gửi AI (nếu có khai ở ô "Tên thật")
+      restoreRealNamesDeep(report);
       report._stage = currentStage;
       D._report = report;
       D._notes = notes;
@@ -2162,7 +2225,7 @@ async function sendChat() {
   el.scrollTop = el.scrollHeight;
   document.getElementById('btn-send').disabled = true;
 
-  chatHistory.push({role:'user',content:maskPhonesInText(msg)});
+  chatHistory.push({role:'user',content:maskIdentityText(msg)});
   const stageLabel = ['','Tiếp cận ban đầu','Vãng gia & Đánh giá','Kế hoạch can thiệp','Tiến trình','Kết thúc ca'][currentStage] || '';
   
   // ── ENHANCED CONTEXT: gửi data nếu có, hoặc chế độ tư vấn chung ──
@@ -2717,6 +2780,7 @@ function newCase() {
   document.querySelectorAll('.fi-ck').forEach(el => el.remove());
   document.querySelectorAll('.form-item').forEach(el => { el.classList.remove('form-locked'); el.style.opacity = ''; el.title = ''; });
   document.getElementById('dash-notes').value = '';
+  const _rn = document.getElementById('dash-real-name'); if (_rn) _rn.value = '';
   document.getElementById('dash-cc').textContent = '0 ký tự';
   updateHeader();
   renderCaseList();
@@ -3057,6 +3121,7 @@ function _closeCaseFromList(id) {
         // Reset dashboard về trạng thái sạch sau khi đóng ca
         D = null; curCaseId = null; currentStage = 1; chatHistory = []; _editingEntryIdx = null;
         document.getElementById('dash-notes').value = '';
+        const _rn = document.getElementById('dash-real-name'); if (_rn) _rn.value = '';
         document.getElementById('dash-cc').textContent = '0 ký tự';
         document.getElementById('btn-fill').disabled = true;
         document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
@@ -3120,6 +3185,8 @@ function loadCaseIntoApp(id) {
   _logAudit(id, 'view');
   curCaseId = id;
   _editingEntryIdx = null;
+  const _rnField = document.getElementById('dash-real-name');
+  if (_rnField) _rnField.value = c.lastAnalysis?._realName || '';
   // ★ Khôi phục giai đoạn đã lưu
   currentStage = c.currentStage || (c.lastAnalysis?._currentStage) || 1;
   // ★ Load D từ lastAnalysis (tích luỹ toàn ca — forms đọc từ đây)
