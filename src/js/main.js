@@ -314,24 +314,39 @@ let _tplOpen = false;
 
 function loadCases() { return _cases; }
 
+// Lưu 1 case lên Supabase — mã hóa toàn bộ "data" qua RPC encrypt_case_data() (migration 0013)
+// trước khi ghi. Vẫn gửi kèm "data" plaintext làm dự phòng (nếu RPC lỗi — mất mạng, chưa cấu
+// hình Vault...) để KHÔNG BAO GIỜ mất dữ liệu chỉ vì bước mã hóa thất bại; initStorage() sẽ tự
+// dùng lại "data" nếu "data_enc" không giải mã được.
+async function _upsertCaseEncrypted(cs) {
+  const risk = cs.lastAnalysis?._report?.risk?.level || cs.lastAnalysis?._report?.risk_level || null;
+  const payload = {
+    id: cs.id, user_id: cs._ownerId, name: cs.name || 'Ca mới',
+    status: cs.status || 'open', stage: cs.currentStage || 1,
+    risk_level: ['Cao','Trung bình','Thấp'].includes(risk) ? risk : null,
+    child_name: cs.lastAnalysis?.co_ban?.ho_ten || '',
+    child_dob: cs.lastAnalysis?.co_ban?.ngay_sinh || '',
+    data: cs, data_enc: null, updated_at: cs.updatedAt || new Date().toISOString()
+  };
+  try {
+    const { data: enc, error: encErr } = await _supabase.rpc('encrypt_case_data', { p_data: cs });
+    if (encErr) throw encErr;
+    payload.data_enc = enc;
+  } catch (e) {
+    console.warn('Encrypt case data error — lưu tạm bằng plaintext:', e);
+  }
+  const { error } = await _supabase.from('cases_v2').upsert(payload, { onConflict: 'id' });
+  if (error) console.warn('Supabase save error:', error);
+}
+
 function saveCases(c) {
   _cases = JSON.parse(JSON.stringify(c));
   updateStaleBadge();
   if (_currentUser) {
     Object.values(_cases).forEach(cs => {
       if (isAdmin() && cs._ownerId && cs._ownerId !== _currentUser.id) return;
-      const risk = cs.lastAnalysis?._report?.risk?.level || cs.lastAnalysis?._report?.risk_level || null;
       if (!cs._ownerId) { cs._ownerId = _currentUser.id; cs._ownerEmail = _currentUser.email; }
-      _supabase.from('cases_v2').upsert({
-        id: cs.id, user_id: cs._ownerId, name: cs.name || 'Ca mới',
-        status: cs.status || 'open', stage: cs.currentStage || 1,
-        risk_level: ['Cao','Trung bình','Thấp'].includes(risk) ? risk : null,
-        child_name: cs.lastAnalysis?.co_ban?.ho_ten || '',
-        child_dob: cs.lastAnalysis?.co_ban?.ngay_sinh || '',
-        data: cs, updated_at: cs.updatedAt || new Date().toISOString()
-      }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.warn('Supabase save error:', error);
-      });
+      _upsertCaseEncrypted(cs);
     });
   }
 }
@@ -341,18 +356,8 @@ function saveOneCase(caseId) {
   if (!cs) return;
   if (isAdmin() && cs._ownerId && cs._ownerId !== _currentUser.id) return;
   if (_currentUser) {
-    const risk = cs.lastAnalysis?._report?.risk?.level || cs.lastAnalysis?._report?.risk_level || null;
     if (!cs._ownerId) { cs._ownerId = _currentUser.id; cs._ownerEmail = _currentUser.email; }
-    _supabase.from('cases_v2').upsert({
-      id: cs.id, user_id: cs._ownerId, name: cs.name || 'Ca mới',
-      status: cs.status || 'open', stage: cs.currentStage || 1,
-      risk_level: ['Cao','Trung bình','Thấp'].includes(risk) ? risk : null,
-      child_name: cs.lastAnalysis?.co_ban?.ho_ten || '',
-      child_dob: cs.lastAnalysis?.co_ban?.ngay_sinh || '',
-      data: cs, updated_at: cs.updatedAt || new Date().toISOString()
-    }, { onConflict: 'id' }).then(({ error }) => {
-      if (error) console.warn('Supabase save error:', error);
-    });
+    _upsertCaseEncrypted(cs);
   }
 }
 
@@ -362,25 +367,37 @@ async function initStorage() {
     let rows;
     if (isAdmin()) {
       const { data, error } = await _supabase.from('cases_v2')
-        .select('id, data, user_id')
+        .select('id, data, data_enc, user_id')
         .order('updated_at', { ascending: false });
       if (error) throw error;
       rows = data;
     } else {
       const { data, error } = await _supabase.from('cases_v2')
-        .select('id, data').eq('user_id', _currentUser.id)
+        .select('id, data, data_enc').eq('user_id', _currentUser.id)
         .order('updated_at', { ascending: false });
       if (error) throw error;
       rows = data;
     }
     if (rows?.length) {
       _cases = {};
-      rows.forEach(row => {
-        if (row.data) {
-          if (row.user_id) row.data._ownerId = row.user_id;
-          _cases[row.id] = row.data;
+      for (const row of rows) {
+        // Ưu tiên giải mã data_enc; nếu lỗi (chưa cấu hình Vault, mất mạng...) tự dùng lại
+        // "data" plaintext làm dự phòng — không bao giờ mất quyền xem ca chỉ vì lỗi giải mã.
+        let caseData = row.data;
+        if (row.data_enc) {
+          try {
+            const { data: dec, error: decErr } = await _supabase.rpc('decrypt_case_data', { p_enc: row.data_enc });
+            if (decErr) throw decErr;
+            if (dec) caseData = dec;
+          } catch (e) {
+            console.warn('Decrypt case data error — dùng lại data plaintext:', e);
+          }
         }
-      });
+        if (caseData) {
+          if (row.user_id) caseData._ownerId = row.user_id;
+          _cases[row.id] = caseData;
+        }
+      }
     }
   } catch(e) { console.error('[initStorage] Supabase error:', e?.message || e); }
 }
