@@ -1263,7 +1263,11 @@ async function runAnalysis() {
       ]);
 
       let report = {};
-      try { report = robustJSON(reportRaw); } catch(e) { report = { risk: 'Không xác định', summary: reportRaw.substring(0, 300) }; }
+      try { report = robustJSON(reportRaw); } catch(e) {
+        console.warn('Report JSON parse error:', e, reportRaw);
+        report = { risk: 'Không xác định', summary: reportRaw.substring(0, 300) };
+        showNotif('⚠️ AI trả về báo cáo không đầy đủ (thiếu ma trận rủi ro) — thử bấm "Phân tích" lại', 'warn', 6000);
+      }
 
       let formData = {};
       try { formData = robustJSON(formRaw); } catch(e) { console.warn('Form JSON error:', e); formData = {}; }
