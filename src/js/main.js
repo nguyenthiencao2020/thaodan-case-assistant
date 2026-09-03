@@ -525,19 +525,47 @@ function _getRealNames() {
   return raw.split(',').map(s => s.trim()).filter(Boolean);
 }
 
+// Từ chỉ người thường đứng trước tên trẻ trong ghi chép CTXH tiếng Việt ("bé An", "em Linh",
+// "cháu Mai"...). Dùng làm ngữ cảnh nhận diện tên gọi ngắn — chính xác hơn nhiều so với thay
+// mọi lần xuất hiện của từ đó.
+const _NAME_PREFIXES = 'bé|em|cháu|trẻ|con|bạn|anh|chị|ông|bà|cô|chú|dì|thân chủ|tc';
+
+// Tên gọi trùng từ thông dụng tiếng Việt — KHÔNG thay khi đứng một mình (không có tiền tố chỉ
+// người), nếu không sẽ phá nội dung ghi chép gửi AI: "anh trai", "linh hoạt", "ngày mai",
+// "an toàn", "ảnh hưởng"... khiến AI hiểu sai quan hệ gia đình và phân tích rủi ro sai.
+const _COMMON_WORD_NAMES = new Set([
+  'an','anh','chi','chị','em','mai','linh','hoa','huong','hương','thu','tam','tâm','nam','bac','bắc',
+  'trung','minh','sang','sáng','thang','thắng','loi','lợi','phuc','phúc','duc','đức','hanh','hạnh',
+  'hien','hiền','thao','thảo','my','mỹ','ha','hà','giang','binh','bình','yen','yên','nhi','vi','vy',
+  'quyen','quyên','trang','tien','tiến','tu','tú','hai','hải','son','sơn','long','phong','quang','khanh','khánh'
+]);
+
 function maskRealNamesInText(text) {
   if (typeof text !== 'string' || !text) return text;
   const names = _getRealNames();
   let out = text;
   names.forEach(name => {
-    // Thay nguyên cụm tên đầy đủ
+    // 1) Luôn thay nguyên cụm tên đầy đủ (nhiều từ → gần như không trùng từ thông dụng)
     out = out.replace(new RegExp(_escRegex(name), 'gi'), REAL_NAME_PLACEHOLDER);
-    // Thay cả từ cuối (thường là tên gọi hàng ngày, VD "Nguyễn Văn An" → gọi "An")
-    // nếu từ đó đủ dài để tránh ẩn nhầm âm tiết phổ biến.
+
     const parts = name.split(/\s+/).filter(Boolean);
-    const lastPart = parts[parts.length - 1];
-    if (lastPart && lastPart.length >= 3) {
-      out = out.replace(new RegExp('\\b' + _escRegex(lastPart) + '\\b', 'gi'), REAL_NAME_PLACEHOLDER);
+    if (parts.length > 1) {
+      // 2) Thay cụm 2 từ cuối (VD "Bích Ngọc") — vẫn đủ dài để an toàn
+      const lastTwo = parts.slice(-2).join(' ');
+      out = out.replace(new RegExp(_escRegex(lastTwo), 'gi'), REAL_NAME_PLACEHOLDER);
+    }
+
+    const callName = parts[parts.length - 1];
+    if (!callName) return;
+    // 3) Tên gọi ngắn đứng SAU từ chỉ người ("bé An", "cháu Linh") → luôn thay, giữ lại tiền tố
+    //    để AI vẫn biết đang nói về ai. Áp dụng cho cả tên 2 ký tự ("An") mà cách cũ bỏ sót.
+    out = out.replace(
+      new RegExp('\\b(' + _NAME_PREFIXES + ')(\\s+)' + _escRegex(callName) + '\\b', 'gi'),
+      (_m, p1, sp) => p1 + sp + REAL_NAME_PLACEHOLDER
+    );
+    // 4) Tên gọi đứng một mình → chỉ thay nếu KHÔNG phải từ thông dụng, tránh phá nội dung
+    if (!_COMMON_WORD_NAMES.has(callName.toLowerCase())) {
+      out = out.replace(new RegExp('\\b' + _escRegex(callName) + '\\b', 'gi'), REAL_NAME_PLACEHOLDER);
     }
   });
   return out;
