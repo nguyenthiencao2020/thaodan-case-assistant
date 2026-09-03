@@ -98,7 +98,10 @@
           <button class="tpl-toggle-btn" id="tpl-toggle-btn" onclick="toggleTemplate()">💡 Gợi ý</button>
         </div>
         <div id="tpl-panel" class="tpl-panel" style="display:none;"></div>
-        <textarea id="dash-notes" class="input-ta" placeholder="Paste ghi chép tiếp cận ban đầu...&#10;&#10;AI sẽ trích xuất Form 0 và Form 1. Không ghi họ tên thật hoặc địa chỉ cụ thể."></textarea>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <input type="text" id="dash-real-name" class="input-ta" style="min-height:unset;height:32px;padding:5px 10px;font-size:11.5px;" placeholder="🔒 Tên thật của trẻ (tùy chọn) — hệ thống tự ẩn đi trước khi gửi AI phân tích, không lưu lộ ra ngoài">
+        </div>
+        <textarea id="dash-notes" class="input-ta" placeholder="Paste ghi chép tiếp cận ban đầu...&#10;&#10;AI sẽ trích xuất Form 0 và Form 1. Nếu ghi chép có tên thật, nhập vào ô phía trên để hệ thống tự ẩn danh trước khi gửi AI."></textarea>
         <div class="input-footer"><span class="char-count" id="dash-cc">0 ký tự</span><span class="case-label" id="dash-case-label"></span></div>
       </div>
       <div class="action-bar" id="action-bar">
