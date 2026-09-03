@@ -777,6 +777,11 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 
 @media print {
   .hdr,.main-nav,.notif,.pov-bar,.pclose{display:none!important;}
+  /* Bản in hồ sơ chính thức không được có nút bấm hay nhãn phiên bản của giao diện:
+     .fv-acts (Chỉnh sửa/Lưu ca/Bản Word), .sec-acts + .btn-cp (nút Copy từng mục),
+     .fv-badges (badge "v16"/"GĐ n"), .btn-noprint (nút ⬇ .docx trong báo cáo AI). */
+  .fv-acts,.sec-acts,.btn-cp,.fv-badges,.btn-noprint,
+  .btn-fv-edit,.btn-fv-save,.btn-dl-docx,.btn-dl-docx-brand{display:none!important;}
   .pov{position:static!important;background:none!important;padding:0!important;}
   .psheet{box-shadow:none!important;padding:20px!important;max-width:100%!important;}
 }
