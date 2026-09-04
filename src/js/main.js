@@ -1532,6 +1532,8 @@ async function runAnalysis() {
       restoreRealNamesDeep(report);
       report._stage = currentStage;
       D._report = report;
+      // Có nội dung AI mới → xác nhận trước đó không còn giá trị, bản in về lại BẢN NHÁP.
+      D._verified = null;
       D._notes = notes;
       D._currentStage = currentStage;
       if (!D.co_ban) D.co_ban = {};
@@ -1729,6 +1731,40 @@ function renderReport1(r) {
   // số viết cứng nên báo cáo nhảy số (I, II, IV — mất III).
   _rnReset();
 
+  // ── ĐẶT LÊN ĐẦU: những gì cần kiểm chứng, trước khi đọc bất kỳ kết luận nào của máy ──
+  // Trước đây "câu hỏi cần khai thác" và "độ tin cậy dữ liệu" nằm cuối báo cáo với cỡ chữ nhỏ,
+  // còn ô "Mức độ Rủi ro" thì to đậm đỏ ở trên — giao diện nói với NVXH rằng máy đã kết luận.
+  // Đảo lại: việc của NVXH lên trước, phỏng đoán của máy xuống sau.
+  const _drGuess = dr.filter(d => d && d.type !== 'sự kiện').length;
+  if ((r.next_questions||[]).length || dr.length) {
+    h += `<div style="background:#fffbeb;border:1.5px solid #fcd34d;border-left:5px solid #d97706;border-radius:0 10px 10px 0;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">
+        📋 Việc của NVXH trước khi kết luận</div>`;
+    if ((r.next_questions||[]).length) {
+      h += `<div style="font-size:11px;font-weight:700;color:#78350f;margin-bottom:3px">Cần khai thác / kiểm chứng thêm:</div>
+        <ol style="margin:0 0 8px;padding-left:16px">${(r.next_questions||[]).map(q=>`<li style="font-size:12.5px;margin:3px 0;color:#451a03">${esc(q)}</li>`).join('')}</ol>`;
+    }
+    if (dr.length) {
+      h += `<div style="font-size:11.5px;color:#78350f">
+        Trong ghi chép có <strong>${dr.length}</strong> nhận định, trong đó
+        <strong style="color:#b45309">${_drGuess} là suy diễn</strong> chưa có bằng chứng —
+        xem chi tiết ở mục "Độ tin cậy dữ liệu" bên dưới.</div>`;
+    }
+    h += `</div>`;
+  }
+
+  // Độ tin cậy
+  if (dr.length) {
+    h += _secHead('🔍',_rn(),'ĐỘ TIN CẬY DỮ LIỆU','#059669');
+    h += `<div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:10px;margin-bottom:10px">`;
+    dr.forEach(d => {
+      h+=`<div style="display:flex;gap:7px;margin-bottom:5px;padding:4px 8px;background:#fff;border-radius:5px;border:1px solid #e5e7eb">
+        <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;${d.type==='sự kiện'?'background:#dcfce7;color:#166534':'background:#fef3c7;color:#92400e'};flex-shrink:0">${esc(d.type)}</span>
+        <div style="font-size:12px;flex:1">"${esc(d.content)}"${d.note?`<div style="color:#0d9488;font-size:11px;margin-top:1px">→ ${esc(d.note)}</div>`:''}</div></div>`;
+    });
+    h += `</div>`;
+  }
+
   // Tóm tắt chuyên môn — AI vẫn sinh ra trường "summary" nhưng trước đây không hiển thị ở đâu.
   if (r.summary) {
     h += _secHead('🧭',_rn(),'TÓM TẮT CHUYÊN MÔN','#0f2d6b');
@@ -1748,11 +1784,14 @@ function renderReport1(r) {
   h += `</div>`;
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:${rBg};border:1.5px solid ${rC}44;border-left:4px solid ${rC};border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:${rC};text-transform:uppercase;margin-bottom:5px">Mức độ Rủi ro</div>
-      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:26px">${rI}</span>
-      <div><div style="font-size:17px;font-weight:900;color:${rC}">${r.risk||'?'}</div>
+      <div style="font-size:10px;font-weight:700;color:${rC};text-transform:uppercase;margin-bottom:5px">Mức rủi ro — AI gợi ý</div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:19px">${rI}</span>
+      <div><div style="font-size:15px;font-weight:800;color:${rC}">${r.risk||'?'}</div>
       ${r.urgent?'<div style="font-size:10px;background:#dc2626;color:#fff;padding:1px 7px;border-radius:10px;margin-top:2px;display:inline-block">⚠️ KHẨN CẤP</div>':''}</div></div>
-      <div style="margin-top:6px;font-size:12px;color:#374151">${esc(r.risk_reason||'')}</div></div>
+      <div style="margin-top:6px;font-size:12px;color:#374151">${esc(r.risk_reason||'')}</div>
+      <div style="margin-top:7px;padding-top:6px;border-top:1px dashed ${rC}55;font-size:10.5px;color:#6b7280;font-style:italic">
+        Đây là gợi ý của máy dựa trên ghi chép, <strong>không phải kết luận chuyên môn</strong>.
+        Mức rủi ro chính thức do NVXH và giám sát ca quyết định.</div></div>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px">
       <div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:5px">🚩 Red Flags</div>
       <ul style="margin:0;padding-left:14px">${(r.red_flags||[]).map(f=>`<li style="font-size:12px;margin:2px 0;color:#78350f">${esc(f)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không phát hiện</li>'}</ul>
@@ -1775,18 +1814,6 @@ function renderReport1(r) {
       <div style="font-size:10px;font-weight:700;color:#c2410c;margin-bottom:5px">YÊU CẦU (chủ quan)</div>
       <div style="display:flex;flex-wrap:wrap;gap:2px">${(nw.wants||[]).map(w=>_chip(w,'#c2410c')).join('')||'<span style="color:#9ca3af;font-style:italic;font-size:11px">Chưa thu thập</span>'}</div></div></div>`;
 
-  // Độ tin cậy
-  if (dr.length) {
-    h += _secHead('🔍',_rn(),'ĐỘ TIN CẬY DỮ LIỆU','#059669');
-    h += `<div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:10px;margin-bottom:10px">`;
-    dr.forEach(d => {
-      h+=`<div style="display:flex;gap:7px;margin-bottom:5px;padding:4px 8px;background:#fff;border-radius:5px;border:1px solid #e5e7eb">
-        <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;${d.type==='sự kiện'?'background:#dcfce7;color:#166534':'background:#fef3c7;color:#92400e'};flex-shrink:0">${esc(d.type)}</span>
-        <div style="font-size:12px;flex:1">"${esc(d.content)}"${d.note?`<div style="color:#0d9488;font-size:11px;margin-top:1px">→ ${esc(d.note)}</div>`:''}</div></div>`;
-    });
-    h += `</div>`;
-  }
-
   // Gợi ý can thiệp
   h += _secHead('🎯',_rn(),'GỢI Ý CAN THIỆP','#7c3aed');
   h += `<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px;margin-bottom:10px">`;
@@ -1799,14 +1826,11 @@ function renderReport1(r) {
   });
   h += `</div>`;
 
-  // Ưu thế + Câu hỏi
-  h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+  // Ưu thế (câu hỏi cần khai thác đã đưa lên khối đầu báo cáo)
+  h += `<div style="margin-bottom:10px">
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
       <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:5px">💪 ƯU THẾ & BẢO VỆ</div>
-      <ul style="margin:0;padding-left:13px">${(r.strengths||[]).map(s=>`<li style="font-size:12px;margin:2px 0;color:#14532d">${esc(s)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Chưa xác định</li>'}</ul></div>
-    <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#6b21a8;margin-bottom:5px">❓ CÂU HỎI CẦN KHAI THÁC</div>
-      <ol style="margin:0;padding-left:13px">${(r.next_questions||[]).map(q=>`<li style="font-size:12px;margin:2px 0;color:#4c1d95;font-style:italic">${esc(q)}</li>`).join('')||'<li style="color:#9ca3af">Chưa có</li>'}</ol></div></div>`;
+      <ul style="margin:0;padding-left:13px">${(r.strengths||[]).map(s=>`<li style="font-size:12px;margin:2px 0;color:#14532d">${esc(s)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Chưa xác định</li>'}</ul></div></div>`;
 
   h += _supervisionNotes(r.supervision_notes);
   h += `</div>`;
@@ -1829,7 +1853,7 @@ function renderReport2(r) {
   h += _secHead('⚠️','I.','CẬP NHẬT MỨC RỦI RO','#dc2626');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:${_riskBg(r.risk_current)};border:1.5px solid ${_riskColor(r.risk_current)}44;border-left:4px solid ${_riskColor(r.risk_current)};border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:${_riskColor(r.risk_current)};text-transform:uppercase;margin-bottom:5px">Mức rủi ro hiện tại</div>
+      <div style="font-size:10px;font-weight:700;color:${_riskColor(r.risk_current)};text-transform:uppercase;margin-bottom:5px">Mức rủi ro hiện tại — AI gợi ý</div>
       <div style="display:flex;align-items:center;gap:8px"><span style="font-size:24px">${_riskIcon(r.risk_current)}</span>
       <span style="font-size:17px;font-weight:900;color:${_riskColor(r.risk_current)}">${r.risk_current||'?'}</span></div></div>
     <div style="background:#f8fafc;border:1.5px solid ${updColor}44;border-left:4px solid ${updColor};border-radius:8px;padding:12px">
@@ -2652,7 +2676,7 @@ function SecDashboard(idx) {
   const rfText = rf.length ? rf.map(f=>'• '+f).join('\n') : '';
 
   const overview = () =>
-    F('Mức độ rủi ro', r.risk, '-', '_report.risk') +
+    F('Mức rủi ro (AI gợi ý)', r.risk, '-', '_report.risk') +
     F('Lý do đánh giá', r.risk_reason, '-', '_report.risk_reason') +
     (r.urgent ? F('Trạng thái khẩn cấp', 'CÓ', '-', '_report.urgent') : '');
 
@@ -2701,7 +2725,7 @@ function SecDashboard(idx) {
     4:  { title: 'E. Phân tích nhu cầu chuyên sâu',              icon: '🧠',
           body: (hasNW() ? Dv('Nhu cầu vs Mong muốn') + needsWants() : '') +
                 (hasPF() ? Dv('Phụ mẫu hóa') + parent() : '') +
-                Dv('Ngữ cảnh rủi ro') + F('Mức độ rủi ro', r.risk, '-', '_report.risk') },
+                Dv('Ngữ cảnh rủi ro') + F('Mức rủi ro (AI gợi ý)', r.risk, '-', '_report.risk') },
     5:  { title: 'E. Ngữ cảnh rủi ro định hướng kế hoạch',       icon: '🎯',
           body: Dv('Tổng quan') + overview() +
                 Dv('Red flags cần giải quyết') + redFlags() +
@@ -2731,6 +2755,63 @@ function TBL(hs, rows) {
   return `<table class="tbl"><thead><tr>${hs.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${fmtDate(clean(String(c||'')))||'—'}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 }
 
+// ── Xác nhận của NVXH: phân biệt "AI trích xuất" với "người đã kiểm chứng" ─────────────────
+// Trước đây bản in không có dấu vết nào cho biết trường nào do AI điền, trường nào NVXH đã đọc.
+// NVXH lại ký tên vào bản in đó — hồ sơ bảo vệ trẻ em là chứng cứ pháp lý, nên một câu AI tự
+// suy ra nằm trong tờ phiếu có chữ ký là rủi ro thật. Mọi bản in khi CHƯA xác nhận đều mang dấu
+// "BẢN NHÁP"; dấu chỉ mất khi NVXH tự tích xác nhận đã đọc.
+function _isVerified() { return !!(D && D._verified && D._verified.at); }
+function _verifiedLabel() {
+  if (!_isVerified()) return '';
+  const v = D._verified;
+  return (v.by || 'NVXH') + ' · ' + new Date(v.at).toLocaleString('vi-VN');
+}
+const DRAFT_STAMP = 'BẢN NHÁP — NỘI DUNG DO AI TRÍCH XUẤT, CHƯA ĐƯỢC NVXH XÁC NHẬN';
+
+function toggleVerify() {
+  if (!D) { showNotif('⚠️ Chưa có dữ liệu', 'warn'); return; }
+  if (_isVerified()) {
+    D._verified = null;
+    showNotif('↩️ Đã bỏ xác nhận — bản in trở lại dạng BẢN NHÁP', 'warn');
+    if (curCaseId) saveOneCase(curCaseId);
+    renderFormTab(typeof curForm === 'number' ? curForm : 0);
+    return;
+  }
+  showConfirm({
+    icon: '✔️',
+    title: 'Xác nhận đã kiểm chứng nội dung?',
+    body: 'Bạn xác nhận đã ĐỌC LẠI ghi chép gốc và kiểm chứng từng thông tin AI trích xuất '
+        + 'trong biểu mẫu này là đúng.\n\nSau khi xác nhận, bản in sẽ bỏ dấu "BẢN NHÁP" và bạn '
+        + 'là người chịu trách nhiệm về nội dung hồ sơ.',
+    okText: 'Tôi xác nhận',
+    okClass: 'cmb-ok-blue',
+    onConfirm() {
+      D._verified = { by: _currentUser?.email || 'NVXH', at: new Date().toISOString() };
+      if (curCaseId) saveOneCase(curCaseId);
+      renderFormTab(typeof curForm === 'number' ? curForm : 0);
+      showNotif('✔️ Đã xác nhận — bản in không còn dấu BẢN NHÁP');
+    }
+  });
+}
+
+function _verifyBanner() {
+  if (!D) return '';
+  if (_isVerified()) {
+    return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f0fdf4;border:1.5px solid #86efac;border-left:5px solid #16a34a;border-radius:0 8px 8px 0;padding:9px 13px;margin-bottom:14px">
+      <div style="flex:1;min-width:180px;font-size:12px;color:#14532d">
+        <strong>✔️ Đã được NVXH xác nhận</strong>
+        <div style="font-size:11px;color:#3f6212;margin-top:2px">${esc(_verifiedLabel())}</div></div>
+      <button class="btn-secondary" style="font-size:11px;padding:6px 12px" onclick="toggleVerify()">↩️ Bỏ xác nhận</button>
+    </div>`;
+  }
+  return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fffbeb;border:1.5px solid #fcd34d;border-left:5px solid #d97706;border-radius:0 8px 8px 0;padding:9px 13px;margin-bottom:14px">
+    <div style="flex:1;min-width:200px;font-size:12px;color:#78350f">
+      <strong>⚠️ BẢN NHÁP — do AI trích xuất, chưa kiểm chứng</strong>
+      <div style="font-size:11px;color:#92400e;margin-top:2px">Hãy đọc lại ghi chép gốc và đối chiếu từng trường trước khi in hoặc gửi đi.</div></div>
+    <button class="btn-analyze" style="flex:0 0 auto;height:34px;font-size:11.5px;padding:0 14px" onclick="toggleVerify()">✔ Tôi đã kiểm chứng</button>
+  </div>`;
+}
+
 function renderFormTab(idx) {
   const cb=D.co_ban||{},gd=D.gia_dinh||{},tt=D.tinh_trang||{},dg=D.danh_gia||{},vg=D.vang_gia||{},kh=D.ke_hoach||{},ktu=D.ket_thuc||{};
   const ncs=gd.nguoi_cham_soc||{},hv=tt.hoc_van||{},sk=tt.suc_khoe||{},tl=tt.tam_ly||{};
@@ -2755,6 +2836,8 @@ function renderFormTab(idx) {
       <button class="btn-dl-docx-brand" title="Bản in chính thức — có bìa logo Thảo Đàn, footer trên mỗi trang" onclick="dlDocxBranded(${idx})">📄 Bản in Thảo Đàn</button>
     </div>
   </div>`;
+
+  h += _verifyBanner();
 
   if (idx===0) {
     h+=Sec("A. Thông tin trẻ","s0a",
@@ -3542,7 +3625,9 @@ function _checkUrgentPopup(report) {
   showConfirm({
     icon: '🚨',
     title: risk === 'Cao' ? 'CẢNH BÁO: Rủi ro mức CAO' : 'CẢNH BÁO KHẨN CẤP',
-    body: report.urgent_reason || report.risk_reason || 'AI phát hiện dấu hiệu rủi ro cao trong ghi chép vừa phân tích — cần NVXH xem xét và xử lý ngay.',
+    body: (report.urgent_reason || report.risk_reason || 'Ghi chép vừa phân tích có dấu hiệu rủi ro cao.')
+        + '\n\nĐây là dấu hiệu MÁY phát hiện, cần NVXH kiểm chứng lại ghi chép gốc rồi quyết định. '
+        + 'Nếu xác nhận đúng, báo giám sát ca ngay.',
     okText: 'Đã hiểu',
     okClass: 'cmb-ok-red',
     onConfirm: null
@@ -3674,6 +3759,18 @@ async function dlReportDocx() {
     body.push(Pg([Tx((cb.ho_ten||'—')+'   |   NVXH: '+(_nvxhNow()||'—')+'   |   Ngày: '+new Date().toLocaleDateString('vi-VN'),{size:20,color:'666666',italics:true})],{alignment:AlignmentType.CENTER}));
     body.push(new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:4,color:NAVY}},spacing:{before:80,after:120}}));
 
+    // ── Dấu tình trạng kiểm chứng ──
+    if (_isVerified()) {
+      body.push(Pg([Tx('✔ ĐÃ ĐƯỢC NVXH XÁC NHẬN — ' + _verifiedLabel(), {bold:true,color:'15803D',size:20})],{alignment:AlignmentType.CENTER}));
+    } else {
+      body.push(new Paragraph({
+        children:[Tx('⚠ ' + DRAFT_STAMP, {bold:true,color:'B45309',size:22})],
+        alignment:AlignmentType.CENTER, spacing:{before:40,after:120,line:LS.value},
+        border:{top:{style:BorderStyle.SINGLE,size:6,color:'D97706'},bottom:{style:BorderStyle.SINGLE,size:6,color:'D97706'},
+                left:{style:BorderStyle.SINGLE,size:6,color:'D97706'},right:{style:BorderStyle.SINGLE,size:6,color:'D97706'}}
+      }));
+    }
+
     // ── Cảnh báo KHẨN CẤP — trước đây chỉ hiện trên màn hình, bản Word gửi đi bị mất hoàn toàn ──
     if (r.urgent) {
       body.push(new Paragraph({
@@ -3691,7 +3788,8 @@ async function dlReportDocx() {
       // "summary" — đoạn tóm tắt chuyên môn AI vẫn sinh ra nhưng trước đây không hiển thị/in ở đâu.
       if (r.summary) { body.push(SHN('TÓM TẮT CHUYÊN MÔN')); body.push(Pg([Tx(r.summary,{color:'1E293B'})])); }
       body.push(SHN('MA TRẬN RỦI RO ĐA CHIỀU'));
-      body.push(Pg([Tx('Mức rủi ro tổng thể: ',{bold:true}),Tx(r.risk||'?',{bold:true,color:RISKC(r.risk)})]));
+      body.push(Pg([Tx('Mức rủi ro tổng thể (AI gợi ý): ',{bold:true}),Tx(r.risk||'?',{bold:true,color:RISKC(r.risk)})]));
+      body.push(Pg([Tx('Gợi ý của máy dựa trên ghi chép, không phải kết luận chuyên môn — mức rủi ro chính thức do NVXH và giám sát ca quyết định.',{italics:true,size:19,color:'777777'})]));
       if (r.risk_reason) body.push(Pg([Tx(r.risk_reason,{italics:true,color:'555555',size:22})]));
       [['an_toan_the_chat','An toàn Thể chất'],['an_toan_tam_ly','An toàn Tâm lý'],['moi_truong','Môi trường Sống'],['giao_duc','Giáo dục'],['he_thong_bao_ve','Hệ thống Bảo vệ']].forEach(([k,v])=>{
         const o=rm[k]||{}; body.push(Pg([Tx('• '+v+': ',{bold:true}),Tx('['+( o.level||'?')+']  '),Tx(o.detail||'',{color:'555555',size:22})]));
@@ -4295,6 +4393,19 @@ async function buildDocx(fi,logoData,footerData,_collector){
       body.push(new Table({width:{size:CW,type:WidthType.DXA},columnWidths:[800,CW-800-2400,2400],rows:[new TableRow({children:[lC,tC,iC]})]}));
     }catch(e){body.push(P([R("CƠ SỞ THẢO ĐÀN — Mã hồ sơ: "+_caseCodeNow(),{bold:true})]));}
   }else{body.push(P([R("Mã hồ sơ: "+_caseCodeNow()+"     Số TT: "+_caseSeqNow(),{bold:true,size:T_TABLE})],{alignment:AlignmentType.RIGHT}));}
+  // Dấu tình trạng kiểm chứng, ngay dưới phần đầu trang của mọi biểu mẫu xuất ra.
+  if (typeof _isVerified === 'function') {
+    if (_isVerified()) {
+      body.push(P([R("✔ ĐÃ ĐƯỢC NVXH XÁC NHẬN — "+_verifiedLabel(),{bold:true,size:T_META,color:"15803D"})],{alignment:AlignmentType.CENTER}));
+    } else {
+      body.push(new Paragraph({
+        children:[R("⚠ "+DRAFT_STAMP,{bold:true,size:T_SMALL,color:"B45309"})],
+        alignment:AlignmentType.CENTER, spacing:{before:30,after:60,line:LS.value},
+        border:{top:{style:BorderStyle.SINGLE,size:6,color:"D97706"},bottom:{style:BorderStyle.SINGLE,size:6,color:"D97706"},
+                left:{style:BorderStyle.SINGLE,size:6,color:"D97706"},right:{style:BorderStyle.SINGLE,size:6,color:"D97706"}}
+      }));
+    }
+  }
   body.push(HR());
 
   // ════════════════════════════════════════
@@ -4778,7 +4889,7 @@ async function buildDocx(fi,logoData,footerData,_collector){
 
     const _pushOverview = () => {
       body.push(SUB("Tổng quan"));
-      body.push(FL("Mức độ rủi ro", _rep.risk || ''));
+      body.push(FL("Mức rủi ro (AI gợi ý)", _rep.risk || ''));
       body.push(FL("Lý do đánh giá", _rep.risk_reason || ''));
       if (_rep.urgent) body.push(FL("Trạng thái khẩn cấp", 'CÓ'));
     };
@@ -4835,7 +4946,7 @@ async function buildDocx(fi,logoData,footerData,_collector){
         body.push(SH("E. PHÂN TÍCH NHU CẦU CHUYÊN SÂU"));
         _pushNeedsWants(); _pushParent();
         body.push(SUB("Ngữ cảnh rủi ro"));
-        body.push(FL("Mức độ rủi ro", _rep.risk || ''));
+        body.push(FL("Mức rủi ro (AI gợi ý)", _rep.risk || ''));
         break;
       case 5:
         body.push(SH("E. NGỮ CẢNH RỦI RO ĐỊNH HƯỚNG KẾ HOẠCH"));
@@ -5044,6 +5155,14 @@ function printFullCase() {
   h += '<div style="font-size:16px;color:#333;">Trẻ: <strong>' + esc(caseName) + '</strong></div>';
   h += '<div style="font-size:12px;color:#555;margin-top:6px;">Mã hồ sơ: <strong>' + esc(_caseCodeNow()) + '</strong> · Số TT: ' + esc(_caseSeqNow()) + '</div>';
   h += '<div style="font-size:12px;color:#888;margin-top:4px;">NVXH phụ trách: ' + esc(_nvxhNow() || '—') + ' · Ngày in: ' + now + ' · Giai đoạn: ' + currentStage + '/5</div>';
+  // Dấu tình trạng kiểm chứng — người nhận hồ sơ phải biết đây là bản nháp hay bản đã xác nhận.
+  if (_isVerified()) {
+    h += '<div style="display:inline-block;margin-top:10px;border:1.5px solid #16a34a;color:#15803d;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;">'
+       + '✔ ĐÃ ĐƯỢC NVXH XÁC NHẬN · ' + esc(_verifiedLabel()) + '</div>';
+  } else {
+    h += '<div style="display:inline-block;margin-top:10px;border:2px solid #d97706;color:#b45309;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:800;letter-spacing:.5px;">'
+       + '⚠ ' + DRAFT_STAMP + '</div>';
+  }
   h += '</div>';
 
   const formSections = [
@@ -5068,7 +5187,8 @@ function printFullCase() {
       const clean = _cleanForPrint(origFv.innerHTML);
       if (!_hasData(clean)) { skipped.push(fs.title.replace(/ —.*$/, '')); return; }
       h += "<div style=\"page-break-inside:avoid;margin-bottom:24px;\">";
-      h += "<div style=\"background:#0f2d6b;color:#fff;padding:8px 14px;border-radius:6px 6px 0 0;font-size:13px;font-weight:700;\">" + fs.title + "</div>";
+      h += "<div style=\"background:#0f2d6b;color:#fff;padding:8px 14px;border-radius:6px 6px 0 0;font-size:13px;font-weight:700;display:flex;justify-content:space-between;gap:10px;\"><span>" + fs.title + "</span>"
+         + (_isVerified() ? "" : "<span style=\"font-size:9.5px;font-weight:800;color:#fcd34d;letter-spacing:.5px;align-self:center;\">BẢN NHÁP</span>") + "</div>";
       h += "<div style=\"border:1px solid #ddd;border-top:none;padding:12px 14px;border-radius:0 0 6px 6px;\">" + clean.innerHTML + "</div>";
       h += "</div>";
     } catch(e) {}
