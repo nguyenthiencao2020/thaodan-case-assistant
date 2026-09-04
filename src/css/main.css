@@ -28,7 +28,15 @@
 body {
   font-family:'Be Vietnam Pro',system-ui,sans-serif;
   background:var(--cream); color:var(--text); font-size:13px; line-height:1.5;
+  /* Vỏ app là một cột flex chiếm đúng chiều cao màn hình. Trước đây .tab-panel bị đặt cứng
+     height:calc(100vh - 96px) trong khi header + nav + thanh chính sách thực tế cao 132px
+     (tới 190px trên iPhone SE khi header xuống dòng), nên trang luôn tràn 33-102px: header bị
+     cắt ở trên và phần dưới sidebar không kéo tới được. 100dvh để không bị thanh địa chỉ của
+     trình duyệt di động tính sai. */
+  margin:0; display:flex; flex-direction:column;
+  height:100vh; height:100dvh; overflow:hidden;
 }
+.hdr, .main-nav, .app-footer-policy { flex-shrink:0; }
 
 /* ══ SCROLLBAR ══ */
 ::-webkit-scrollbar { width:4px; height:4px; }
@@ -89,7 +97,7 @@ body {
 .notif-err { background:#fef2f2; border:1px solid #fca5a5; color:#7f1d1d; }
 
 /* ══ TAB PANELS ══ */
-.tab-panel { display:none; height:calc(100vh - 96px); overflow:hidden; width:100%; }
+.tab-panel { display:none; flex:1 1 auto; min-height:0; overflow:hidden; width:100%; }
 .tab-panel.active { display:flex; width:100%; }
 
 /* ══ DASHBOARD LAYOUT ══ */
@@ -362,7 +370,7 @@ body {
   grid-template-columns:0px 1fr;
 }
 .forms-sidebar {
-  background:var(--navy3); overflow:hidden;
+  background:var(--navy3); overflow-y:auto; overflow-x:hidden;
   display:flex; flex-direction:column;
   transition:opacity .2s ease; min-width:0;
   grid-column:1;
@@ -844,7 +852,7 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   .mn-ico { font-size:11px; }
 
   /* ── TAB PANEL HEIGHT ── */
-  .tab-panel { height:calc(100vh - 88px) !important; max-height:calc(100vh - 88px) !important; }
+  /* Chiều cao panel do flex quyết định — không đặt cứng theo 100vh nữa (xem ghi chú ở body). */
 
   /* ── DASHBOARD: stack vertically ── */
   .dash { flex-direction:column !important; }
@@ -888,6 +896,8 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   .sidebar-toggle { left:8px !important; z-index:30; width:38px; height:38px; font-size:16px; top:10px; }
   .forms-tab.sidebar-shown .sidebar-toggle { left:248px !important; }
   .form-preview { padding:12px !important; }
+  /* Nút ☰ nổi ở góc trên trái (38px) đè lên tiêu đề biểu mẫu — chừa chỗ cho nó. */
+  .fv-header .fv-title-block { padding-left:46px; }
   .forms-content { padding-top:0; }
 
   /* Form section fields */

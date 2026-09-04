@@ -2323,6 +2323,13 @@ function switchMain(tab) {
   });
   if (tab==='cases') renderCaseList();
   if (tab==='analysis') renderAnalysisPanel();
+  // Bấm thẳng vào tab "Biểu mẫu QLTH" trước đây không vẽ lại biểu mẫu — chỉ có nút "Điền form"
+  // (fillForms) hoặc bấm từng form mới gọi showForm(). Hậu quả: ca đang mở đã có dữ liệu nhưng
+  // khung xem vẫn đứng ở "Chưa có dữ liệu" cho tới khi người dùng bấm một biểu mẫu.
+  if (tab==='forms') {
+    restoreFormChecks();
+    showForm(typeof curForm === 'number' ? curForm : 0);
+  }
 }
 
 function fillForms() {
@@ -5322,9 +5329,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function fixHeights() {
+    // Phải trừ CẢ thanh chính sách ở chân trang — bỏ sót nó làm trang tràn 33px trên desktop
+    // và tới 65px trên điện thoại, khiến header bị cắt và không kéo xuống hết được.
     const hdr = document.querySelector('.hdr');
     const nav = document.querySelector('.main-nav');
-    const h = window.innerHeight - (hdr?.offsetHeight||56) - (nav?.offsetHeight||36);
+    const foot = document.querySelector('.app-footer-policy');
+    const h = window.innerHeight - (hdr?.offsetHeight||56) - (nav?.offsetHeight||36) - (foot?.offsetHeight||0);
     document.querySelectorAll('.tab-panel').forEach(el => { el.style.height = h+'px'; el.style.maxHeight = h+'px'; el.style.width = '100%'; });
   }
   fixHeights();
