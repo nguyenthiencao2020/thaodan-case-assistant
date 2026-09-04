@@ -598,7 +598,16 @@ function maskPhonesInText(text) {
 // người KHÔNG có khuôn dạng để tự nhận diện bằng regex. Cách đáng tin cậy: để NVXH tự nhập tên
 // thật vào 1 ô riêng (không gửi AI), hệ thống tìm-thay chính xác tên đó trong ghi chép trước
 // khi gửi AI, rồi khôi phục lại khi hiển thị cho NVXH (xem runAnalysis()).
-const REAL_NAME_PLACEHOLDER = '[TRẺ_ẨN_DANH]';
+// Placeholder có ĐÁNH SỐ theo từng tên. Trước đây mọi tên dùng chung một placeholder nên khi
+// NVXH khai nhiều tên (ô này vốn nhận danh sách cách nhau bằng dấu phẩy), lúc khôi phục mọi
+// placeholder đều thành tên đầu tiên — tên mẹ bị ghi thành tên trẻ, tức SAI NGƯỜI trong hồ sơ.
+const REAL_NAME_PLACEHOLDER = '[TRẺ_ẨN_DANH]';        // giữ lại cho hồ sơ cũ đã lưu
+const _namePlaceholder = (i) => i === 0 ? REAL_NAME_PLACEHOLDER : `[TÊN_${i + 1}]`;
+
+// Ranh giới từ có hiểu chữ tiếng Việt. \b của JavaScript chỉ tính ký tự ASCII, nên tên gọi một
+// chữ như "C" khớp luôn vào chữ "c" trong "công nhân" → "làm [TRẺ_ẨN_DANH]ông nhân".
+const _WB = (body) => new RegExp('(?<![\\p{L}\\p{N}])(?:' + body + ')(?![\\p{L}\\p{N}])', 'giu');
+
 function _escRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 function _getRealNames() {
@@ -626,28 +635,32 @@ function maskRealNamesInText(text) {
   if (typeof text !== 'string' || !text) return text;
   const names = _getRealNames();
   let out = text;
-  names.forEach(name => {
+  // Tên dài thay trước, để "Nguyễn Văn Tí" không bị "Tí" ăn mất một phần.
+  names.map((name, i) => ({ name, ph: _namePlaceholder(i) }))
+       .sort((a, b) => b.name.length - a.name.length)
+       .forEach(({ name, ph }) => {
     // 1) Luôn thay nguyên cụm tên đầy đủ (nhiều từ → gần như không trùng từ thông dụng)
-    out = out.replace(new RegExp(_escRegex(name), 'gi'), REAL_NAME_PLACEHOLDER);
+    out = out.replace(_WB(_escRegex(name)), ph);
 
     const parts = name.split(/\s+/).filter(Boolean);
     if (parts.length > 1) {
       // 2) Thay cụm 2 từ cuối (VD "Bích Ngọc") — vẫn đủ dài để an toàn
-      const lastTwo = parts.slice(-2).join(' ');
-      out = out.replace(new RegExp(_escRegex(lastTwo), 'gi'), REAL_NAME_PLACEHOLDER);
+      out = out.replace(_WB(_escRegex(parts.slice(-2).join(' '))), ph);
     }
 
     const callName = parts[parts.length - 1];
     if (!callName) return;
-    // 3) Tên gọi ngắn đứng SAU từ chỉ người ("bé An", "cháu Linh") → luôn thay, giữ lại tiền tố
-    //    để AI vẫn biết đang nói về ai. Áp dụng cho cả tên 2 ký tự ("An") mà cách cũ bỏ sót.
+    // 3) Tên gọi ngắn đứng SAU từ chỉ người ("bé An", "cháu Linh", "mẹ C") → luôn thay, giữ lại
+    //    tiền tố để AI vẫn biết đang nói về ai. Áp dụng cho cả tên 1-2 ký tự.
     out = out.replace(
-      new RegExp('\\b(' + _NAME_PREFIXES + ')(\\s+)' + _escRegex(callName) + '\\b', 'gi'),
-      (_m, p1, sp) => p1 + sp + REAL_NAME_PLACEHOLDER
+      new RegExp('(?<![\\p{L}\\p{N}])(' + _NAME_PREFIXES + ')(\\s+)' + _escRegex(callName)
+                 + '(?![\\p{L}\\p{N}])', 'giu'),
+      (_m, p1, sp) => p1 + sp + ph
     );
-    // 4) Tên gọi đứng một mình → chỉ thay nếu KHÔNG phải từ thông dụng, tránh phá nội dung
-    if (!_COMMON_WORD_NAMES.has(callName.toLowerCase())) {
-      out = out.replace(new RegExp('\\b' + _escRegex(callName) + '\\b', 'gi'), REAL_NAME_PLACEHOLDER);
+    // 4) Tên gọi đứng một mình → chỉ thay khi đủ dài VÀ không phải từ thông dụng. Tên 1 ký tự
+    //    ("C" trong "Trần Thị C") thì tuyệt đối không thay lẻ, vì sẽ phá vỡ vô số từ khác.
+    if (callName.length >= 2 && !_COMMON_WORD_NAMES.has(callName.toLowerCase())) {
+      out = out.replace(_WB(_escRegex(callName)), ph);
     }
   });
   return out;
@@ -739,10 +752,12 @@ function maskIdentityText(text) {
 // tin (tên thật vẫn được lưu — đã mã hóa ở DB từ migration 0012/0013 — chỉ không gửi AI).
 function restoreRealNamesDeep(obj) {
   const names = _getRealNames();
-  const realName = names[0];
-  if (!realName && !_addrFromPlaceholder.size) return obj;
+  if (!names.length && !_addrFromPlaceholder.size) return obj;
   const unmask = (str) => {
-    let v = realName ? str.split(REAL_NAME_PLACEHOLDER).join(realName) : str;
+    // Khôi phục theo ĐÚNG chỉ số của từng tên — trước đây mọi placeholder đều thành names[0].
+    let v = str;
+    names.forEach((nm, i) => { const ph = _namePlaceholder(i);
+      if (v.indexOf(ph) !== -1) v = v.split(ph).join(nm); });
     // Địa chỉ: trả lại nguyên văn số nhà + tên đường đã che khi gửi AI.
     if (v.indexOf('[ĐỊA_CHỈ_') !== -1) {
       _addrFromPlaceholder.forEach((orig, ph) => { if (v.indexOf(ph) !== -1) v = v.split(ph).join(orig); });
@@ -2682,6 +2697,100 @@ async function dlReferralLetter() {
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
     showNotif('✅ Đã soạn công văn chuyển gửi — kiểm tra và sửa trước khi gửi');
   } catch(e) { showNotif('❌ '+e.message,'err'); console.error(e); }
+}
+
+
+// ════════════════════════════════════════════════════════════
+// ĐỌC ẢNH TRANG SỔ TAY — NVXH thực địa ghi sổ giấy
+// ════════════════════════════════════════════════════════════
+// Luồng: ảnh → /api/ocr (OpenAI đọc chữ, KHÔNG phân tích) → văn bản → đi qua đúng bộ che
+// tên/SĐT/địa chỉ của app → Groq phân tích như mọi ghi chép khác. Groq không hề nhận ảnh.
+//
+// Điểm phải nói thẳng với NVXH: ảnh KHÔNG che được thông tin định danh (tên thật và địa chỉ
+// nằm ngay trong nét chữ), nên bước này gửi dữ liệu định danh ra ngoài — khác với mọi bước
+// khác trong app. Vì vậy bắt xác nhận rõ ràng trước lần dùng đầu tiên, và ảnh không lưu ở đâu.
+const _OCR_CONSENT_KEY = 'thaodan_ocr_consent_v1';
+const OCR_MAX_EDGE = 1600;     // thu nhỏ trước khi gửi: đủ nét để đọc chữ, giảm dung lượng & chi phí
+
+function pickNotebookPhoto() {
+  const done = () => document.getElementById('ocr-file')?.click();
+  let agreed = false;
+  try { agreed = localStorage.getItem(_OCR_CONSENT_KEY) === 'yes'; } catch(e) {}
+  if (agreed) return done();
+  showConfirm({
+    icon: '📷',
+    title: 'Đọc ảnh trang sổ tay — đọc kỹ trước khi dùng',
+    body: 'Khác với ghi chép gõ tay, ẢNH KHÔNG THỂ ẩn danh trước khi gửi: tên thật, địa chỉ, số '
+        + 'điện thoại viết trong sổ sẽ được gửi nguyên trạng tới nhà cung cấp AI để đọc chữ.\n\n'
+        + 'Hệ thống chỉ dùng ảnh để chép lại chữ, KHÔNG lưu ảnh ở bất kỳ đâu. Văn bản chép ra sau '
+        + 'đó vẫn được che tên/SĐT/địa chỉ như bình thường trước khi phân tích.\n\n'
+        + 'Nếu trang sổ có thông tin nhận dạng trẻ mà tổ chức chưa cho phép gửi ra ngoài, hãy gõ '
+        + 'lại bằng tay thay vì chụp ảnh.',
+    okText: 'Tôi hiểu, tiếp tục',
+    okClass: 'cmb-ok-orange',
+    onConfirm() { try { localStorage.setItem(_OCR_CONSENT_KEY, 'yes'); } catch(e) {} done(); }
+  });
+}
+
+// Thu nhỏ + nén phía máy NVXH: ảnh điện thoại 4-8MB không gửi được (giới hạn body), mà cũng
+// không cần — 1600px là quá đủ để đọc chữ viết tay.
+function _shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error('Không đọc được tệp ảnh'));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Tệp không phải ảnh hợp lệ'));
+      img.onload = () => {
+        const scale = Math.min(1, OCR_MAX_EDGE / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale), hh = Math.round(img.height * scale);
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = hh;
+        cv.getContext('2d').drawImage(img, 0, 0, w, hh);
+        resolve(cv.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+async function onNotebookPhoto(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  ev.target.value = '';                       // cho phép chọn lại cùng một ảnh
+  if (!file) return;
+
+  const btn = document.getElementById('btn-ocr'), lbl = document.getElementById('ocr-lbl');
+  const restore = () => { if (btn) btn.disabled = false; if (lbl) lbl.textContent = 'Ảnh sổ tay'; };
+  if (btn) btn.disabled = true; if (lbl) lbl.textContent = 'Đang đọc chữ…';
+
+  try {
+    const dataUrl = await _shrinkImage(file);
+    const authHeader = await _authHeader();
+    const res = await fetch('/api/ocr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader },
+      body: JSON.stringify({ image: dataUrl }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || ('Lỗi máy chủ ' + res.status));
+    const text = (out.text || '').trim();
+    if (!text) { showNotif('⚠️ ' + (out.warning || 'Không đọc được chữ nào trong ảnh'), 'warn'); restore(); return; }
+
+    const ta = document.getElementById('dash-notes');
+    const sep = ta.value && !/\n$/.test(ta.value) ? '\n\n' : '';
+    ta.value = ta.value + sep + text;
+    document.getElementById('dash-cc').textContent = ta.value.length + ' ký tự';
+    _stageDataCache[currentStage] = { notes: ta.value };
+    _saveNotesDraft(); window._markUnsaved?.();
+
+    const unread = (text.match(/\[không đọc được\]/g) || []).length;
+    showNotif(`📷 Đã chép ${text.length} ký tự từ ảnh`
+      + (unread ? ` · ${unread} chỗ không đọc được — hãy sửa lại bằng tay` : '')
+      + ' — đọc lại và sửa trước khi phân tích', unread ? 'warn' : 'ok', 6000);
+  } catch (e) {
+    showNotif('❌ ' + e.message, 'err', 6000);
+  } finally { restore(); }
 }
 
 // ════════════════════════════════════════════════════════════
