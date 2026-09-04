@@ -9,6 +9,15 @@ const PRIVACY_PREFIX = `\n\n⚠️ BẢO MẬT DỮ LIỆU TRẺ EM (Luật ATTT
 const LOGO_URL = 'https://raw.githubusercontent.com/nguyenthiencao2020/asif-brand-assets/82a695f369588161b12f90608c17088b84f8427c/ThaoDan_Logo.png';
 const FOOTER_URL = 'https://raw.githubusercontent.com/nguyenthiencao2020/asif-brand-assets/82a695f369588161b12f90608c17088b84f8427c/ThaoDan_Footer.png';
 
+// ── Công tắc tính năng ──────────────────────────────────────────────────────────────────────
+// Đặt false để ẩn nút khỏi giao diện mà KHÔNG xóa code (modal, hàm openDASS/openGenogram và
+// dữ liệu đã lưu vẫn còn nguyên) — bật lại chỉ cần đổi thành true.
+// DASS và Sơ đồ phả hệ đang tạm ẩn để thiết kế lại.
+const FEATURES = {
+  dass: false,      // Thang đo trầm cảm - lo âu - stress (DASS-21/42)
+  genogram: false,  // Sơ đồ phả hệ gia đình
+};
+
 const FORM_NAMES = [
   'HỒ SƠ THÔNG TIN TRẺ', 'PHIẾU TIẾP CẬN', 'PHÚC TRÌNH VÃNG GIA',
   'PHIẾU ĐÁNH GIÁ KHẨN CẤP', 'ĐÁNH GIÁ NHU CẦU', 'KẾ HOẠCH CAN THIỆP',

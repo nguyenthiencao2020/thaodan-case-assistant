@@ -38,6 +38,11 @@ body {
 }
 .hdr, .main-nav, .app-footer-policy { flex-shrink:0; }
 
+/* Thuộc tính [hidden] của HTML mặc định chỉ là display:none ở stylesheet trình duyệt nên bị
+   mọi quy tắc có class (VD .btn-action-icon{display:flex}) ghi đè — phải ép ở đây thì
+   el.hidden = true mới thực sự ẩn. */
+[hidden] { display:none !important; }
+
 /* ══ SCROLLBAR ══ */
 ::-webkit-scrollbar { width:4px; height:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
