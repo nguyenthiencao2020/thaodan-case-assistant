@@ -63,6 +63,9 @@ bình thường nên rất dễ tưởng là đã xong:
 *"Quy trình giai đoạn 2 của Thảo Đàn yêu cầu những gì?"* — trả lời đúng **SLA 72 giờ** và tên biểu
 mẫu bắt buộc là đang chạy; trả lời chung chung là chưa.
 
+RAG cần chuẩn bị những gì, vì sao không có cách thay thế khóa OpenAI, ai chuẩn bị nội dung nào —
+xem [`docs/README.md`](docs/README.md).
+
 Những phần **không** phụ thuộc khóa OpenAI và đang chạy đủ: phân tích ca và chat (Groq), 10 biểu
 mẫu, truy vết nguồn, dấu BẢN NHÁP, ẩn danh, tra cứu tiền lệ, nhập bằng giọng nói, xuất Word/PDF,
 mã hóa hồ sơ.
