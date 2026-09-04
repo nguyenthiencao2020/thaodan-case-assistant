@@ -291,6 +291,9 @@ function _onLogin(user) {
     updateStageUI();
     renderEntriesPanel();
     setTimeout(() => { checkStaleCases(); showNotifications(); }, 2000);
+    // Hỏi khôi phục ghi chép dang dở của phiên trước. PHẢI gọi sau khi đăng nhập — gọi lúc
+    // khởi động thì hộp thoại nằm dưới lớp login (z-index 99999), NVXH không bấm được.
+    setTimeout(_offerRestoreDraft, 600);
   });
 }
 
@@ -338,29 +341,107 @@ async function _upsertCaseEncrypted(cs) {
     console.warn('Encrypt case data error — lưu tạm bằng plaintext:', e);
   }
   const { error } = await _supabase.from('cases_v2').upsert(payload, { onConflict: 'id' });
-  if (error) console.warn('Supabase save error:', error);
+  if (error) {
+    // KHÔNG nuốt lỗi: trước đây chỉ console.warn nên app vẫn báo "Đã lưu" trong khi ghi DB
+    // thất bại (mất mạng, hết phiên, RLS chặn) — NVXH đóng máy là mất trắng công việc.
+    console.warn('Supabase save error:', error);
+    return { ok: false, error: error.message || String(error) };
+  }
+  return { ok: true };
 }
 
+// ── Bản nháp ghi chép, lưu ngay xuống máy khi NVXH gõ ──────────────────────────────────────
+// Trước đây ghi chép đang gõ dở không có lớp bảo vệ nào: đóng tab không cảnh báo (điều kiện cũ
+// cần _unsaved && D), tự lưu 60s không chạy (cần cả D lẫn curCaseId), và hết phiên 30 phút thì
+// logoutUser() xóa trắng ô nhập. Gõ biên bản 20 phút rồi bị gọi đi là mất sạch.
+// Nháp chỉ nằm trong trình duyệt của chính NVXH (không gửi đi đâu), bị xóa ngay khi ghi DB
+// thành công hoặc khi NVXH tự bỏ.
+const _DRAFT_KEY = 'thaodan_notes_draft_v1';
+
+function _saveNotesDraft() {
+  try {
+    const el = document.getElementById('dash-notes');
+    const notes = el ? el.value : '';
+    if (!notes.trim()) { localStorage.removeItem(_DRAFT_KEY); return; }
+    localStorage.setItem(_DRAFT_KEY, JSON.stringify({
+      notes, stage: currentStage, caseId: curCaseId || null,
+      caseName: (curCaseId && _cases[curCaseId]?.name) || '', ts: new Date().toISOString()
+    }));
+  } catch(e) { /* trình duyệt chặn localStorage (chế độ ẩn danh) — bỏ qua, không chặn thao tác */ }
+}
+function _clearNotesDraft() { try { localStorage.removeItem(_DRAFT_KEY); } catch(e) {} }
+function _readNotesDraft() {
+  try { const raw = localStorage.getItem(_DRAFT_KEY); return raw ? JSON.parse(raw) : null; } catch(e) { return null; }
+}
+
+// Hỏi khôi phục nếu lần trước thoát giữa chừng mà ô nhập hiện đang trống.
+function _offerRestoreDraft() {
+  const d = _readNotesDraft();
+  const el = document.getElementById('dash-notes');
+  if (!d || !d.notes || !el || el.value.trim()) return;
+  const when = d.ts ? new Date(d.ts).toLocaleString('vi-VN') : '';
+  showConfirm({
+    icon: '📝',
+    title: 'Khôi phục ghi chép chưa lưu?',
+    body: `Lần trước bạn đang gõ ${d.notes.length} ký tự${d.caseName ? ' cho ca "' + d.caseName + '"' : ''} `
+        + `ở giai đoạn ${d.stage || 1} nhưng chưa lưu.\n\nLúc: ${when}\n\nKhôi phục lại nội dung đó?`,
+    okText: 'Khôi phục',
+    okClass: 'cmb-ok-blue',
+    onConfirm() {
+      el.value = d.notes;
+      const cc = document.getElementById('dash-cc');
+      if (cc) cc.textContent = d.notes.length + ' ký tự';
+      _stageDataCache[d.stage || currentStage] = { notes: d.notes };
+      showNotif('📝 Đã khôi phục ghi chép chưa lưu');
+    },
+    onCancel() { _clearNotesDraft(); }
+  });
+}
+
+// Ảnh chụp nội dung từng ca ở lần ghi DB thành công gần nhất. Trước đây mỗi lần bấm Lưu là
+// ghi lại TOÀN BỘ ca đang có trong bộ nhớ — đo được 200 ca = 400 lệnh mạng cho một cú bấm,
+// chậm dần theo thời gian dùng và có thể ghi đè ngược thay đổi từ máy khác.
+const _savedSnapshot = new Map();
+
+// Đánh dấu dữ liệu vừa tải từ DB là "đã đồng bộ" để lần lưu đầu không ghi lại tất cả.
+function _seedSavedSnapshot() {
+  _savedSnapshot.clear();
+  Object.values(_cases).forEach(cs => { try { _savedSnapshot.set(cs.id, JSON.stringify(cs)); } catch(e) {} });
+}
+
+function _prepOwner(cs) {
+  if (isAdmin() && cs._ownerId && cs._ownerId !== _currentUser.id) return false;
+  if (!cs._ownerId) { cs._ownerId = _currentUser.id; cs._ownerEmail = _currentUser.email; }
+  return true;
+}
+
+// Trả Promise<{ok, failed:[{id,error}]}> — chỗ gọi có thể await để báo đúng cho NVXH.
 function saveCases(c) {
   _cases = JSON.parse(JSON.stringify(c));
   updateStaleBadge();
-  if (_currentUser) {
-    Object.values(_cases).forEach(cs => {
-      if (isAdmin() && cs._ownerId && cs._ownerId !== _currentUser.id) return;
-      if (!cs._ownerId) { cs._ownerId = _currentUser.id; cs._ownerEmail = _currentUser.email; }
-      _upsertCaseEncrypted(cs);
-    });
-  }
+  if (!_currentUser) return Promise.resolve({ ok: true, failed: [] });
+  const jobs = [];
+  Object.values(_cases).forEach(cs => {
+    if (!_prepOwner(cs)) return;
+    let sig; try { sig = JSON.stringify(cs); } catch(e) { sig = null; }
+    if (sig && _savedSnapshot.get(cs.id) === sig) return; // không đổi → khỏi ghi lại
+    jobs.push(_upsertCaseEncrypted(cs).then(r => {
+      if (r.ok && sig) _savedSnapshot.set(cs.id, sig); else _savedSnapshot.delete(cs.id);
+      return { id: cs.id, ...r };
+    }));
+  });
+  return Promise.all(jobs).then(rs => ({ ok: rs.every(r => r.ok), failed: rs.filter(r => !r.ok) }));
 }
 
 function saveOneCase(caseId) {
   const cs = _cases[caseId];
-  if (!cs) return;
-  if (isAdmin() && cs._ownerId && cs._ownerId !== _currentUser.id) return;
-  if (_currentUser) {
-    if (!cs._ownerId) { cs._ownerId = _currentUser.id; cs._ownerEmail = _currentUser.email; }
-    _upsertCaseEncrypted(cs);
-  }
+  if (!cs || !_currentUser) return Promise.resolve({ ok: true, failed: [] });
+  if (!_prepOwner(cs)) return Promise.resolve({ ok: true, failed: [] });
+  let sig; try { sig = JSON.stringify(cs); } catch(e) { sig = null; }
+  return _upsertCaseEncrypted(cs).then(r => {
+    if (r.ok && sig) _savedSnapshot.set(cs.id, sig); else _savedSnapshot.delete(cs.id);
+    return { ok: r.ok, failed: r.ok ? [] : [{ id: caseId, error: r.error }] };
+  });
 }
 
 async function initStorage() {
@@ -401,6 +482,7 @@ async function initStorage() {
         }
       }
     }
+    _seedSavedSnapshot();
   } catch(e) { console.error('[initStorage] Supabase error:', e?.message || e); }
 }
 
@@ -3002,7 +3084,7 @@ function _logEdit(source, stage) {
   _cases = cases;
 }
 
-function saveCaseNow() {
+async function saveCaseNow() {
   if (!D && !document.getElementById('dash-notes').value.trim()) { showNotif('⚠️ Chưa có dữ liệu','warn'); return; }
   _commitDraft(); // lưu ca draft thành thật nếu chưa lưu
   const cases = loadCases();
@@ -3032,11 +3114,31 @@ function saveCaseNow() {
   // ★ Mirror stageData (KHÔNG push history — chỉ "Phân tích" mới tạo phiên bản)
   _flushStage(currentStage);
   cases[curCaseId] = loadCases()[curCaseId] || c;
-  saveCases(cases);
+
+  const res = await saveCases(cases);
+
   updateHeader(); renderCaseList(); updateCasesCount();
   renderEntriesPanel();
   renderStageHistory();
-  showNotif('💾 Đã lưu: '+c.name);
+
+  if (res.ok) {
+    _clearNotesDraft();          // ghi DB xong mới bỏ bản nháp cục bộ
+    showNotif('💾 Đã lưu: '+c.name);
+  } else {
+    // Chỉ báo "đã lưu" khi DB xác nhận. Dữ liệu vẫn còn trong bộ nhớ và trong bản nháp
+    // cục bộ, nên bấm "Thử lại" là lưu được ngay khi có mạng lại.
+    console.warn('Lưu thất bại:', res.failed);
+    showConfirm({
+      icon: '⚠️',
+      title: 'CHƯA lưu được lên máy chủ',
+      body: `Ca "${c.name}" mới chỉ nằm trên máy bạn, chưa ghi được lên hệ thống.\n\n`
+          + `Lý do: ${res.failed[0]?.error || 'không rõ'}\n\n`
+          + `Đừng đóng tab. Kiểm tra kết nối mạng rồi bấm "Thử lại".`,
+      okText: 'Thử lại',
+      okClass: 'cmb-ok-red',
+      onConfirm() { saveCaseNow(); }
+    });
+  }
 }
 
 function updateHeader() {
@@ -3408,8 +3510,9 @@ function loadCaseIntoApp(id) {
 
 // ── CUSTOM CONFIRM MODAL ──
 let _confirmCb = null;
-function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', okClass='cmb-ok-red', onConfirm=null}={}) {
-  _confirmCb = onConfirm;
+let _cancelCb = null;
+function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', okClass='cmb-ok-red', onConfirm=null, onCancel=null}={}) {
+  _confirmCb = onConfirm; _cancelCb = onCancel;
   document.getElementById('cmb-icon').textContent = icon;
   document.getElementById('cmb-title').textContent = title;
   document.getElementById('cmb-body').textContent = body;
@@ -3421,12 +3524,13 @@ function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', ok
 }
 function _doConfirm() {
   document.getElementById('confirm-overlay').classList.remove('show');
-  const cb = _confirmCb; _confirmCb = null;
+  const cb = _confirmCb; _confirmCb = null; _cancelCb = null;
   if (cb) cb();
 }
 function _cancelConfirm() {
   document.getElementById('confirm-overlay').classList.remove('show');
-  _confirmCb = null;
+  const cb = _cancelCb; _confirmCb = null; _cancelCb = null;
+  if (cb) cb();
 }
 
 // Popup cảnh báo chủ động ngay khi AI phát hiện rủi ro Cao / tình huống khẩn cấp —
@@ -5434,6 +5538,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dash-cc').textContent = e.target.value.length+' ký tự';
     // ★ Mirror draft notes vào _stageDataCache[currentStage] để không mất khi chuyển GĐ
     _stageDataCache[currentStage] = { notes: e.target.value };
+    _saveNotesDraft();              // giữ bản nháp trên máy, chống mất khi đóng tab/hết phiên
+    window._markUnsaved?.();        // để cảnh báo đóng tab cũng bắt được lúc mới gõ, chưa phân tích
   });
 
   function fixHeights() {
@@ -5447,6 +5553,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   fixHeights();
   window.addEventListener('resize', fixHeights);
+
 
   // Ẩn các nút của tính năng đang tắt (xem FEATURES trong config.js). Chỉ ẩn nút — modal và
   // hàm xử lý vẫn giữ nguyên để bật lại không phải viết lại gì.
@@ -5464,7 +5571,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Cảnh báo khi đóng tab có thay đổi chưa lưu
   window.addEventListener('beforeunload', (e) => {
-    if (_unsaved && D) { e.preventDefault(); e.returnValue = ''; }
+    // Điều kiện cũ (_unsaved && D) bỏ sót đúng ca hay gặp nhất: vừa gõ ghi chép, chưa bấm
+    // Phân tích nên D còn null → đóng tab không hề cảnh báo.
+    const typing = (document.getElementById('dash-notes')?.value || '').trim().length > 0;
+    if ((_unsaved && D) || typing) { e.preventDefault(); e.returnValue = ''; }
   });
 
   // Ctrl+S để lưu
