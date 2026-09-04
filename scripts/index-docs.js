@@ -18,10 +18,25 @@ const DOCS_DIR = join(ROOT, 'docs');
 const DRY_RUN = process.argv.includes('--dry-run');
 
 const { SUPABASE_URL, SUPABASE_SERVICE_KEY, OPENAI_API_KEY } = process.env;
-if (!DRY_RUN && (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !OPENAI_API_KEY)) {
-  console.error('❌ Thiếu biến môi trường: SUPABASE_URL, SUPABASE_SERVICE_KEY, OPENAI_API_KEY');
-  console.error('   (chạy "node scripts/index-docs.js --dry-run" để xem trước, không cần key)');
-  process.exit(1);
+// Chỉ ra ĐÚNG biến nào thiếu. Thông báo cũ liệt kê cả ba bất kể thiếu cái nào, nên khi Action
+// đỏ thì không biết mình quên khai secret nào trong ba.
+if (!DRY_RUN) {
+  const missing = Object.entries({ SUPABASE_URL, SUPABASE_SERVICE_KEY, OPENAI_API_KEY })
+    .filter(([, v]) => !v).map(([k]) => k);
+  if (missing.length) {
+    console.error(`❌ Thiếu ${missing.length}/3 biến môi trường: ${missing.join(', ')}`);
+    console.error(`   Đã có: ${['SUPABASE_URL','SUPABASE_SERVICE_KEY','OPENAI_API_KEY']
+      .filter(k => !missing.includes(k)).join(', ') || '(không có biến nào)'}`);
+    if (process.env.GITHUB_ACTIONS) {
+      console.error('');
+      console.error('   Đang chạy trong GitHub Actions → khai ở GitHub, KHÔNG phải Vercel:');
+      console.error('   Settings → Secrets and variables → Actions → New repository secret');
+      console.error('   (khai trên Vercel chỉ dùng cho app đọc dữ liệu, Action không thấy được)');
+    } else {
+      console.error('   (chạy "node scripts/index-docs.js --dry-run" để xem trước, không cần key)');
+    }
+    process.exit(1);
+  }
 }
 
 const supabase = DRY_RUN ? null : createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
