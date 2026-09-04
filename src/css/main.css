@@ -38,6 +38,11 @@ body {
 }
 .hdr, .main-nav, .app-footer-policy { flex-shrink:0; }
 
+/* Thuộc tính [hidden] của HTML mặc định chỉ là display:none ở stylesheet trình duyệt nên bị
+   mọi quy tắc có class (VD .btn-action-icon{display:flex}) ghi đè — phải ép ở đây thì
+   el.hidden = true mới thực sự ẩn. */
+[hidden] { display:none !important; }
+
 /* ══ SCROLLBAR ══ */
 ::-webkit-scrollbar { width:4px; height:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
@@ -287,6 +292,18 @@ body {
 .btn-action-icon span { font-size:8.5px; font-weight:700; color:var(--t3); letter-spacing:.3px; }
 .btn-action-icon:hover { background:#f8fafc; border-color:#cbd5e1; }
 .btn-action-icon:disabled { opacity:.4; cursor:not-allowed; }
+
+/* Chỉ còn 1 nút phụ (xem applyFeatureFlags): trải nút phụ thành nút chữ ngang và không để nút
+   chính chiếm hết chiều ngang, để hàng nút vẫn cân đối. */
+.action-bar-compact .btn-analyze { flex:2 1 0; }
+.action-bar-compact .btn-action-icon {
+  width:auto; flex:1 1 0; max-width:170px;
+  flex-direction:row; gap:7px; padding:0 16px;
+}
+.action-bar-compact .btn-action-icon span {
+  font-size:12px; font-weight:700; color:var(--navy); letter-spacing:0;
+}
+.action-bar-compact .btn-action-icon:disabled span { color:var(--t3); }
 .entries-toggle { display:none; }
 #entries-panel { display:none; }
 

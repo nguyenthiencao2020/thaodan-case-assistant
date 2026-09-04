@@ -2398,6 +2398,21 @@ async function sendChat() {
 // ════════════════════════════════════════════════════════════
 // NAVIGATION
 // ════════════════════════════════════════════════════════════
+// Ẩn/hiện nút theo FEATURES. Gọi lúc khởi động; đổi cờ trong config.js là đủ để bật lại.
+function applyFeatureFlags() {
+  const map = { dass: 'btn-dass', genogram: 'btn-genogram' };
+  Object.entries(map).forEach(([feat, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = !(typeof FEATURES === 'object' && FEATURES[feat]);
+  });
+  // Hàng nút được thiết kế cho 1 nút chính + 3 ô vuông nhỏ. Khi tắt bớt tính năng, ô vuông 60px
+  // còn lại trông lạc lõng cạnh nút chính bị kéo dài hết cỡ — đổi sang dạng nút chữ cho cân.
+  // Tự đo lại nên bật/tắt cờ trong config.js là giao diện tự chỉnh, không phải sửa CSS.
+  const bar = document.getElementById('action-bar');
+  if (bar) bar.classList.toggle('action-bar-compact',
+    bar.querySelectorAll('.btn-action-icon:not([hidden])').length <= 1);
+}
+
 function switchMain(tab) {
   curMain = tab;
   ['dash','forms','cases','analysis'].forEach(t => {
@@ -5432,6 +5447,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   fixHeights();
   window.addEventListener('resize', fixHeights);
+
+  // Ẩn các nút của tính năng đang tắt (xem FEATURES trong config.js). Chỉ ẩn nút — modal và
+  // hàm xử lý vẫn giữ nguyên để bật lại không phải viết lại gì.
+  applyFeatureFlags();
 
   // Auto-save mỗi 60 giây (nếu có data)
   let _unsaved = false;
