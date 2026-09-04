@@ -1,61 +1,57 @@
-# Tài liệu học cho Thảo Đàn AI
+# Kho tri thức của Thảo Đàn (RAG)
 
-Thư mục này chứa các tài liệu nghiệp vụ CTXH mà AI sẽ học để hỗ trợ NVXH tốt hơn.
+Mọi file `.md` / `.txt` trong thư mục này được nạp vào Supabase pgvector và
+**truy xuất tự động mỗi lần AI phân tích ca**. Đây là cách biến AI từ "biết
+công tác xã hội nói chung" thành "biết cách Thảo Đàn làm".
 
-## Cách thêm tài liệu
+Nếu thư mục này trống hoặc chưa nạp, AI vẫn trả lời — nhưng bằng kiến thức
+chung của internet, không phải quy trình và nguồn lực thật của tổ chức.
 
-1. Tạo file `.md` hoặc `.txt` trong thư mục này
-2. Đặt tên rõ ràng: `luat-tre-em-2016.md`, `quy-trinh-can-thiep.md`, v.v.
-3. Push lên GitHub — GitHub Actions sẽ tự động index tài liệu vào Supabase
+## Cấu trúc
 
-## Cấu trúc tài liệu gợi ý
+| Đường dẫn | Nội dung | Trạng thái |
+|---|---|---|
+| `quy-trinh-ctxh-co-ban.md` | Quy trình 5 giai đoạn, triết lý, ma trận rủi ro | ✅ đã có |
+| `sop-quan-ly-ca-ctxh-v1.md` | SOP từng giai đoạn, SLA, RACI, playbook | ✅ đã có |
+| `nguon-luc/danh-ba-nguon-luc.md` | Trường, bệnh viện, quỹ, đầu mối khẩn cấp **có thật** | ⬜ khung mẫu, chờ điền |
+| `phap-ly/can-cu-phap-ly.md` | Điều khoản hay viện dẫn, ngưỡng can thiệp | ⬜ khung mẫu, chờ điền |
+| `ca-mau/` | Ca đã đóng, đã ẩn danh, kèm kết quả thật | ⬜ chưa có ca nào |
 
-```
-docs/
-├── luat-chinh-sach/
-│   ├── luat-tre-em-2016.md
-│   └── nghi-dinh-bao-ve-tre-em.md
-├── quy-trinh-nvxh/
-│   ├── sop-quan-ly-ca-ctxh-v1.md
-│   ├── quy-trinh-tiep-can.md
-│   ├── quy-trinh-vang-gia.md
-│   └── quy-trinh-ket-thuc-ca.md
-├── cong-cu-danh-gia/
-│   ├── ma-tran-rui-ro.md
-│   └── eco-map-genogram.md
-└── tai-lieu-dao-tao/
-    └── phu-mau-hoa.md
-```
+File nào còn dòng `<!-- SKIP-INDEX -->` sẽ **không** được nạp — để khung mẫu
+chưa điền không làm nhiễu kho tri thức. Điền xong thì xóa dòng đó.
 
-## Định dạng tài liệu
+## Nạp vào kho
 
-Mỗi file nên có header rõ ràng:
+```bash
+# 1. Xem trước cách cắt mẩu — KHÔNG cần API key, KHÔNG ghi database
+node scripts/index-docs.js --dry-run
 
-```markdown
-# Tên tài liệu
-
-**Nguồn:** ...
-**Phiên bản:** vX.Y
-**Ngày hiệu lực:** dd/mm/yyyy
-**Người phê duyệt:** ...
-**Ngày rà soát kế tiếp:** dd/mm/yyyy
-**Tags:** luat, quy-trinh, danh-gia, ...
-
-## Nội dung
-...
+# 2. Nạp thật (cần 3 biến môi trường)
+export SUPABASE_URL=...
+export SUPABASE_SERVICE_KEY=...      # service_role key, KHÔNG phải anon key
+export OPENAI_API_KEY=...            # dùng cho text-embedding-3-small
+node scripts/index-docs.js
 ```
 
-## Lưu ý bảo mật
+Chạy lại bất cứ lúc nào — mỗi file được xóa và nạp lại theo `source_file`,
+không sinh bản trùng.
 
-- KHÔNG đưa thông tin cá nhân của trẻ em vào đây
-- Chỉ đưa tài liệu nghiệp vụ, quy trình, luật pháp
-- Tài liệu được ẩn danh hóa trước khi gửi AI
+## Để tính năng hoạt động trên bản chạy thật
 
+`api/rag.js` cần 3 biến môi trường trên **được cấu hình trong Vercel**.
+Nếu thiếu bất kỳ biến nào, endpoint trả về rỗng một cách âm thầm và AI mất
+hoàn toàn phần tri thức tổ chức — không có thông báo lỗi nào.
 
-## Quy tắc phiên bản tài liệu
+Kiểm tra nhanh: phân tích một ca rồi hỏi trong khung chat *"quy trình giai
+đoạn 2 của Thảo Đàn yêu cầu gì?"*. Nếu AI trả lời đúng SLA 72h và các biểu
+mẫu bắt buộc → RAG đang chạy. Nếu trả lời chung chung → chưa chạy.
 
-- Major (`v2.0`): thay đổi nội dung nghiệp vụ cốt lõi hoặc quy trình.
-- Minor (`v1.1`): bổ sung nội dung vận hành (checklist/KPI/playbook) không đổi khung lớn.
-- Patch (`v1.0.1`): sửa lỗi trình bày/chính tả hoặc làm rõ câu chữ.
+## Bảo mật — đọc trước khi thêm file
 
-Mỗi lần cập nhật tài liệu nên thêm bảng `Lịch sử thay đổi` ở cuối tài liệu để phục vụ audit.
+Nội dung trong thư mục này **được gửi cho nhà cung cấp AI ở nước ngoài** khi
+truy xuất. Vì vậy:
+
+- ❌ Không đưa hồ sơ trẻ chưa ẩn danh vào đây
+- ❌ Không đưa tên thật, số nhà, số điện thoại của thân chủ
+- ✅ Được đưa đầu mối dịch vụ công khai (trường, bệnh viện, quỹ)
+- ✅ Được đưa ca mẫu **đã ẩn danh** và có xác nhận của giám sát ca

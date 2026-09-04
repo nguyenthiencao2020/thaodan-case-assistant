@@ -99,14 +99,21 @@
         </div>
         <div id="tpl-panel" class="tpl-panel" style="display:none;"></div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-          <input type="text" id="dash-real-name" class="input-ta" style="min-height:unset;height:32px;padding:5px 10px;font-size:11.5px;" placeholder="🔒 Tên thật của trẻ (tùy chọn) — hệ thống tự ẩn đi trước khi gửi AI phân tích, không lưu lộ ra ngoài">
+          <input type="text" id="dash-real-name" class="input-ta" style="min-height:unset;height:32px;padding:5px 10px;font-size:11.5px;" placeholder="🔒 Tên thật của trẻ và người thân (tùy chọn, cách nhau bằng dấu phẩy) — hệ thống tự ẩn đi trước khi gửi AI, hồ sơ vẫn lưu tên thật">
         </div>
         <textarea id="dash-notes" class="input-ta" placeholder="Paste ghi chép tiếp cận ban đầu...&#10;&#10;AI sẽ trích xuất Form 0 và Form 1. Nếu ghi chép có tên thật, nhập vào ô phía trên để hệ thống tự ẩn danh trước khi gửi AI."></textarea>
-        <div class="input-footer"><span class="char-count" id="dash-cc">0 ký tự</span><span class="case-label" id="dash-case-label"></span></div>
+        <div class="input-footer">
+          <span class="char-count" id="dash-cc">0 ký tự</span>
+          <button id="btn-mic" class="btn-mic" onclick="toggleDictation()" title="Đọc ghi chép bằng giọng nói — chữ sẽ được thêm vào cuối ô ghi chép">🎤 <span id="mic-lbl">Đọc</span></button>
+          <button id="btn-ocr" class="btn-mic" onclick="pickNotebookPhoto()" title="Chụp hoặc chọn ảnh trang sổ tay — hệ thống đọc chữ và thêm vào ô ghi chép">📷 <span id="ocr-lbl">Ảnh sổ tay</span></button>
+          <input type="file" id="ocr-file" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none" onchange="onNotebookPhoto(event)">
+          <span class="case-label" id="dash-case-label"></span>
+        </div>
       </div>
       <div class="action-bar" id="action-bar">
         <button class="btn-analyze" id="btn-analyze" onclick="runAnalysis()">🔬 Phân tích Tiếp cận</button>
         <button class="btn-action-icon" onclick="fillForms()" id="btn-fill" disabled title="Xem biểu mẫu">📋<span>Form</span></button>
+        <button class="btn-action-icon" onclick="openPrecedents()" id="btn-precedent" title="Tìm ca cũ có dấu hiệu tương tự — xem đã can thiệp thế nào, kết quả ra sao">🗂<span>Tiền lệ</span></button>
         <button class="btn-action-icon btn-dass" onclick="openDASS()" id="btn-dass" title="Đánh giá trầm cảm, lo âu, stress (DASS-21/42)">🧠<span>DASS</span></button>
         <button class="btn-action-icon" onclick="openGenogram()" id="btn-genogram" title="Sơ đồ gia đình (genogram)">🧬<span>Sơ đồ</span></button>
       </div>
@@ -216,6 +223,17 @@
       <button onclick="closeGenogram()" style="background:none;border:none;font-size:20px;color:var(--t2);cursor:pointer;padding:0 4px;line-height:1;">✕</button>
     </div>
     <div id="genogram-body" class="genogram-body"></div>
+  </div>
+</div>
+
+<!-- ══ TIỀN LỆ MODAL — tra cứu ca cũ tương tự ══ -->
+<div id="precedent-overlay" class="dass-overlay" style="display:none" onclick="if(event.target===this)closePrecedents()">
+  <div class="dass-modal">
+    <div class="dass-modal-hd">
+      <span class="dass-modal-title">🗂 Ca tương tự đã xử lý</span>
+      <button class="dass-close" onclick="closePrecedents()">✕</button>
+    </div>
+    <div id="precedent-body" class="dass-body"></div>
   </div>
 </div>
 
