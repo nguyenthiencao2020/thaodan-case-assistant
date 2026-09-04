@@ -140,6 +140,8 @@
   <div class="forms-tab" id="forms-tab">
     <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleFormSidebar()">☰</button>
     <div class="forms-sidebar" id="forms-sidebar">
+      <!-- Danh sách biểu mẫu cuộn riêng; nút "Tải form đã chọn" ghim đáy sidebar -->
+      <div class="forms-list">
       <div class="stage-group"><div class="stage-hd">Tiếp cận ban đầu</div><div class="stage-group-bar"></div>
         <div class="form-item" data-fi="0" onclick="showForm(0)"><input type="checkbox" onclick="event.stopPropagation()"><div class="fi-ico">📋</div><div class="fi-lbl"><span class="fi-num">Form 0</span>Hồ sơ xã hội</div></div>
         <div class="form-item" data-fi="1" onclick="showForm(1)"><input type="checkbox" onclick="event.stopPropagation()"><div class="fi-ico">👤</div><div class="fi-lbl"><span class="fi-num">Form 1</span>Phiếu tiếp cận</div></div>
@@ -158,6 +160,7 @@
         <div class="form-item" data-fi="8" onclick="showForm(8)"><input type="checkbox" onclick="event.stopPropagation()"><div class="fi-ico">↗️</div><div class="fi-lbl"><span class="fi-num">Form 7</span>Phiếu chuyển gửi</div></div>
         <div class="form-item" data-fi="9" onclick="showForm(9)"><input type="checkbox" onclick="event.stopPropagation()"><div class="fi-ico">✅</div><div class="fi-lbl"><span class="fi-num">Form 8</span>Phiếu kết thúc ca</div></div>
         <div class="form-item" data-fi="10" onclick="showForm(10)"><input type="checkbox" onclick="event.stopPropagation()"><div class="fi-ico">📑</div><div class="fi-lbl"><span class="fi-num">Tổng hợp</span>Báo cáo QLTH</div></div>
+      </div>
       </div>
       <div class="forms-export">
         <button class="btn-export-all" onclick="exportSelected()">📄 Tải form đã chọn</button>

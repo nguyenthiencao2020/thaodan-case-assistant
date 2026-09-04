@@ -571,10 +571,85 @@ function maskRealNamesInText(text) {
   return out;
 }
 
-// Ẩn danh toàn diện (số điện thoại/CCCD/email + tên thật) — dùng thay maskPhonesInText ở mọi
-// nơi gửi ghi chép/tin nhắn tự do cho AI.
+
+// ── Che số nhà + tên đường trong ghi chép tự do trước khi gửi AI ──────────────────────────
+// GIỮ LẠI phường/quận/xã/huyện/tỉnh: AI cần biết địa bàn để đánh giá môi trường sống và nguồn
+// lực tại chỗ, nhưng không cần biết nhà cụ thể ở đâu. Khác với số điện thoại (thay '***', mất
+// hẳn), địa chỉ dùng placeholder có đánh số để khôi phục NGUYÊN VĂN vào biểu mẫu sau khi AI trả
+// kết quả — hồ sơ nội bộ vẫn đủ địa chỉ, chỉ Groq là không thấy.
+//
+// Nhận diện theo ngữ cảnh chứ không bắt mọi "số + Chữ Hoa", để không phá nội dung nghiệp vụ:
+//   ✓ có từ khóa đường/hẻm/ngõ/phố/kiệt  → "45 đường Trần Hưng Đạo"
+//   ✓ có từ dẫn địa chỉ ngay trước số nhà → "ở 12 Lê Lợi", "địa chỉ 23/4 Nguyễn Trãi"
+//   ✗ "bé 12 tuổi", "ngày 05/09 Mẹ hợp tác", "đi học 2 tuần" → giữ nguyên
+const _addrToPlaceholder = new Map();   // nguyên văn → [ĐỊA_CHỈ_n]
+const _addrFromPlaceholder = new Map(); // [ĐỊA_CHỈ_n] → nguyên văn
+
+const _ADDR_STREET_KW = /^(?:đường|đ|phố|hẻm|hem|ngõ|ngo|ngách|kiệt)\.?$/i;
+const _ADDR_ADMIN_KW  = /^(?:p|q|x|h|tp|tt|phường|quận|xã|huyện|thị|thành|tỉnh|khu|kp|ấp|thôn|tổ)\.?\s*\d*$/i;
+const _ADDR_CTX_KW    = /^(?:ở|tại|ngụ|trú|chỉ|nhà|sống)$/i; // "địa chỉ" → xét từ cuối là "chỉ"
+const _ADDR_PREFIX_KW = /^(?:số|nhà)$/i;
+const _ADDR_HOUSE_NO  = /^\d+(?:[\/\-]\d+)*[A-Za-z]?$/;
+
+function _addrBare(w) { return String(w||'').replace(/[.,;:!?)\]]+$/, '').replace(/^[(\[]+/, ''); }
+function _addrIsCap(w) {
+  const c = String(w||'').replace(/^[^\p{L}\d]+/u, '')[0];
+  return !!c && c !== c.toLowerCase();
+}
+
+function maskAddressInText(text) {
+  if (typeof text !== 'string' || !text) return text;
+  const parts = text.split(/(\s+)/);
+  const idx = []; parts.forEach((p, i) => { if (p.trim()) idx.push(i); });
+  const tok = j => (j >= 0 && j < idx.length) ? parts[idx[j]] : '';
+  const out = parts.slice();
+
+  // Nuốt tiếp các từ còn thuộc tên đường (chữ hoa hoặc số), dừng ở phường/quận hoặc từ thường.
+  const eat = (from) => {
+    let end = from - 1, k = from, taken = 0;
+    while (k < idx.length && taken < 4) {
+      const w = _addrBare(tok(k));
+      if (!w || _ADDR_ADMIN_KW.test(w)) break;
+      if (_addrIsCap(w) || _ADDR_HOUSE_NO.test(w)) { end = k; k++; taken++; } else break;
+    }
+    return end;
+  };
+
+  let j = 0;
+  while (j < idx.length) {
+    const t = _addrBare(tok(j));
+    let start = -1, end = -1;
+
+    if (_ADDR_STREET_KW.test(t)) {
+      start = j; end = Math.max(j, eat(j + 1));
+      if (start > 0 && _ADDR_HOUSE_NO.test(_addrBare(tok(start - 1)))) start--;
+    } else if (_ADDR_HOUSE_NO.test(t) && j > 0 && _ADDR_CTX_KW.test(_addrBare(tok(j - 1)))) {
+      const nxt = _addrBare(tok(j + 1));
+      if (nxt && _addrIsCap(nxt) && !_ADDR_ADMIN_KW.test(nxt)) { start = j; end = eat(j + 1); }
+    }
+    if (start < 0) { j++; continue; }
+
+    while (start > 0 && _ADDR_PREFIX_KW.test(_addrBare(tok(start - 1)))) start--;
+
+    const orig = parts.slice(idx[start], idx[end] + 1).join('');
+    const tail = (orig.match(/[^\p{L}\d\]]+$/u) || [''])[0];   // giữ dấu phẩy/chấm cuối cụm
+    const kept = tail ? orig.slice(0, orig.length - tail.length) : orig;
+    let ph = _addrToPlaceholder.get(kept);
+    if (!ph) {
+      ph = '[ĐỊA_CHỈ_' + (_addrToPlaceholder.size + 1) + ']';
+      _addrToPlaceholder.set(kept, ph); _addrFromPlaceholder.set(ph, kept);
+    }
+    out[idx[start]] = ph + tail;
+    for (let m = idx[start] + 1; m <= idx[end]; m++) out[m] = '';
+    j = end + 1;
+  }
+  return out.join('');
+}
+
+// Ẩn danh toàn diện (số điện thoại/CCCD/email + tên thật + số nhà/tên đường) — dùng thay
+// maskPhonesInText ở mọi nơi gửi ghi chép/tin nhắn tự do cho AI.
 function maskIdentityText(text) {
-  return maskRealNamesInText(maskPhonesInText(text));
+  return maskAddressInText(maskRealNamesInText(maskPhonesInText(text)));
 }
 
 // Khôi phục tên thật vào dữ liệu AI vừa trích xuất — AI thấy [TRẺ_ẨN_DANH] trong ghi chép nên
@@ -582,10 +657,18 @@ function maskIdentityText(text) {
 // tin (tên thật vẫn được lưu — đã mã hóa ở DB từ migration 0012/0013 — chỉ không gửi AI).
 function restoreRealNamesDeep(obj) {
   const names = _getRealNames();
-  if (!names.length) return obj;
   const realName = names[0];
+  if (!realName && !_addrFromPlaceholder.size) return obj;
+  const unmask = (str) => {
+    let v = realName ? str.split(REAL_NAME_PLACEHOLDER).join(realName) : str;
+    // Địa chỉ: trả lại nguyên văn số nhà + tên đường đã che khi gửi AI.
+    if (v.indexOf('[ĐỊA_CHỈ_') !== -1) {
+      _addrFromPlaceholder.forEach((orig, ph) => { if (v.indexOf(ph) !== -1) v = v.split(ph).join(orig); });
+    }
+    return v;
+  };
   const walk = (o) => {
-    if (typeof o === 'string') return o.split(REAL_NAME_PLACEHOLDER).join(realName);
+    if (typeof o === 'string') return unmask(o);
     if (Array.isArray(o)) return o.map(walk);
     if (o && typeof o === 'object') { for (const k of Object.keys(o)) o[k] = walk(o[k]); return o; }
     return o;

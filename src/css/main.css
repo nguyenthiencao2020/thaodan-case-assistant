@@ -370,7 +370,7 @@ body {
   grid-template-columns:0px 1fr;
 }
 .forms-sidebar {
-  background:var(--navy3); overflow-y:auto; overflow-x:hidden;
+  background:var(--navy3); overflow:hidden;
   display:flex; flex-direction:column;
   transition:opacity .2s ease; min-width:0;
   grid-column:1;
@@ -407,7 +407,10 @@ body {
 .fi-lbl { flex:1; line-height:1.25; min-width:0; }
 .fi-num { font-size:8.5px; opacity:.45; display:block; font-family:'JetBrains Mono',monospace; letter-spacing:.3px; }
 .fi-ck { width:14px; height:14px; background:var(--org); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:8px; color:#fff; font-weight:800; flex-shrink:0; }
-.forms-export { margin-top:auto; padding:12px; border-top:1px solid rgba(255,255,255,.07); }
+/* Chỉ DANH SÁCH biểu mẫu cuộn — nếu để cả sidebar cuộn thì nút "Tải form đã chọn" trôi xuống
+   dưới tầm nhìn trên màn hình thấp thay vì ghim ở đáy. */
+.forms-list { flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; }
+.forms-export { flex-shrink:0; padding:12px; border-top:1px solid rgba(255,255,255,.07); }
 .btn-export-all { width:100%; background:var(--org); color:#fff; border:none; padding:9px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .2s; }
 .btn-export-all:hover { background:var(--org2); }
 .btn-export-bundle { width:100%; background:linear-gradient(135deg,#0f2d6b,#1a3f8f); color:#fff; border:none; padding:9px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .2s; }
@@ -466,7 +469,9 @@ body {
   display:flex; align-items:flex-start; justify-content:space-between;
   margin-bottom:20px; gap:16px; flex-wrap:wrap;
 }
-.fv-title-block {}
+/* Nút ☰ (position:absolute) nằm đè lên góc trên trái vùng nội dung ở CẢ hai trạng thái
+   (left:228px khi mở sidebar, left:8px khi ẩn) — chừa chỗ để không cắt mất chữ đầu tiêu đề. */
+.fv-title-block { padding-left:40px; }
 .fv-ttl { font-size:20px; font-weight:900; color:var(--navy); letter-spacing:-.3px; }
 .fv-meta { font-size:10.5px; color:var(--t3); margin-top:3px; font-family:'JetBrains Mono',monospace; }
 .fv-badges { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
