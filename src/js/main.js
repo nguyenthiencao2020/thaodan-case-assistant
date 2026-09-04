@@ -1483,6 +1483,7 @@ async function runAnalysis() {
         });
       }
 
+      _resetGrounding(notes);
       D._notes_stage4 = (D._notes_stage4 || []);
       D._notes_stage4.push({ date: new Date().toISOString(), notes });
 
@@ -1536,6 +1537,7 @@ async function runAnalysis() {
       D._verified = null;
       D._notes = notes;
       D._currentStage = currentStage;
+      _resetGrounding(notes);
       if (!D.co_ban) D.co_ban = {};
 
       _validateData(D);
@@ -2580,10 +2582,112 @@ function showForm(idx) {
   if (ctx) ctx.textContent = '— '+FORM_NAMES[idx];
 }
 
+
+// ════════════════════════════════════════════════════════════
+// TRUY VẾT NGUỒN — đối chiếu từng giá trị AI trích xuất với ghi chép gốc
+// ════════════════════════════════════════════════════════════
+// Vấn đề: NVXH phải xác nhận 139 trường trên 10 biểu mẫu. Nếu phải đọc lại toàn bộ ghi chép rồi
+// tự đối chiếu từng ô thì gần như chậm bằng chép tay — kết quả là NVXH sẽ bấm xác nhận bừa
+// (nguy hiểm) hoặc bỏ tool (vô ích).
+//
+// Cách làm: KHÔNG nhờ AI tự khai nguồn (model hay bỏ field, và tự khai thì không kiểm chứng
+// được). Thay vào đó đối chiếu NGƯỢC: lấy giá trị AI trả về, tìm xem từ ngữ của nó có thật
+// trong ghi chép hay không. Trường nào không tìm thấy căn cứ chính là trường AI suy diễn hoặc
+// bịa — đánh dấu để NVXH soi riêng mấy ô đó thay vì đọc lại tất cả.
+const _GROUND_MIN_WORDS = 2;      // giá trị quá ngắn (1 từ) thì không đủ cơ sở đối chiếu
+const _GROUND_RATIO = 0.6;        // ≥60% từ khóa xuất hiện trong ghi chép → coi là có căn cứ
+
+// Bỏ dấu tiếng Việt + hạ chữ thường để so khớp không phụ thuộc cách gõ dấu.
+function _normText(str) {
+  return String(str || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+
+// Giá trị do hệ thống/AI chuẩn hóa, không mong đợi xuất hiện nguyên văn trong ghi chép.
+const _GROUND_SKIP = new Set(['cao','trung binh','thap','nam','nu','co','khong','ro','chua ro',
+  'dat','chua dat','on','tot','kha','yeu','a','b','c','d','e','1','2','3','4','5']);
+
+let _groundCache = new Map();     // giá trị đã đối chiếu → kết quả
+let _groundNotesNorm = '';        // ghi chép gốc đã chuẩn hóa
+let _groundSentences = [];        // các câu gốc, để trích dẫn lại cho NVXH
+
+// Gọi lại mỗi khi ghi chép đổi (sau mỗi lần phân tích).
+function _resetGrounding(notes) {
+  _groundCache = new Map();
+  _groundNotesNorm = _normText(notes);
+  _groundSentences = String(notes || '').split(/(?<=[.!?;\n])\s+/).map(x => x.trim()).filter(x => x.length > 8);
+}
+
+// Trả {status:'ok'|'no'|'skip', quote} — 'no' nghĩa là KHÔNG tìm thấy căn cứ trong ghi chép.
+function _checkGround(val) {
+  if (!_groundNotesNorm) return { status: 'skip' };
+  const raw = String(val == null ? '' : val).trim();
+  if (!raw) return { status: 'skip' };
+  const norm = _normText(raw);
+  if (!norm) return { status: 'skip' };
+  if (_groundCache.has(norm)) return _groundCache.get(norm);
+
+  let res;
+  const words = norm.split(' ').filter(w => w.length >= 3);
+  if (_GROUND_SKIP.has(norm) || words.length < _GROUND_MIN_WORDS || /^\d[\d\/\-.]*$/.test(norm)) {
+    res = { status: 'skip' };
+  } else if (_groundNotesNorm.includes(norm)) {
+    res = { status: 'ok', quote: _findQuote(words) };   // khớp nguyên văn
+  } else {
+    const hit = words.filter(w => _groundNotesNorm.includes(w)).length;
+    res = hit / words.length >= _GROUND_RATIO
+      ? { status: 'ok', quote: _findQuote(words) }
+      : { status: 'no' };
+  }
+  _groundCache.set(norm, res);
+  return res;
+}
+
+// Câu trong ghi chép chứa nhiều từ khóa nhất — dùng làm dẫn chứng hiện cho NVXH.
+function _findQuote(words) {
+  let best = '', bestHit = 0;
+  for (const sen of _groundSentences) {
+    const sn = _normText(sen);
+    const hit = words.filter(w => sn.includes(w)).length;
+    if (hit > bestHit) { bestHit = hit; best = sen; }
+  }
+  return bestHit >= Math.max(1, Math.ceil(words.length * 0.4)) ? best : '';
+}
+
+// Đếm số trường không có căn cứ trên toàn bộ dữ liệu ca — dùng cho banner tổng.
+function _countUngrounded(obj, acc) {
+  acc = acc || { total: 0, no: 0 };
+  const walk = (o) => {
+    if (o == null) return;
+    if (typeof o === 'string') {
+      const r = _checkGround(o);
+      if (r.status !== 'skip') { acc.total++; if (r.status === 'no') acc.no++; }
+      return;
+    }
+    if (Array.isArray(o)) { o.forEach(walk); return; }
+    if (typeof o === 'object') {
+      Object.keys(o).forEach(k => { if (!k.startsWith('_')) walk(o[k]); });
+    }
+  };
+  walk(obj);
+  return acc;
+}
+
 function F(lbl, val, ic='-', path='') {
   const s = fmtDate(clean(val));
   const extra = path ? ` fl-editable" onclick="inlineEdit(this,'${path}')" title="Bấm để chỉnh sửa"` : '"';
-  return `<div class="fl"><div class="fl-ico">${ic}</div><div class="fl-bd"><div class="fl-lb">${lbl}</div><div class="fl-vl ${s?'ok':'no'}${extra}>${esc(s)||'—'}</div></div></div>`;
+  // Dấu truy vết: ô nào không tìm thấy căn cứ trong ghi chép gốc thì gắn cờ để NVXH soi riêng.
+  const g = s ? _checkGround(s) : { status: 'skip' };
+  let mark = '';
+  if (g.status === 'no') {
+    mark = `<span class="fl-ungrounded" title="Không tìm thấy nội dung này trong ghi chép gốc — AI có thể đã suy diễn. Hãy kiểm tra lại.">❓ chưa có căn cứ</span>`;
+  } else if (g.status === 'ok' && g.quote) {
+    mark = `<span class="fl-grounded" title="${esc('Căn cứ trong ghi chép: “' + g.quote + '”')}">📎 có căn cứ</span>`;
+  }
+  return `<div class="fl${g.status==='no'?' fl-warn':''}"><div class="fl-ico">${ic}</div><div class="fl-bd"><div class="fl-lb">${lbl}${mark}</div><div class="fl-vl ${s?'ok':'no'}${extra}>${esc(s)||'—'}</div></div></div>`;
 }
 
 function toggleFvEditMode(idx) {
@@ -2804,10 +2908,17 @@ function _verifyBanner() {
       <button class="btn-secondary" style="font-size:11px;padding:6px 12px" onclick="toggleVerify()">↩️ Bỏ xác nhận</button>
     </div>`;
   }
+  // Tổng kết truy vết: chỉ ra ĐÚNG những ô cần soi, thay vì bắt NVXH đọc lại toàn bộ ghi chép.
+  const g = _groundNotesNorm ? _countUngrounded(D) : null;
+  const gLine = !g ? ''
+    : g.no === 0
+      ? `<div style="font-size:11px;color:#166534;margin-top:3px">📎 Cả ${g.total} thông tin trích xuất đều tìm thấy căn cứ trong ghi chép.</div>`
+      : `<div style="font-size:11px;color:#b91c1c;margin-top:3px"><strong>❓ ${g.no}/${g.total} thông tin KHÔNG tìm thấy căn cứ</strong> trong ghi chép — chỉ cần soi những ô có dấu <em>❓ chưa có căn cứ</em>, không phải đọc lại tất cả.</div>`;
   return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fffbeb;border:1.5px solid #fcd34d;border-left:5px solid #d97706;border-radius:0 8px 8px 0;padding:9px 13px;margin-bottom:14px">
     <div style="flex:1;min-width:200px;font-size:12px;color:#78350f">
       <strong>⚠️ BẢN NHÁP — do AI trích xuất, chưa kiểm chứng</strong>
-      <div style="font-size:11px;color:#92400e;margin-top:2px">Hãy đọc lại ghi chép gốc và đối chiếu từng trường trước khi in hoặc gửi đi.</div></div>
+      <div style="font-size:11px;color:#92400e;margin-top:2px">Đối chiếu các ô được đánh dấu bên dưới rồi bấm xác nhận.</div>
+      ${gLine}</div>
     <button class="btn-analyze" style="flex:0 0 auto;height:34px;font-size:11.5px;padding:0 14px" onclick="toggleVerify()">✔ Tôi đã kiểm chứng</button>
   </div>`;
 }
@@ -3566,6 +3677,8 @@ function loadCaseIntoApp(id) {
   if (c.lastAnalysis) {
     D = c.lastAnalysis;
     if (!Array.isArray(D.cap_nhat)) D.cap_nhat = [];
+    // Dựng lại lớp truy vết từ ghi chép đã lưu, để mở lại ca cũ vẫn thấy ô nào chưa có căn cứ.
+    _resetGrounding(D._notes || (c.entries || []).map(e => e.notes || '').join('\n'));
     if (D.co_ban && Object.keys(D.co_ban).length) {
       document.getElementById('btn-fill').disabled = false;
       document.getElementById('chat-input').disabled = false;

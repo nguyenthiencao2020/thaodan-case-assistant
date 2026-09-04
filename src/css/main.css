@@ -846,6 +846,22 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   box-sizing:border-box !important;
 }
 .fl-vl { word-break:break-word !important; }
+
+/* ══ DẤU TRUY VẾT NGUỒN ══
+   Ô nào AI trích xuất mà không tìm thấy căn cứ trong ghi chép gốc thì nổi bật lên, để NVXH
+   chỉ phải soi mấy ô đó thay vì đọc lại toàn bộ ghi chép. */
+.fl-ungrounded {
+  display:inline-block; margin-left:7px; padding:1px 6px; border-radius:9px;
+  background:#fef2f2; color:#b91c1c; border:1px solid #fecaca;
+  font-size:8.5px; font-weight:800; letter-spacing:.2px; vertical-align:middle; cursor:help;
+}
+.fl-grounded {
+  display:inline-block; margin-left:7px; padding:1px 6px; border-radius:9px;
+  background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;
+  font-size:8.5px; font-weight:700; vertical-align:middle; cursor:help;
+}
+.fl.fl-warn { background:#fffbfb; border-left:3px solid #fca5a5; }
+@media print { .fl-grounded { display:none !important; } }
 /* ══════════════════════════════════════════════════════
    MOBILE RESPONSIVE — NVXH thực địa
    Breakpoint: 768px (tablet), 480px (phone)
