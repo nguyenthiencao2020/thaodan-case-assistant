@@ -2405,6 +2405,12 @@ function applyFeatureFlags() {
     const el = document.getElementById(id);
     if (el) el.hidden = !(typeof FEATURES === 'object' && FEATURES[feat]);
   });
+  // Hàng nút được thiết kế cho 1 nút chính + 3 ô vuông nhỏ. Khi tắt bớt tính năng, ô vuông 60px
+  // còn lại trông lạc lõng cạnh nút chính bị kéo dài hết cỡ — đổi sang dạng nút chữ cho cân.
+  // Tự đo lại nên bật/tắt cờ trong config.js là giao diện tự chỉnh, không phải sửa CSS.
+  const bar = document.getElementById('action-bar');
+  if (bar) bar.classList.toggle('action-bar-compact',
+    bar.querySelectorAll('.btn-action-icon:not([hidden])').length <= 1);
 }
 
 function switchMain(tab) {
