@@ -16,6 +16,11 @@ const FOOTER_URL = 'https://raw.githubusercontent.com/nguyenthiencao2020/asif-br
 const FEATURES = {
   dass: false,      // Thang đo trầm cảm - lo âu - stress (DASS-21/42)
   genogram: false,  // Sơ đồ phả hệ gia đình
+  // Đọc chữ trong ảnh trang sổ tay. TẮT theo quyết định của tổ chức: đây là luồng DUY NHẤT gửi
+  // dữ liệu định danh chưa che ra ngoài (tên thật và địa chỉ nằm ngay trong nét chữ, không regex
+  // nào che được), và tổ chức chưa có khóa OpenAI. Mọi luồng khác đều đã che trước khi gửi.
+  // Bật lại: đổi thành true VÀ khai OPENAI_API_KEY trên Vercel.
+  ocr: false,
 };
 
 const FORM_NAMES = [
