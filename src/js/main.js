@@ -2583,6 +2583,259 @@ function showForm(idx) {
 }
 
 
+
+
+
+// ════════════════════════════════════════════════════════════
+// CÔNG VĂN CHUYỂN GỬI — soạn sẵn từ Form 7
+// ════════════════════════════════════════════════════════════
+// Form 7 đã có đủ dữ liệu (nơi nhận, lý do, nhu cầu) nhưng NVXH vẫn phải tự ngồi soạn công văn
+// gửi trường / bệnh viện / UBND phường bằng tay. Sinh sẵn bản Word theo thể thức hành chính,
+// NVXH chỉ sửa và ký.
+async function dlReferralLetter() {
+  if (!D) { showNotif('⚠️ Chưa có dữ liệu ca', 'warn'); return; }
+  const cg = D.chuyen_gui || {}, cb = D.co_ban || {}, dg = D.danh_gia || {};
+  if (!cg.don_vi_nhan && !cg.nguoi_nhan) {
+    showNotif('⚠️ Chưa có thông tin nơi nhận — điền Form 7 (Phiếu chuyển gửi) trước', 'warn');
+    return;
+  }
+  let lib; try { lib = await loadDocxLib(); } catch(e) { showNotif('❌ ' + e.message, 'err'); return; }
+  showNotif('📄 Đang soạn công văn chuyển gửi...');
+  const imgs = await Promise.all([fetchImg(LOGO_URL), fetchImg(FOOTER_URL)]);
+  try {
+    const { Document, Paragraph, TextRun, ImageRun, AlignmentType, BorderStyle, WidthType,
+            Table, TableRow, TableCell } = lib;
+    const PW = 11906, MG = 1134, CW = PW - 2 * MG, TNR = 'Times New Roman', NAVY = '0F2D6B';
+    const LS = { value: 300, rule: 'auto' };
+    const Tx = (t, o) => new TextRun(Object.assign({ text: t || '', font: TNR, size: 26 }, o || {}));
+    const Pg = (ch, o) => new Paragraph(Object.assign(
+      { children: Array.isArray(ch) ? ch : [ch], spacing: { before: 80, after: 80, line: LS.value } }, o || {}));
+    const d = new Date();
+    const dmy = `ngày ${String(d.getDate()).padStart(2,'0')} tháng ${String(d.getMonth()+1).padStart(2,'0')} năm ${d.getFullYear()}`;
+    const body = [];
+
+    if (imgs[0]) { try { body.push(new Paragraph({ children:[new ImageRun({data:imgs[0],transformation:{width:52,height:52},type:'png'})], alignment:AlignmentType.LEFT, spacing:{after:40} })); } catch(e) {} }
+    body.push(Pg([Tx('CƠ SỞ THẢO ĐÀN — TRUNG TÂM DỊCH VỤ XÃ HỘI TP.HCM',{bold:true,size:24,color:NAVY})],{alignment:AlignmentType.CENTER}));
+    body.push(Pg([Tx('Số: '+_caseSeqNow()+'/CV-TĐ',{size:22})],{alignment:AlignmentType.CENTER}));
+    body.push(new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:4,color:NAVY}},spacing:{before:40,after:140}}));
+    body.push(Pg([Tx('TP. Hồ Chí Minh, '+dmy,{italics:true,size:24})],{alignment:AlignmentType.RIGHT}));
+    body.push(Pg([Tx('CÔNG VĂN CHUYỂN GỬI TRƯỜNG HỢP',{bold:true,size:32,color:NAVY})],{alignment:AlignmentType.CENTER}));
+    if (cg.nhu_cau || dg.nhu_cau_the_chat) {
+      body.push(Pg([Tx('Về việc: đề nghị hỗ trợ '+(cg.nhu_cau || dg.nhu_cau_the_chat || ''),{italics:true,size:24})],{alignment:AlignmentType.CENTER}));
+    }
+    body.push(Pg([Tx('')],{spacing:{after:100}}));
+
+    body.push(Pg([Tx('Kính gửi: ',{bold:true}),Tx((cg.don_vi_nhan||'…').toUpperCase(),{bold:true})]));
+    if (cg.nguoi_nhan) body.push(Pg([Tx('              '+cg.nguoi_nhan+(cg.dia_chi_nhan?' — '+cg.dia_chi_nhan:''),{size:24})]));
+
+    body.push(Pg([Tx('Cơ sở Thảo Đàn hiện đang quản lý và hỗ trợ trường hợp trẻ có hoàn cảnh đặc biệt dưới đây. '
+      +'Sau quá trình đánh giá, chúng tôi nhận thấy trẻ cần được hỗ trợ từ đơn vị Quý cơ quan và trân trọng đề nghị được phối hợp.')]));
+
+    // Thông tin trẻ — chỉ những gì cần cho việc chuyển gửi
+    const bna = { top:{style:BorderStyle.NONE},bottom:{style:BorderStyle.NONE},left:{style:BorderStyle.NONE},right:{style:BorderStyle.NONE} };
+    const row = (l, v) => new TableRow({ children: [
+      new TableCell({ width:{size:3200,type:WidthType.DXA}, borders:bna,
+        children:[Pg([Tx(l+':',{bold:true,size:24})],{spacing:{before:30,after:30}})] }),
+      new TableCell({ width:{size:CW-3200,type:WidthType.DXA}, borders:bna,
+        children:[Pg([Tx(v||'…',{size:24})],{spacing:{before:30,after:30}})] }) ]});
+    const rows = [
+      row('Mã hồ sơ', _caseCodeNow()),
+      row('Họ tên trẻ', cb.ho_ten),
+      row('Tuổi / Giới tính', [cb.tuoi, cb.gioi_tinh].filter(Boolean).join(' · ')),
+      row('Nơi ở hiện tại', cb.dia_chi_hien_tai),
+      row('Người chăm sóc', (D.gia_dinh?.nguoi_cham_soc?.ho_ten || '') + (D.gia_dinh?.nguoi_cham_soc?.quan_he ? ' ('+D.gia_dinh.nguoi_cham_soc.quan_he+')' : '')),
+      row('Hoàn cảnh', D.gia_dinh?.hoan_canh),
+      row('Nội dung đề nghị hỗ trợ', cg.nhu_cau || dg.nhu_cau_the_chat),
+      row('Lý do chuyển gửi', cg.ly_do || dg.nhan_xet_nvxh),
+    ];
+    body.push(new Table({ width:{size:CW,type:WidthType.DXA}, columnWidths:[3200,CW-3200], borders:bna, rows }));
+
+    body.push(Pg([Tx('Rất mong nhận được sự phối hợp của Quý cơ quan để bảo đảm quyền lợi tốt nhất cho trẻ. '
+      +'Mọi thông tin cần trao đổi, xin liên hệ nhân viên xã hội phụ trách theo địa chỉ dưới đây.')]));
+    if (cg.nguoi_chuyen || cg.sdt_chuyen || _nvxhNow()) {
+      body.push(Pg([Tx('Đầu mối liên hệ: ',{bold:true}),
+        Tx([cg.nguoi_chuyen || _nvxhNow(), cg.chuc_danh, cg.sdt_chuyen, cg.email_chuyen].filter(Boolean).join(' · '),{size:24})]));
+    }
+    body.push(Pg([Tx('Trân trọng cảm ơn./.',{italics:true})]));
+
+    // Chữ ký
+    const sgn = (role, name) => new TableCell({ width:{size:Math.floor(CW/2),type:WidthType.DXA}, borders:bna, children:[
+      new Paragraph({children:[Tx(role,{bold:true,size:24,color:NAVY})],alignment:AlignmentType.CENTER,spacing:{before:120,after:20}}),
+      new Paragraph({children:[Tx('(Ký, ghi rõ họ tên)',{italics:true,size:20,color:'777777'})],alignment:AlignmentType.CENTER,spacing:{after:900}}),
+      new Paragraph({children:[Tx(name||'',{size:24})],alignment:AlignmentType.CENTER}) ]});
+    body.push(new Table({ width:{size:CW,type:WidthType.DXA}, borders:bna,
+      rows:[new TableRow({children:[sgn('Giám đốc cơ sở',''), sgn('Nhân viên xã hội', cg.nguoi_chuyen || _nvxhNow())]})] }));
+
+    if (!_isVerified()) {
+      body.push(Pg([Tx('⚠ '+DRAFT_STAMP,{bold:true,color:'B45309',size:20})],{alignment:AlignmentType.CENTER}));
+    }
+
+    let footers = {};
+    if (imgs[1]) { try { const {Footer:FC}=lib;
+      footers = { default: new FC({ children:[new Paragraph({children:[new ImageRun({data:imgs[1],transformation:{width:794,height:79},type:'png'})],alignment:AlignmentType.CENTER})] }) }; } catch(e) {} }
+    const doc = new Document({ sections:[{ properties:{page:{size:{width:PW,height:16838},margin:{top:MG,right:MG,bottom:1400,left:MG,footer:0}}}, footers, children: body }] });
+    const blob = await lib.Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'ThaoDan_CongVanChuyenGui_' + (cb.ho_ten||'Ca').replace(/\s+/g,'_') + '.docx';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    showNotif('✅ Đã soạn công văn chuyển gửi — kiểm tra và sửa trước khi gửi');
+  } catch(e) { showNotif('❌ '+e.message,'err'); console.error(e); }
+}
+
+// ════════════════════════════════════════════════════════════
+// NHẬP BẰNG GIỌNG NÓI — Web Speech API có sẵn trong trình duyệt
+// ════════════════════════════════════════════════════════════
+// NVXH vừa đi vãng gia về, kể lại nhanh hơn gõ nhiều. Dùng API sẵn của trình duyệt nên không
+// thêm thư viện, không gửi âm thanh cho máy chủ của app (Chrome xử lý qua dịch vụ của Google —
+// đã nêu trong tooltip để NVXH biết mà không đọc tên thật vào máy).
+let _rec = null, _recOn = false, _recBase = '';
+
+function _micUI(on) {
+  const b = document.getElementById('btn-mic'), l = document.getElementById('mic-lbl');
+  if (b) b.classList.toggle('btn-mic-on', on);
+  if (l) l.textContent = on ? 'Đang nghe… bấm để dừng' : 'Đọc';
+}
+
+function toggleDictation() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    showConfirm({ icon:'🎤', title:'Trình duyệt không hỗ trợ nhập giọng nói',
+      body:'Tính năng này cần Chrome hoặc Edge (bản mới). Safari và Firefox chưa hỗ trợ ổn định.\n\nBạn vẫn có thể gõ ghi chép như bình thường.',
+      okText:'Đã hiểu', okClass:'cmb-ok-blue' });
+    return;
+  }
+  if (_recOn) { try { _rec.stop(); } catch(e) {} return; }
+
+  const ta = document.getElementById('dash-notes');
+  _recBase = ta.value;
+  _rec = new SR();
+  _rec.lang = 'vi-VN';
+  _rec.continuous = true;
+  _rec.interimResults = true;
+
+  _rec.onstart = () => { _recOn = true; _micUI(true); showNotif('🎤 Đang nghe — nói tự nhiên, dừng lâu sẽ tự ngắt'); };
+  _rec.onerror = (e) => {
+    _recOn = false; _micUI(false);
+    const msg = e.error === 'not-allowed' ? 'Bạn cần cho phép trình duyệt dùng micro'
+              : e.error === 'no-speech' ? 'Không nghe thấy gì — thử lại gần micro hơn'
+              : 'Lỗi micro: ' + e.error;
+    showNotif('⚠️ ' + msg, 'warn');
+  };
+  _rec.onend = () => {
+    _recOn = false; _micUI(false);
+    // Lưu nháp + cập nhật đếm ký tự như khi gõ tay.
+    const el = document.getElementById('dash-notes');
+    document.getElementById('dash-cc').textContent = el.value.length + ' ký tự';
+    _stageDataCache[currentStage] = { notes: el.value };
+    _saveNotesDraft(); window._markUnsaved?.();
+  };
+  _rec.onresult = (ev) => {
+    let done = '', partial = '';
+    for (let i = 0; i < ev.results.length; i++) {
+      const r = ev.results[i];
+      if (r.isFinal) done += r[0].transcript; else partial += r[0].transcript;
+    }
+    const sep = _recBase && !/\s$/.test(_recBase) ? ' ' : '';
+    ta.value = _recBase + sep + done + partial;
+    document.getElementById('dash-cc').textContent = ta.value.length + ' ký tự';
+  };
+  try { _rec.start(); } catch(e) { showNotif('⚠️ Không khởi động được micro', 'warn'); }
+}
+
+// ════════════════════════════════════════════════════════════
+// TRA CỨU TIỀN LỆ — tìm ca cũ có dấu hiệu tương tự
+// ════════════════════════════════════════════════════════════
+// Sau 1-2 năm tổ chức có hàng trăm ca đã đóng kèm kết quả thật — đó là tri sản, nhưng hiện chỉ
+// tra được bằng tên trẻ. Đây là chỗ máy vượt trội con người: đọc hết hồ sơ trong một giây.
+// Quan trọng: nó KHÔNG ra quyết định, chỉ đưa TIỀN LỆ để NVXH tự quyết. Đúng vai trò.
+//
+// Chạy hoàn toàn cục bộ trên dữ liệu ca đã tải — không gửi gì cho AI, không cần embedding.
+// So khớp theo các đặc trưng nghiệp vụ chứ không theo toàn văn (toàn văn thì ca nào cũng giống
+// ca nào vì dùng chung bộ biểu mẫu).
+function _caseFeatures(cs) {
+  const d = cs?.lastAnalysis; if (!d) return null;
+  const cb = d.co_ban || {}, gd = d.gia_dinh || {}, dg = d.danh_gia || {}, tt = d.tinh_trang || {};
+  const bag = new Set();
+  const add = (v) => { _normText(v).split(' ').forEach(w => { if (w.length >= 4) bag.add(w); }); };
+  [gd.hoan_canh, gd.loai_hinh, dg.nguy_co, dg.van_de_the_chat, dg.van_de_tam_ly,
+   dg.nhu_cau_the_chat, dg.nhu_cau_tam_ly, tt.hoc_van?.ly_do_bo_hoc, tt.cong_viec,
+   ...(d.ke_hoach?.nhu_cau_ho_tro || []).map(x => x?.loai)].forEach(add);
+  const age = parseInt(cb.tuoi, 10);
+  return {
+    id: cs.id, code: cs.caseCode || '', name: cs.name || '',
+    status: cs.status, stage: cs.currentStage || 1,
+    age: isNaN(age) ? null : age,
+    risk: d._report?.risk || d._report?.risk_current || '',
+    bag,
+    outcome: d.ket_thuc?.ket_qua_dat || '',
+    notAchieved: d.ket_thuc?.ket_qua_chua_dat || '',
+    plan: (d.ke_hoach?.nhu_cau_ho_tro || []).map(x => x?.muc_tieu).filter(Boolean),
+    closedAt: cs.closedAt || null,
+  };
+}
+
+// Điểm giống nhau: chồng lấn đặc trưng (Jaccard) + gần tuổi + cùng mức rủi ro.
+function _similarCases(caseId, limit) {
+  const all = Object.values(_cases || {});
+  const me = _caseFeatures(all.find(c => c.id === caseId));
+  if (!me || !me.bag.size) return [];
+  const out = [];
+  for (const c of all) {
+    if (c.id === caseId) continue;
+    const f = _caseFeatures(c);
+    if (!f || !f.bag.size) continue;
+    let inter = 0; me.bag.forEach(w => { if (f.bag.has(w)) inter++; });
+    const jac = inter / (me.bag.size + f.bag.size - inter);
+    if (!inter) continue;
+    let score = jac;
+    if (me.age != null && f.age != null && Math.abs(me.age - f.age) <= 3) score += 0.08;
+    if (me.risk && me.risk === f.risk) score += 0.06;
+    if (f.status === 'closed') score += 0.05;   // ca đã đóng có kết quả thật → tham khảo được
+    out.push({ ...f, score, shared: inter });
+  }
+  return out.sort((a, b) => b.score - a.score).slice(0, limit || 5);
+}
+
+function openPrecedents() {
+  if (!curCaseId || !D) { showNotif('⚠️ Hãy mở một ca trước', 'warn'); return; }
+  const list = _similarCases(curCaseId, 5);
+  const body = document.getElementById('precedent-body');
+  if (!list.length) {
+    body.innerHTML = `<div style="padding:40px 20px;text-align:center;color:#94a3b8">
+      <div style="font-size:34px;margin-bottom:10px;opacity:.4">🗂</div>
+      <div style="font-weight:700;color:#64748b;margin-bottom:5px">Chưa tìm được ca tương tự</div>
+      <div style="font-size:12px">Cần thêm ca đã phân tích để đối chiếu. Tính năng này càng dùng lâu càng hữu ích.</div></div>`;
+  } else {
+    body.innerHTML = `<div style="font-size:11.5px;color:#64748b;margin-bottom:12px;background:#f8fafc;border-left:3px solid #94a3b8;padding:8px 12px;border-radius:0 6px 6px 0">
+        Đây là <strong>tiền lệ để tham khảo</strong>, không phải khuyến nghị. Hoàn cảnh mỗi trẻ khác nhau —
+        quyết định vẫn thuộc NVXH và giám sát ca.</div>`
+      + list.map(c => {
+      const pct = Math.round(Math.min(c.score, 1) * 100);
+      const st = c.status === 'closed' ? '<span style="background:#dcfce7;color:#166534;padding:1px 7px;border-radius:9px;font-size:9.5px;font-weight:700">ĐÃ ĐÓNG</span>'
+                                       : '<span style="background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:9px;font-size:9.5px;font-weight:700">ĐANG MỞ · GĐ '+c.stage+'</span>';
+      return `<div style="border:1px solid #e2e8f0;border-radius:9px;padding:11px 13px;margin-bottom:9px;background:#fff">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#64748b">${esc(c.code)}</span>
+          <strong style="font-size:13px;color:#0f2d6b;flex:1;min-width:100px">${esc(c.name)}</strong>
+          ${st}
+          <span style="font-size:10px;color:#7c3aed;font-weight:700">giống ~${pct}%</span>
+        </div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:6px">
+          ${c.age != null ? c.age + ' tuổi · ' : ''}${c.risk ? 'rủi ro ' + esc(c.risk) + ' · ' : ''}${c.shared} đặc điểm trùng</div>
+        ${c.plan.length ? `<div style="font-size:11.5px;margin-bottom:4px"><strong style="color:#1e40af">Đã đặt mục tiêu:</strong> ${esc(c.plan.slice(0,3).join(' · '))}</div>` : ''}
+        ${c.outcome ? `<div style="font-size:11.5px;margin-bottom:3px"><strong style="color:#15803d">✅ Kết quả đạt:</strong> ${esc(c.outcome)}</div>` : ''}
+        ${c.notAchieved ? `<div style="font-size:11.5px;margin-bottom:3px"><strong style="color:#b45309">⚠ Chưa đạt:</strong> ${esc(c.notAchieved)}</div>` : ''}
+        ${!c.outcome && !c.notAchieved ? '<div style="font-size:11px;color:#9ca3af;font-style:italic">Ca chưa kết thúc — chưa có kết quả để tham khảo</div>' : ''}
+        <button class="btn-secondary" style="font-size:10.5px;padding:4px 10px;margin-top:7px" onclick="closePrecedents();selectCase('${c.id}')">Mở hồ sơ ca này</button>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('precedent-overlay').style.display = 'flex';
+}
+function closePrecedents() { document.getElementById('precedent-overlay').style.display = 'none'; }
+
 // ════════════════════════════════════════════════════════════
 // TRUY VẾT NGUỒN — đối chiếu từng giá trị AI trích xuất với ghi chép gốc
 // ════════════════════════════════════════════════════════════
@@ -3025,6 +3278,10 @@ function renderFormTab(idx) {
     if (ttm.nhan_xet || ttm.de_xuat_tiep_theo)
       h+=Sec("Nhận xét & đề xuất của NVXH","s7b",F("Nhận xét tiến trình",ttm.nhan_xet)+F("Đề xuất buổi tiếp theo",ttm.de_xuat_tiep_theo),'📝');
   } else if (idx===8) {
+    h+=`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 13px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="flex:1;min-width:180px;font-size:12px;color:#1e3a8a"><strong>📨 Công văn chuyển gửi</strong>
+      <div style="font-size:11px;color:#3b82f6;margin-top:2px">Soạn sẵn bản Word theo thể thức hành chính từ dữ liệu phiếu này — chỉ cần sửa và ký.</div></div>
+      <button class="btn-dl-docx-brand" onclick="dlReferralLetter()">📨 Soạn công văn</button></div>`;
     h+=Sec("Trẻ cần chuyển gửi","s8a",F("Họ tên",cb.ho_ten)+F("Năm sinh",cb.ngay_sinh)+F("Người chăm sóc",ncs.ho_ten));
     h+=Sec("Người chuyển gửi","s8b",F("Họ tên",cg.nguoi_chuyen)+F("Đơn vị",cg.don_vi_chuyen));
     h+=Sec("Nơi nhận","s8c",F("Đơn vị",cg.don_vi_nhan)+F("Người nhận",cg.nguoi_nhan));
