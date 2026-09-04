@@ -57,11 +57,14 @@ bình thường nên rất dễ tưởng là đã xong:
 |---|---|
 | Truy xuất kho tri thức (RAG) | `api/rag.js` trả `{chunks:[]}` **không báo lỗi** → AI trả lời bằng kiến thức chung của internet thay vì quy trình và nguồn lực thật của Thảo Đàn |
 | Nạp tài liệu vào kho | GitHub Action dừng, chỉ thấy ✗ trong tab Actions — app không báo gì |
-| Đọc ảnh trang sổ tay (nút 📷) | Báo rõ *"Chưa cấu hình OPENAI_API_KEY"* — đây là cái duy nhất báo lỗi tử tế |
+| Đọc ảnh trang sổ tay | **Đã TẮT** qua `FEATURES.ocr` — quyết định của tổ chức, xem mục dưới |
 
 **Cách kiểm RAG đã chạy hay chưa** (vì nó không báo lỗi): phân tích một ca rồi hỏi trong khung chat
 *"Quy trình giai đoạn 2 của Thảo Đàn yêu cầu những gì?"* — trả lời đúng **SLA 72 giờ** và tên biểu
 mẫu bắt buộc là đang chạy; trả lời chung chung là chưa.
+
+RAG cần chuẩn bị những gì, vì sao không có cách thay thế khóa OpenAI, ai chuẩn bị nội dung nào —
+xem [`docs/README.md`](docs/README.md).
 
 Những phần **không** phụ thuộc khóa OpenAI và đang chạy đủ: phân tích ca và chat (Groq), 10 biểu
 mẫu, truy vết nguồn, dấu BẢN NHÁP, ẩn danh, tra cứu tiền lệ, nhập bằng giọng nói, xuất Word/PDF,
@@ -187,8 +190,18 @@ tự, chạy cục bộ, không gửi gì cho AI) · popup cảnh báo khi AI th
 `CA-YYYY-MM-STT` · xuất Word/PDF có chữ ký và số trang · **soạn công văn chuyển gửi** từ Form 7 ·
 theo dõi sau đóng ca · audit log.
 
-**Đang tạm ẩn** (`FEATURES` trong `src/js/config.js`, đổi `false`→`true` để bật lại): DASS-21/42 và
-sơ đồ phả hệ. Code, modal và dữ liệu đã lưu vẫn còn nguyên.
+**Đang tạm tắt** — công tắc `FEATURES` trong `src/js/config.js`, đổi `false`→`true` để bật lại.
+Code, modal, endpoint và dữ liệu đã lưu đều còn nguyên, không phải viết lại gì:
+
+| Cờ | Tính năng | Vì sao tắt |
+|---|---|---|
+| `dass` | Thang đo DASS-21/42 | Chờ thiết kế lại — bộ câu hỏi là bản tự khai ngôi thứ nhất của người lớn, chỉ thẩm định cho ≥17 tuổi, mà màn hình không hỏi ai là người trả lời |
+| `genogram` | Sơ đồ phả hệ | Chờ thiết kế lại — thiếu đúng phần cốt lõi là đường quan hệ (thân thiết/xung đột/xa cách/cắt đứt) và không sửa được bằng tay |
+| `ocr` | Đọc chữ trong ảnh sổ tay | **Quyết định của tổ chức.** Đây là luồng DUY NHẤT gửi dữ liệu định danh chưa che ra ngoài — tên thật và địa chỉ nằm ngay trong nét chữ, không regex nào che được. Bật lại cần cả `OPENAI_API_KEY` và quyết định về NĐ 13/2023 |
+
+Nút 🎤 **nhập bằng giọng nói vẫn bật** — dùng Web Speech API sẵn trong Chrome/Edge, miễn phí, và
+văn bản đọc ra vẫn đi qua đúng bộ che tên/SĐT/địa chỉ trước khi tới Groq. Với NVXH vừa đi vãng gia
+về, kể lại bằng miệng còn nhanh hơn chụp ảnh trang sổ rồi sửa lỗi đọc.
 
 ## Khôi phục lịch sử/quyết định
 

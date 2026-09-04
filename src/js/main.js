@@ -2523,7 +2523,7 @@ async function sendChat() {
 // ════════════════════════════════════════════════════════════
 // Ẩn/hiện nút theo FEATURES. Gọi lúc khởi động; đổi cờ trong config.js là đủ để bật lại.
 function applyFeatureFlags() {
-  const map = { dass: 'btn-dass', genogram: 'btn-genogram' };
+  const map = { dass: 'btn-dass', genogram: 'btn-genogram', ocr: 'btn-ocr' };
   Object.entries(map).forEach(([feat, id]) => {
     const el = document.getElementById(id);
     if (el) el.hidden = !(typeof FEATURES === 'object' && FEATURES[feat]);
