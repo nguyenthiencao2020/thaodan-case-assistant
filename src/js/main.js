@@ -3217,6 +3217,16 @@ function _closeCaseFromList(id) {
     }
   });
 }
+// Mở lại ca: trước đây xóa hẳn closedAt nên mất dấu ca đã từng đóng — không tra lại được
+// ca nào bị tái mở và cách lần đóng bao lâu. Nay ghi lại vào reopenLog trước khi xóa.
+function _recordReopen(c) {
+  if (!c) return;
+  c.reopenLog = Array.isArray(c.reopenLog) ? c.reopenLog : [];
+  c.reopenLog.push({ closedAt: c.closedAt || null, reopenedAt: new Date().toISOString() });
+  c.reopenedAt = c.reopenLog[c.reopenLog.length - 1].reopenedAt;
+  delete c.closedAt;
+}
+
 function _reopenCaseFromList(id) {
   const c = loadCases()[id];
   showConfirm({
@@ -3227,7 +3237,7 @@ function _reopenCaseFromList(id) {
     okClass: 'cmb-ok-blue',
     onConfirm() {
       const cases = loadCases();
-      if (cases[id]) { cases[id].status = 'open'; delete cases[id].closedAt; }
+      if (cases[id]) { cases[id].status = 'open'; _recordReopen(cases[id]); cases[id].updatedAt = new Date().toISOString(); }
       saveCases(cases);
       if (curCaseId === id && D) { D._status = 'open'; applyClosedCaseUI(); }
       renderCaseList(); showCaseDetail(id);
@@ -5030,7 +5040,7 @@ function reopenCase() {
       const cases = loadCases();
       if (cases[curCaseId]) {
         cases[curCaseId].status = 'open';
-        delete cases[curCaseId].closedAt;
+        _recordReopen(cases[curCaseId]);
         cases[curCaseId].updatedAt = new Date().toISOString();
         if (D) delete D._status;
         saveCases(cases);
