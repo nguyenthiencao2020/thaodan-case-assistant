@@ -36,6 +36,16 @@ node scripts/index-docs.js
 Chạy lại bất cứ lúc nào — mỗi file được xóa và nạp lại theo `source_file`,
 không sinh bản trùng.
 
+## Trạng thái hiện tại (04/09/2026)
+
+**Kho tri thức CHƯA được nạp** — Action `Index docs → Supabase RAG` đang lỗi vì thiếu secret
+`OPENAI_API_KEY` trong GitHub (tổ chức chưa có khóa OpenAI). `SUPABASE_URL` và
+`SUPABASE_SERVICE_KEY` đã khai xong.
+
+Khi có khóa, nạp được ngay **27 mẩu** từ `quy-trinh-ctxh-co-ban.md` (8) và `sop-quan-ly-ca-ctxh-v1.md`
+(19). Hai file `nguon-luc/` và `phap-ly/` vẫn bị bỏ qua vì còn dấu `SKIP-INDEX` — đang chờ dữ liệu
+thật từ tổ chức.
+
 ## Để tính năng hoạt động trên bản chạy thật
 
 `api/rag.js` cần 3 biến môi trường trên **được cấu hình trong Vercel**.
