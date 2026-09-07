@@ -40,35 +40,38 @@ Ghi lại để phiên sau không phải đoán. Cập nhật bảng này mỗi 
 | Khóa Vault `case_encryption_key` | ✅ đã tạo — kiểm chứng mã hóa/giải mã vòng tròn OK |
 | Mã hóa ca cũ | ✅ 4/4 ca có `data_enc`, 0 ca còn plaintext |
 | Vercel: `GROQ_KEY_1/2/3`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_ANON_KEY` | ✅ đã khai |
-| Vercel: `OPENAI_API_KEY` | ⬜ **chưa có khóa OpenAI** |
+| Vercel: `OPENAI_API_KEY` | ⏸ **HOÃN** — tổ chức chưa có khóa OpenAI |
 | GitHub Secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` | ✅ đã khai |
-| GitHub Secrets: `OPENAI_API_KEY` | ⬜ **chưa có khóa OpenAI** |
-| Kho tri thức đã nạp | ⬜ chưa — Action chưa chạy được vì thiếu secret trên |
-| `docs/nguon-luc/danh-ba-nguon-luc.md` | ⬜ còn khung mẫu, đang chờ dữ liệu thật từ tổ chức |
+| GitHub Secrets: `OPENAI_API_KEY` | ⏸ **HOÃN** — cùng lý do |
+| Kho tri thức (RAG) đã nạp | ⏸ **HOÃN** cùng với khóa OpenAI — Action tự bỏ qua và vẫn báo xanh |
+| `docs/nguon-luc/danh-ba-nguon-luc.md` | ⬜ còn khung mẫu, đang chờ dữ liệu thật từ tổ chức (làm được độc lập, không cần khóa OpenAI) |
 | `docs/phap-ly/can-cu-phap-ly.md` | ⬜ còn khung mẫu |
 | Hồ sơ đánh giá tác động NĐ 13/2023 | ⬜ việc của tổ chức, cần tham vấn pháp lý |
 
-### Hiện tại KHÔNG hoạt động vì chưa có `OPENAI_API_KEY`
+### Hai tính năng đang HOÃN vì chưa có khóa OpenAI
 
-Một khóa OpenAI duy nhất chặn 3 việc. Cả 3 đều **lỗi âm thầm hoặc bán âm thầm** — app vẫn chạy
-bình thường nên rất dễ tưởng là đã xong:
+Tổ chức chưa có khóa OpenAI, nên hai tính năng dùng nó đều đã được xử lý gọn để **không gây nhiễu**:
 
-| Việc | Biểu hiện khi thiếu khóa |
+| Tính năng | Trạng thái khi không có khóa |
 |---|---|
-| Truy xuất kho tri thức (RAG) | `api/rag.js` trả `{chunks:[]}` **không báo lỗi** → AI trả lời bằng kiến thức chung của internet thay vì quy trình và nguồn lực thật của Thảo Đàn |
-| Nạp tài liệu vào kho | GitHub Action dừng, chỉ thấy ✗ trong tab Actions — app không báo gì |
-| Đọc ảnh trang sổ tay | **Đã TẮT** qua `FEATURES.ocr` — quyết định của tổ chức, xem mục dưới |
+| Kho tri thức (RAG) | `api/rag.js` trả `{chunks:[]}` — app chạy bình thường, chỉ là AI trả lời bằng kiến thức chung. GitHub Action **tự bỏ qua và thoát 0** nên không đỏ; log in cảnh báo rõ |
+| Đọc ảnh trang sổ tay | **Đã TẮT** qua `FEATURES.ocr` — cũng là quyết định riêng về bảo mật, xem mục "đang tạm tắt" |
 
-**Cách kiểm RAG đã chạy hay chưa** (vì nó không báo lỗi): phân tích một ca rồi hỏi trong khung chat
-*"Quy trình giai đoạn 2 của Thảo Đàn yêu cầu những gì?"* — trả lời đúng **SLA 72 giờ** và tên biểu
-mẫu bắt buộc là đang chạy; trả lời chung chung là chưa.
+**Không phải việc cần làm gấp.** Bật lại khi nào tổ chức có khóa: khai `OPENAI_API_KEY` ở Vercel và
+GitHub Secrets, đổi `FEATURES.ocr` nếu muốn dùng cả nút 📷. Chi tiết trong
+[`docs/README.md`](docs/README.md).
 
-RAG cần chuẩn bị những gì, vì sao không có cách thay thế khóa OpenAI, ai chuẩn bị nội dung nào —
-xem [`docs/README.md`](docs/README.md).
+Nếu sau này bật RAG, **cách kiểm nó chạy thật** (vì nó không báo lỗi): phân tích một ca rồi hỏi
+trong chat *"Quy trình giai đoạn 2 của Thảo Đàn yêu cầu những gì?"* — trả lời đúng **SLA 72 giờ**
+và tên biểu mẫu bắt buộc là đang chạy.
 
-Những phần **không** phụ thuộc khóa OpenAI và đang chạy đủ: phân tích ca và chat (Groq), 10 biểu
-mẫu, truy vết nguồn, dấu BẢN NHÁP, ẩn danh, tra cứu tiền lệ, nhập bằng giọng nói, xuất Word/PDF,
-mã hóa hồ sơ.
+### Đang chạy đủ, không phụ thuộc khóa OpenAI
+
+Phân tích ca và chat (Groq) · 10 biểu mẫu và bộ hồ sơ Word · truy vết nguồn · dấu BẢN NHÁP và bước
+xác nhận · ẩn danh tên/SĐT/CCCD/email/địa chỉ · tra cứu tiền lệ · nhập bằng giọng nói · xuất
+Word/PDF có chữ ký và số trang · công văn chuyển gửi · mã hóa hồ sơ · audit log.
+
+Nói cách khác: **giá trị cốt lõi của tool không cần khóa OpenAI.**
 
 ## Biến môi trường — phải khai ở HAI nơi khác nhau
 
