@@ -23,6 +23,21 @@ const { SUPABASE_URL, SUPABASE_SERVICE_KEY, OPENAI_API_KEY } = process.env;
 if (!DRY_RUN) {
   const missing = Object.entries({ SUPABASE_URL, SUPABASE_SERVICE_KEY, OPENAI_API_KEY })
     .filter(([, v]) => !v).map(([k]) => k);
+
+  // Chưa có khóa OpenAI = RAG chưa được cấp phép dùng, KHÔNG phải cấu hình sai → bỏ qua và
+  // thoát 0 để Action không đỏ. Action đỏ triền miên làm người ta quen với dấu ✗ rồi bỏ qua cả
+  // khi có lỗi thật. Vẫn in cảnh báo rõ để không ai tưởng kho tri thức đã nạp.
+  if (!OPENAI_API_KEY) {
+    console.warn('⏭️  BỎ QUA nạp kho tri thức: chưa có OPENAI_API_KEY.');
+    console.warn('   RAG chưa hoạt động — AI sẽ trả lời bằng kiến thức chung, không phải quy');
+    console.warn('   trình và nguồn lực của Thảo Đàn. Xem docs/README.md mục "RAG cần những gì".');
+    if (missing.length > 1) {
+      console.warn(`   (đồng thời còn thiếu: ${missing.filter(k => k !== 'OPENAI_API_KEY').join(', ')})`);
+    }
+    process.exit(0);
+  }
+
+  // Có khóa OpenAI mà thiếu biến Supabase = cấu hình SAI → vẫn phải đỏ để người ta biết mà sửa.
   if (missing.length) {
     console.error(`❌ Thiếu ${missing.length}/3 biến môi trường: ${missing.join(', ')}`);
     console.error(`   Đã có: ${['SUPABASE_URL','SUPABASE_SERVICE_KEY','OPENAI_API_KEY']

@@ -88,13 +88,19 @@ không sinh bản trùng.
 
 ## Trạng thái hiện tại (04/09/2026)
 
-**Kho tri thức CHƯA được nạp** — Action `Index docs → Supabase RAG` đang lỗi vì thiếu secret
-`OPENAI_API_KEY` trong GitHub (tổ chức chưa có khóa OpenAI). `SUPABASE_URL` và
-`SUPABASE_SERVICE_KEY` đã khai xong.
+**RAG đang HOÃN** — tổ chức chưa có khóa OpenAI. Đây là quyết định, không phải việc còn dở:
 
-Khi có khóa, nạp được ngay **27 mẩu** từ `quy-trinh-ctxh-co-ban.md` (8) và `sop-quan-ly-ca-ctxh-v1.md`
-(19). Hai file `nguon-luc/` và `phap-ly/` vẫn bị bỏ qua vì còn dấu `SKIP-INDEX` — đang chờ dữ liệu
-thật từ tổ chức.
+- `SUPABASE_URL` và `SUPABASE_SERVICE_KEY` đã khai xong trong GitHub Secrets
+- Thiếu `OPENAI_API_KEY` thì `scripts/index-docs.js` **tự bỏ qua và thoát 0**, nên Action báo xanh
+  chứ không đỏ — tránh việc Action đỏ triền miên làm người ta quen bỏ qua cả lỗi thật. Log vẫn in
+  cảnh báo để không ai tưởng kho tri thức đã nạp
+- App chạy bình thường; `api/rag.js` trả về rỗng nên AI chỉ trả lời bằng kiến thức chung
+
+Khi nào có khóa: khai secret rồi Re-run workflow là nạp được ngay **27 mẩu** từ
+`quy-trinh-ctxh-co-ban.md` (8) và `sop-quan-ly-ca-ctxh-v1.md` (19) — không cần chờ danh bạ.
+
+Hai file `nguon-luc/` và `phap-ly/` vẫn bị bỏ qua vì còn dấu `SKIP-INDEX`; điền dữ liệu thật vào
+đó **làm được ngay, không cần khóa OpenAI** — chỉ là chưa nạp lên được thôi.
 
 ## Để tính năng hoạt động trên bản chạy thật
 
