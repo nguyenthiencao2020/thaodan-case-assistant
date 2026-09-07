@@ -20,6 +20,17 @@
   --s4:#d97706; --s4-bg:#fffbeb; --s4-bd:#fde68a;
   --s5:#059669; --s5-bg:#ecfdf5; --s5-bd:#a7f3d0;
 
+  /* Nền/viền phụ. Bốn biến này ĐANG được dùng ở 10 chỗ trong file (chip gợi ý, thẻ thống kê,
+     mục thông báo, danh sách tệp...) nhưng trước đây CHƯA HỀ được khai báo — var() không có
+     giá trị nên khai báo bị vô hiệu, nền biến thành trong suốt, chữ thì kế thừa màu bừa. */
+  --bg:var(--white);    /* nền hộp thoại — cũng đang được dùng mà chưa khai báo */
+  --bg2:#f1f5f9;        /* xám rất nhạt — nền chip, nút phụ, thẻ thống kê */
+  --bd2:#cbd5e1;        /* viền đậm hơn --bd, dùng cho icon mờ */
+  --t1:var(--text);     /* tên cũ của --text, còn sót ở vài chỗ */
+  --navy-tint:#eef2fb;  /* navy RẤT nhạt — nền khi trỏ chuột. KHÔNG dùng --navy3 cho việc
+                           này: --navy3 là #0a1f4d, navy đậm nhất, chữ navy trên nền đó thì
+                           mất chữ (đúng lỗi vừa gặp ở chip gợi ý). */
+
   /* Current stage (updated by JS) */
   --sc: var(--s1); --sc-bg: var(--s1-bg); --sc-bd: var(--s1-bd);
 }
@@ -205,7 +216,10 @@ body {
   background:#f1f5f9; border-color:#e2e8f0;
   cursor:not-allowed;
 }
-.sp-step.locked .sp-num, .sp-step.locked .sp-lbl { color:#cbd5e1; }
+/* Mốc bị khóa vẫn phải ĐỌC ĐƯỢC: #cbd5e1 trên nền #f1f5f9 chỉ đạt 1.36:1, tên giai đoạn
+   coi như mất chữ. --t3 trên cùng nền đó đạt ~3.3:1 — vẫn mờ rõ ràng là đang khóa, nhưng đọc
+   được tên. */
+.sp-step.locked .sp-num, .sp-step.locked .sp-lbl { color:var(--t3); }
 .sp-step.locked::before {
   content:'🔒'; position:absolute; top:2px; right:4px;
   font-size:8px; opacity:.45;
@@ -397,7 +411,7 @@ svg.ic-sm { width:13px; height:13px; }
 
 .chat-msgs { flex:1; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
 .chat-empty { text-align:center; color:var(--t3); font-size:13px; padding:40px 20px; }
-.chat-empty-ic { width:26px; height:26px; margin-bottom:8px; color:var(--bd2,#cbd5e1); }
+.chat-empty-ic { width:26px; height:26px; margin-bottom:8px; color:var(--bd2); }
 .chat-empty-t { font-weight:600; font-size:15px; color:var(--t2); margin-bottom:4px; }
 
 /* Gợi ý: một hàng cuộn ngang, không viền, không nhãn — trước đây 5 chip xuống 2 hàng
@@ -410,9 +424,9 @@ svg.ic-sm { width:13px; height:13px; }
   display:inline-flex; align-items:center; gap:5px; flex-shrink:0; transition:background .15s, color .15s;
 }
 .chat-sug-btn .ic { width:13px; height:13px; }
-.chat-sug-btn:hover { background:var(--navy3,#eef2fb); color:var(--navy); }
+.chat-sug-btn:hover { background:var(--navy-tint); color:var(--navy); }
 .chat-sug-btn:focus-visible { outline:2px solid var(--navy); outline-offset:1px; }
-.chat-sug-more { color:var(--navy); background:#eef2fb; }
+.chat-sug-more { color:var(--navy); background:var(--navy-tint); }
 
 .cb { max-width:88%; padding:10px 14px; border-radius:12px; font-size:13px; line-height:1.65; word-break:break-word; }
 .cb-user { background:var(--navy); color:#fff; align-self:flex-end; border-bottom-right-radius:3px; }
