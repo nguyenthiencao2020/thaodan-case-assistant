@@ -75,6 +75,29 @@ body {
 .btn-hdr-primary { background:var(--org); color:#fff; border:none; font-weight:700; }
 .btn-hdr-primary:hover { background:var(--org2); }
 
+/* ══ NHÃN TAB, DẢI MÃ CA, MENU "⋯" ══ */
+.mn-short { display:none; }
+.cstat-short { display:none; }
+.case-strip { display:none; }
+.btn-hdr-more { display:none; }
+.hdr-more {
+  position:fixed; top:52px; right:8px; z-index:9000; min-width:210px;
+  background:#fff; border:1px solid var(--bd); border-radius:12px; padding:6px;
+  box-shadow:0 16px 44px rgba(15,23,42,.24); display:flex; flex-direction:column; gap:2px;
+}
+.hdr-more button {
+  background:none; border:none; text-align:left; font-family:inherit; font-size:14px;
+  color:var(--text); padding:11px 12px; border-radius:8px; cursor:pointer; min-height:44px;
+  display:flex; align-items:center; gap:8px;
+}
+.hdr-more button:hover, .hdr-more button:focus-visible { background:var(--bg2); outline:none; }
+.hdr-more-badge { background:#dc2626; color:#fff; font-size:11px; padding:1px 7px; border-radius:9px; }
+.hdr-more-email {
+  font-size:12px; color:var(--t3); padding:8px 12px 6px; margin-top:4px;
+  border-top:1px solid var(--bd); word-break:break-all;
+}
+.hdr-more-out { color:#dc2626 !important; font-weight:600; }
+
 /* ══ MAIN NAV ══ */
 .main-nav {
   display:flex; background:var(--navy); border-bottom:2px solid var(--org);
@@ -973,6 +996,28 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   .btn-hdr { padding:6px 10px; font-size:10px; min-height:36px; }
   #hdr-progress { display:none !important; }
 
+  /* Header chỉ còn 1 hàng: các thao tác phụ dồn vào menu "⋯" */
+  .user-bar, .btn-hdr-json { display:none !important; }
+  .btn-hdr-more { display:inline-flex; align-items:center; justify-content:center;
+                  font-size:16px; line-height:1; min-width:40px; }
+  .hdr { flex-wrap:nowrap; }
+  .hdr-btns { margin-left:auto; }
+
+  /* Dải mã ca — bù lại việc .hdr-info bị ẩn */
+  .case-strip {
+    display:block; background:var(--navy3); color:rgba(255,255,255,.82);
+    font-size:11.5px; font-weight:600; padding:5px 12px; flex-shrink:0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .case-strip[hidden] { display:none; }
+
+  /* Nhãn tab bản ngắn để cả 4 tab cùng lọt trên màn 390px */
+  .mn-long { display:none; }
+  .mn-short { display:inline; }
+  .cstat-long { display:none; }
+  .cstat-short { display:inline; }
+
   /* ── NAV ── */
   .main-nav { padding:0 6px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
   .main-nav::-webkit-scrollbar { display:none; }
@@ -994,6 +1039,9 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 
   /* Stage header compact */
   .stage-header-card { padding:10px 12px 8px; }
+  /* "Click mốc..." là chỉ dẫn cho chuột, trên điện thoại vừa vô nghĩa vừa bị cắt nửa dòng ở
+     mép vùng cuộn — bỏ hẳn trên màn hẹp. */
+  .stage-progress-hint { display:none; }
   .stage-pill { font-size:10px; padding:3px 8px; }
   .btn-complete-stage { font-size:9px !important; padding:5px 10px !important; }
   #btn-rollback { font-size:9px !important; padding:4px 8px !important; }
@@ -1016,6 +1064,15 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   .btn-send { width:38px; height:38px; }     /* nút tròn, vẫn đủ 38px cho ngón tay */
   .chat-suggestions { padding:6px 10px 0; }
   .chat-disclaim { padding:5px 10px 7px; }
+  /* Vùng bấm cho ngón tay: 5 nhóm nút dưới đây trước đây chỉ cao 18-27px. */
+  .btn-chat-view, .btn-chat-restore { padding:9px; }
+  .chat-i { padding:8px; }
+  .chat-sug-btn { min-height:36px; padding:8px 12px; }
+  .tpl-toggle-btn { min-height:34px; padding:6px 12px !important; }
+  .btn-noprint { min-height:34px; }
+  .btn-mic { min-height:36px; }
+  .btn-fv-edit, .btn-fv-save, .btn-dl-docx, .btn-dl-docx-brand { min-height:36px; }
+  .btn-cp { min-height:32px; }
   /* Thu gọn trên điện thoại: hai cột xếp dọc nên thanh chat nằm ngang, không quay chữ dọc. */
   .dash.chat-collapsed .dash-right { flex:0 0 42px !important; min-width:0; border-left:none; border-top:1px solid var(--bd); }
   .dash.chat-collapsed .dash-left { max-height:none !important; }
@@ -1116,12 +1173,19 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 
   /* Larger touch targets */
   .form-item { padding:10px 12px; min-height:44px; }
-  .mnav { min-height:40px; padding:8px 10px; font-size:10px; }
+  .mnav { min-height:40px; padding:8px 9px; font-size:10px; }
+  .mnav .mn-ico { margin-right:2px; }
   .btn-analyze, .btn-dl-docx, .btn-export-all, .btn-new-case { min-height:48px; }
 
   /* Table scrolling hint */
   .sec-bd::after { content:'← swipe →'; display:block; font-size:9px; color:var(--t3); text-align:right; padding:2px 0 0; }
   .sec-bd:not(:has(table))::after { display:none; }
+}
+
+/* Máy hẹp nhất còn phổ biến (Galaxy S8, 360px): 4 tab thiếu đúng 3px nên siết lề ngang. */
+@media (max-width:380px) {
+  .main-nav { padding:0 2px; }
+  .mnav { padding:8px 7px; letter-spacing:0; }
 }
 
 /* ── Touch-friendly targets (all touch devices) ── */
