@@ -215,7 +215,7 @@ async function logoutUser() {
   document.getElementById('dash-notes').value = '';
   const _rn = document.getElementById('dash-real-name'); if (_rn) _rn.value = '';
   document.getElementById('dash-cc').textContent = '0 ký tự';
-  document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;">Chuyên gia CTXH sẵn sàng</div><div>Hỏi bất kỳ điều gì về CTXH hoặc nhập ghi chép để phân tích ca.</div></div>';
+  document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><svg class="ic chat-empty-ic"><use href="#i-chat"/></svg><div class="chat-empty-t">Chuyên gia CTXH sẵn sàng</div><div>Hỏi bất kỳ điều gì về CTXH hoặc nhập ghi chép để phân tích ca.</div></div>';
   const ci = document.getElementById('chat-input'); if (ci) ci.value = '';
   // Header
   document.getElementById('hdr-case-name').textContent = '';
@@ -240,7 +240,7 @@ async function logoutUser() {
   if (al) al.innerHTML = '<div class="eval-placeholder" style="padding:32px 10px;"><div class="ep-icon">📊</div><div class="ep-title">Chưa có ca nào</div><div class="ep-sub">Mở một ca ở tab Dashboard để xem phân tích</div></div>';
   const fecMsgs = document.getElementById('fec-msgs');
   if (fecMsgs) fecMsgs.innerHTML = '<div class="fec-hint">VD: "sửa họ tên thành Nguyễn Văn A" · "bổ sung địa chỉ 123 Q.1"</div>';
-  document.getElementById('chat-suggestions').style.display = 'none';
+  const _cs = document.getElementById('chat-suggestions'); if (_cs) { _cs.hidden = true; _cs._sugOpen = false; }
   // Stage / banners
   document.getElementById('closed-banner')?.classList.remove('show');
   updateStageUI();
@@ -1690,10 +1690,14 @@ function renderReport(report) {
 // ── Helpers dùng chung ──
 function _riskColor(r) { return r==='Cao'?'#dc2626':r==='Trung bình'?'#d97706':'#16a34a'; }
 function _riskBg(r) { return r==='Cao'?'#fef2f2':r==='Trung bình'?'#fffbeb':'#f0fdf4'; }
-function _riskIcon(r) { return r==='Cao'?'🔴':r==='Trung bình'?'🟡':'🟢'; }
+// Trước đây trả về emoji tròn màu — mỗi hệ điều hành một sắc đỏ/vàng/xanh khác, lệch hẳn với
+// màu chữ ngay bên cạnh. Nay là một chấm tròn vẽ bằng CSS, lấy đúng màu của mức rủi ro.
+function _riskIcon(r) {
+  return `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${_riskColor(r)};vertical-align:middle"></span>`;
+}
 function _levelBadge(obj) {
-  if (!obj||!obj.level) return '<span style="color:#9ca3af">—</span>';
-  const cm={C:['#dc2626','#fef2f2'],TB:['#d97706','#fffbeb'],T:['#16a34a','#f0fdf4'],KR:['#6b7280','#f3f4f6']};
+  if (!obj||!obj.level) return '<span style="color:#94a3b8">—</span>';
+  const cm={C:['#dc2626','#fef2f2'],TB:['#d97706','#fffbeb'],T:['#16a34a','#f0fdf4'],KR:['#64748b','#f1f5f9']};
   const lm={C:'Cao',TB:'TB',T:'Thấp',KR:'Chưa rõ'};
   const [c,bg]=cm[obj.level]||cm.KR;
   return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${bg};color:${c};border:1px solid ${c}33">${lm[obj.level]||obj.level}</span>`;
@@ -1701,39 +1705,58 @@ function _levelBadge(obj) {
 function _chip(txt,color) {
   return `<span style="display:inline-flex;padding:3px 9px;border-radius:16px;font-size:11px;font-weight:600;background:${color}15;color:${color};border:1px solid ${color}33;margin:2px">${esc(txt)}</span>`;
 }
-function _secHead(icon,num,title,color='#1e3a5f') {
-  return `<div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;padding:6px 12px;background:${color}0d;border-left:4px solid ${color};border-radius:0 6px 6px 0">
-    <span style="font-size:14px">${icon}</span><span style="color:${color};font-size:11px;font-weight:800">${num}</span>
-    <span style="font-size:13px;font-weight:800;color:${color}">${title}</span></div>`;
+// Emoji trong tiêu đề mục do mỗi hệ điều hành vẽ một kiểu, một sắc độ — đây là thứ làm báo cáo
+// trông thô nhất. Đổi sang icon nét ăn theo màu chữ. Bảng dịch đặt ở đây nên không phải sửa
+// hơn 20 chỗ gọi _secHead.
+const _SEC_ICON = {
+  '\u{1F3AF}':'target', '\u{1F4CB}':'clipboard', '\u{1F4CA}':'chart', '\u{1F4A1}':'compass',
+  '\u26A0\uFE0F':'alert', '\u{1F9ED}':'compass', '\u{1F522}':'chart', '\u{1F50D}':'search',
+  '\u{1F504}':'refresh', '\u{1F4CC}':'flag', '\u{1F4C5}':'calendar', '\u{1F49A}':'heart',
+  '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}':'users', '\u{1F467}':'child', '\u{1F3E0}':'home',
+  '\u{1F3C6}':'check', '\u{1F4C8}':'trend', '\u2705':'check', '\u{1F4DD}':'doc',
+};
+// Màu tiêu đề mục chỉ còn 3 tông mang nghĩa: đỏ = rủi ro, vàng = việc NVXH phải làm,
+// navy = thông tin chuyên môn. Trước đây mỗi mục một màu (tím, lục lam, lam, cam) nên màu
+// không còn nói lên điều gì. Vẫn nhận tham số color cũ để không phải sửa mọi chỗ gọi.
+const _SEC_TONE = {
+  '#dc2626':['#dc2626','#fef2f2'], '#7f1d1d':['#dc2626','#fef2f2'],
+  '#d97706':['#b45309','#fffbeb'], '#b45309':['#b45309','#fffbeb'],
+};
+function _secHead(icon,num,title,color='#0f2d6b') {
+  const [c,bg] = _SEC_TONE[color] || ['#0f2d6b','#f4f6fb'];
+  const name = _SEC_ICON[icon] || 'doc';
+  return `<div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;padding:7px 12px;background:${bg};border-left:3px solid ${c};border-radius:0 6px 6px 0">
+    <svg class="ic" style="color:${c}"><use href="#i-${name}"/></svg><span style="color:${c};font-size:11px;font-weight:700">${num}</span>
+    <span style="font-size:13px;font-weight:700;color:${c}">${title}</span></div>`;
 }
 function _header(stageName,stageNum,color) {
   const cb=D?.co_ban||{};
   const now=fmtVN(new Date().toISOString());
   return `<div style="background:linear-gradient(135deg,#0f2d6b 0%,#1a3f8f 60%,${color} 100%);border-radius:12px;padding:14px 18px;margin-bottom:14px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;width:100%;box-sizing:border-box">
     <div style="display:flex;align-items:center;gap:10px">
-      <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:18px">🌿</div>
+      <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center"><svg class="ic" style="width:19px;height:19px"><use href="#i-leaf"/></svg></div>
       <div><div style="font-size:14px;font-weight:900">Báo cáo GĐ ${stageNum} — ${stageName}</div>
       <div style="font-size:10px;opacity:.6;margin-top:2px">${esc(cb.ho_ten||'—')} · ${now}</div></div>
     </div>
-    <button class="btn-noprint" onclick="dlReportDocx()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:5px 12px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">⬇ .docx</button>
+    <button class="btn-noprint" onclick="dlReportDocx()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:5px 12px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-download"/></svg> .docx</button>
   </div>`;
 }
 function _urgentBanner(report) {
   if (!report.urgent||!report.urgent_reason) return '';
-  return `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#7f1d1d"><strong>⚠️ KHẨN CẤP:</strong> ${esc(report.urgent_reason)}</div>`;
+  return `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#7f1d1d"><strong><svg class="ic" style="color:#dc2626;vertical-align:-2px"><use href="#i-alert"/></svg> KHẨN CẤP:</strong> ${esc(report.urgent_reason)}</div>`;
 }
 function _supervisionNotes(notes) {
   if (!notes||!notes.length) return '';
-  return `<div style="background:#fefce8;border:1.5px solid #fde047;border-radius:8px;padding:10px 14px;margin-top:10px">
-    <div style="font-size:10px;font-weight:700;color:#854d0e;margin-bottom:5px">📋 GHI CHÚ GIÁM SÁT VIÊN</div>
-    <ul style="margin:0;padding-left:14px">${notes.map(n=>`<li style="font-size:12px;color:#713f12;margin:2px 0">${esc(n)}</li>`).join('')}</ul></div>`;
+  return `<div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-top:10px">
+    <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-clipboard"/></svg> GHI CHÚ GIÁM SÁT VIÊN</div>
+    <ul style="margin:0;padding-left:14px">${notes.map(n=>`<li style="font-size:12px;color:#78350f;margin:2px 0">${esc(n)}</li>`).join('')}</ul></div>`;
 }
 function _infoTable(cb) {
   return `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px">
-    <tr><td style="padding:5px 10px;font-weight:600;color:#555;background:#f9fafb;border:1px solid #e5e7eb;width:20%">Họ tên</td>
-    <td style="padding:5px 10px;border:1px solid #e5e7eb;color:#1a4a8a;font-weight:700">${esc(cb.ho_ten||'—')}</td>
-    <td style="padding:5px 10px;font-weight:600;color:#555;background:#f9fafb;border:1px solid #e5e7eb;width:18%">Tuổi / Giới</td>
-    <td style="padding:5px 10px;border:1px solid #e5e7eb">${esc([cf(cb.tuoi),cf(cb.gioi_tinh)].filter(Boolean).join(' / ')||'—')}</td></tr></table>`;
+    <tr><td style="padding:5px 10px;font-weight:600;color:#555;background:#f8fafc;border:1px solid #e2e8f0;width:20%">Họ tên</td>
+    <td style="padding:5px 10px;border:1px solid #e2e8f0;color:#0f2d6b;font-weight:700">${esc(cb.ho_ten||'—')}</td>
+    <td style="padding:5px 10px;font-weight:600;color:#555;background:#f8fafc;border:1px solid #e2e8f0;width:18%">Tuổi / Giới</td>
+    <td style="padding:5px 10px;border:1px solid #e2e8f0">${esc([cf(cb.tuoi),cf(cb.gioi_tinh)].filter(Boolean).join(' / ')||'—')}</td></tr></table>`;
 }
 function _setReport(html) {
   document.getElementById('chat-msgs').innerHTML = `<div class="cb cb-report" style="width:100%;max-width:100%">${html}</div>`;
@@ -1746,8 +1769,8 @@ function _setReport(html) {
 function renderReport1(r) {
   const cb=D?.co_ban||{}, rm=r.risk_matrix||{}, nw=r.needs_vs_wants||{}, pf=r.parentification||{}, dr=r.data_reliability||[];
   const rC=_riskColor(r.risk), rBg=_riskBg(r.risk), rI=_riskIcon(r.risk);
-  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1f2937;width:100%;box-sizing:border-box">`;
-  h += _header('Tiếp cận ban đầu',1,'#2563eb');
+  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
+  h += _header('Tiếp cận ban đầu',1,'#0f2d6b');
   h += _infoTable(cb);
   h += _urgentBanner(r);
   // Số mục La Mã đánh tự động: mục "Độ tin cậy dữ liệu" chỉ xuất hiện khi AI trả về, trước đây
@@ -1762,10 +1785,10 @@ function renderReport1(r) {
   if ((r.next_questions||[]).length || dr.length) {
     h += `<div style="background:#fffbeb;border:1.5px solid #fcd34d;border-left:5px solid #d97706;border-radius:0 10px 10px 0;padding:12px 14px;margin-bottom:12px">
       <div style="font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">
-        📋 Việc của NVXH trước khi kết luận</div>`;
+        <svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-clipboard"/></svg> Việc của NVXH trước khi kết luận</div>`;
     if ((r.next_questions||[]).length) {
       h += `<div style="font-size:11px;font-weight:700;color:#78350f;margin-bottom:3px">Cần khai thác / kiểm chứng thêm:</div>
-        <ol style="margin:0 0 8px;padding-left:16px">${(r.next_questions||[]).map(q=>`<li style="font-size:12.5px;margin:3px 0;color:#451a03">${esc(q)}</li>`).join('')}</ol>`;
+        <ol style="margin:0 0 8px;padding-left:16px">${(r.next_questions||[]).map(q=>`<li style="font-size:12.5px;margin:3px 0;color:#78350f">${esc(q)}</li>`).join('')}</ol>`;
     }
     if (dr.length) {
       h += `<div style="font-size:11.5px;color:#78350f">
@@ -1778,12 +1801,12 @@ function renderReport1(r) {
 
   // Độ tin cậy
   if (dr.length) {
-    h += _secHead('🔍',_rn(),'ĐỘ TIN CẬY DỮ LIỆU','#059669');
-    h += `<div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:10px;margin-bottom:10px">`;
+    h += _secHead('🔍',_rn(),'ĐỘ TIN CẬY DỮ LIỆU','#166534');
+    h += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:10px">`;
     dr.forEach(d => {
-      h+=`<div style="display:flex;gap:7px;margin-bottom:5px;padding:4px 8px;background:#fff;border-radius:5px;border:1px solid #e5e7eb">
+      h+=`<div style="display:flex;gap:7px;margin-bottom:5px;padding:4px 8px;background:#fff;border-radius:5px;border:1px solid #e2e8f0">
         <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;${d.type==='sự kiện'?'background:#dcfce7;color:#166534':'background:#fef3c7;color:#92400e'};flex-shrink:0">${esc(d.type)}</span>
-        <div style="font-size:12px;flex:1">"${esc(d.content)}"${d.note?`<div style="color:#0d9488;font-size:11px;margin-top:1px">→ ${esc(d.note)}</div>`:''}</div></div>`;
+        <div style="font-size:12px;flex:1">"${esc(d.content)}"${d.note?`<div style="color:#475569;font-size:11px;margin-top:1px">→ ${esc(d.note)}</div>`:''}</div></div>`;
     });
     h += `</div>`;
   }
@@ -1798,11 +1821,11 @@ function renderReport1(r) {
   h += _secHead('⚠️',_rn(),'MA TRẬN RỦI RO ĐA CHIỀU','#dc2626');
   h += `<div style="display:grid;gap:5px;margin-bottom:10px">`;
   ['an_toan_the_chat','an_toan_tam_ly','moi_truong','giao_duc','he_thong_bao_ve'].forEach((k,i)=>{
-    const lb=['🛡 An toàn Thể chất','🧠 An toàn Tâm lý','🏠 Môi trường Sống','📚 Giáo dục & Phát triển','👨‍👩‍👧 Hệ thống Bảo vệ'];
+    const lb=['<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-shield"/></svg> An toàn Thể chất','<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-compass"/></svg> An toàn Tâm lý','<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-home"/></svg> Môi trường Sống','<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-book"/></svg> Giáo dục & Phát triển','<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-users"/></svg> Hệ thống Bảo vệ'];
     const obj=rm[k]||{};
-    h+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:1px solid #e5e7eb;border-radius:6px">
-      <span style="font-size:12px;min-width:175px;font-weight:600;color:#374151">${lb[i]}</span>${_levelBadge(obj)}
-      <span style="font-size:11.5px;color:#6b7280;flex:1">${esc(obj.detail||'')}</span></div>`;
+    h+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:6px">
+      <span style="font-size:12px;min-width:175px;font-weight:600;color:#334155">${lb[i]}</span>${_levelBadge(obj)}
+      <span style="font-size:11.5px;color:#64748b;flex:1">${esc(obj.detail||'')}</span></div>`;
   });
   h += `</div>`;
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
@@ -1810,50 +1833,50 @@ function renderReport1(r) {
       <div style="font-size:10px;font-weight:700;color:${rC};text-transform:uppercase;margin-bottom:5px">Mức rủi ro — AI gợi ý</div>
       <div style="display:flex;align-items:center;gap:8px"><span style="font-size:19px">${rI}</span>
       <div><div style="font-size:15px;font-weight:800;color:${rC}">${r.risk||'?'}</div>
-      ${r.urgent?'<div style="font-size:10px;background:#dc2626;color:#fff;padding:1px 7px;border-radius:10px;margin-top:2px;display:inline-block">⚠️ KHẨN CẤP</div>':''}</div></div>
-      <div style="margin-top:6px;font-size:12px;color:#374151">${esc(r.risk_reason||'')}</div>
-      <div style="margin-top:7px;padding-top:6px;border-top:1px dashed ${rC}55;font-size:10.5px;color:#6b7280;font-style:italic">
+      ${r.urgent?'<div style="font-size:10px;background:#dc2626;color:#fff;padding:1px 7px;border-radius:10px;margin-top:2px;display:inline-block"><svg class="ic ic-sm" style="vertical-align:-2px;color:#b45309"><use href="#i-alert"/></svg> KHẨN CẤP</div>':''}</div></div>
+      <div style="margin-top:6px;font-size:12px;color:#334155">${esc(r.risk_reason||'')}</div>
+      <div style="margin-top:7px;padding-top:6px;border-top:1px dashed ${rC}55;font-size:10.5px;color:#64748b;font-style:italic">
         Đây là gợi ý của máy dựa trên ghi chép, <strong>không phải kết luận chuyên môn</strong>.
         Mức rủi ro chính thức do NVXH và giám sát ca quyết định.</div></div>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:5px">🚩 Red Flags</div>
-      <ul style="margin:0;padding-left:14px">${(r.red_flags||[]).map(f=>`<li style="font-size:12px;margin:2px 0;color:#78350f">${esc(f)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không phát hiện</li>'}</ul>
+      <div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-flag"/></svg> Red Flags</div>
+      <ul style="margin:0;padding-left:14px">${(r.red_flags||[]).map(f=>`<li style="font-size:12px;margin:2px 0;color:#78350f">${esc(f)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không phát hiện</li>'}</ul>
     </div></div>`;
 
   // Phụ mẫu hóa
   if (pf.detected) {
-    h += `<div style="background:#faf5ff;border:1.5px solid #c084fc;border-radius:8px;padding:10px 14px;margin-bottom:10px">
-      <div style="font-weight:800;color:#7c3aed;margin-bottom:4px">⚡ PHỤ MẪU HÓA — ${esc(pf.type||'')}</div>
-      <div style="font-size:12.5px;color:#4c1d95">${esc(pf.description||'')}</div></div>`;
+    h += `<div style="background:#f4f6fb;border:1.5px solid #8ba6dd;border-radius:8px;padding:10px 14px;margin-bottom:10px">
+      <div style="font-weight:800;color:#0f2d6b;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-bolt"/></svg> PHỤ MẪU HÓA — ${esc(pf.type||'')}</div>
+      <div style="font-size:12.5px;color:#1e293b">${esc(pf.description||'')}</div></div>`;
   }
 
   // Nhu cầu vs Yêu cầu
-  h += _secHead('📌',_rn(),'NHU CẦU vs YÊU CẦU','#1e40af');
+  h += _secHead('📌',_rn(),'NHU CẦU vs YÊU CẦU','#0f2d6b');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#1e40af;margin-bottom:5px">NHU CẦU (khách quan)</div>
-      <div style="display:flex;flex-wrap:wrap;gap:2px">${(nw.needs||[]).map(n=>_chip(n,'#1e40af')).join('')||'<span style="color:#9ca3af;font-style:italic;font-size:11px">Chưa xác định</span>'}</div></div>
-    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#c2410c;margin-bottom:5px">YÊU CẦU (chủ quan)</div>
-      <div style="display:flex;flex-wrap:wrap;gap:2px">${(nw.wants||[]).map(w=>_chip(w,'#c2410c')).join('')||'<span style="color:#9ca3af;font-style:italic;font-size:11px">Chưa thu thập</span>'}</div></div></div>`;
+    <div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px">
+      <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:5px">NHU CẦU (khách quan)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px">${(nw.needs||[]).map(n=>_chip(n,'#0f2d6b')).join('')||'<span style="color:#94a3b8;font-style:italic;font-size:11px">Chưa xác định</span>'}</div></div>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px">
+      <div style="font-size:10px;font-weight:700;color:#b45309;margin-bottom:5px">YÊU CẦU (chủ quan)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px">${(nw.wants||[]).map(w=>_chip(w,'#b45309')).join('')||'<span style="color:#94a3b8;font-style:italic;font-size:11px">Chưa thu thập</span>'}</div></div></div>`;
 
   // Gợi ý can thiệp
-  h += _secHead('🎯',_rn(),'GỢI Ý CAN THIỆP','#7c3aed');
-  h += `<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px;margin-bottom:10px">`;
+  h += _secHead('🎯',_rn(),'GỢI Ý CAN THIỆP','#0f2d6b');
+  h += `<div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px;margin-bottom:10px">`;
   (r.suggestions||[]).sort((a,b)=>(a.priority||9)-(b.priority||9)).forEach((s,i)=>{
-    h+=`<div style="display:flex;gap:8px;padding:7px 8px;background:#fff;border:1px solid #e9d5ff;border-radius:6px;margin-bottom:5px">
-      <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">${i+1}</div>
-      <div><div style="font-weight:700;color:#4c1d95;font-size:12px">${esc(s.action)}</div>
-      <div style="font-size:11.5px;color:#6b21a8">${esc(s.reason)}</div>
-      ${s.who||s.timeline?`<div style="font-size:10.5px;color:#8b5cf6;margin-top:2px">${s.who?'👤 '+esc(s.who):''}${s.timeline?' · ⏱ '+esc(s.timeline):''}</div>`:''}</div></div>`;
+    h+=`<div style="display:flex;gap:8px;padding:7px 8px;background:#fff;border:1px solid #dbe3f3;border-radius:6px;margin-bottom:5px">
+      <div style="background:linear-gradient(135deg,#0f2d6b,#0f2d6b);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">${i+1}</div>
+      <div><div style="font-weight:700;color:#1e293b;font-size:12px">${esc(s.action)}</div>
+      <div style="font-size:11.5px;color:#0f2d6b">${esc(s.reason)}</div>
+      ${s.who||s.timeline?`<div style="font-size:10.5px;color:#0f2d6b;margin-top:2px">${s.who?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-user"/></svg> '+esc(s.who):''}${s.timeline?' · <svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-clock"/></svg> '+esc(s.timeline):''}</div>`:''}</div></div>`;
   });
   h += `</div>`;
 
   // Ưu thế (câu hỏi cần khai thác đã đưa lên khối đầu báo cáo)
   h += `<div style="margin-bottom:10px">
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:5px">💪 ƯU THẾ & BẢO VỆ</div>
-      <ul style="margin:0;padding-left:13px">${(r.strengths||[]).map(s=>`<li style="font-size:12px;margin:2px 0;color:#14532d">${esc(s)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Chưa xác định</li>'}</ul></div></div>`;
+      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-shield"/></svg> ƯU THẾ & BẢO VỆ</div>
+      <ul style="margin:0;padding-left:13px">${(r.strengths||[]).map(s=>`<li style="font-size:12px;margin:2px 0;color:#14532d">${esc(s)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa xác định</li>'}</ul></div></div>`;
 
   h += _supervisionNotes(r.supervision_notes);
   h += `</div>`;
@@ -1866,9 +1889,9 @@ function renderReport1(r) {
 function renderReport2(r) {
   const cb=D?.co_ban||{}, he=r.home_environment||{}, fd=r.family_dynamics||{}, vs=r.vs_stage1||{}, nu=r.needs_updated||{};
   const updColor=r.risk_update==='Tăng'?'#dc2626':r.risk_update==='Giảm'?'#16a34a':'#d97706';
-  const updIcon=r.risk_update==='Tăng'?'📈':r.risk_update==='Giảm'?'📉':'➡️';
-  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1f2937;width:100%;box-sizing:border-box">`;
-  h += _header('Vãng gia & Đánh giá',2,'#0891b2');
+  const updIcon=r.risk_update==='Tăng'?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-trend"/></svg>':r.risk_update==='Giảm'?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-trend-down"/></svg>':'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-arrow-right"/></svg>';
+  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
+  h += _header('Vãng gia & Đánh giá',2,'#475569');
   h += _infoTable(cb);
   h += _urgentBanner(r);
 
@@ -1883,55 +1906,55 @@ function renderReport2(r) {
       <div style="font-size:10px;font-weight:700;color:${updColor};text-transform:uppercase;margin-bottom:5px">So với GĐ 1</div>
       <div style="display:flex;align-items:center;gap:6px"><span style="font-size:20px">${updIcon}</span>
       <span style="font-size:15px;font-weight:800;color:${updColor}">${r.risk_update||'?'}</span></div>
-      <div style="font-size:11.5px;color:#374151;margin-top:5px">${esc(r.risk_change_reason||'')}</div></div></div>`;
+      <div style="font-size:11.5px;color:#334155;margin-top:5px">${esc(r.risk_change_reason||'')}</div></div></div>`;
 
   // Môi trường sống
-  h += _secHead('🏠','II.','MÔI TRƯỜNG SỐNG THỰC TẾ','#0891b2');
-  const safeColor=he.safety_level==='An toàn'?'#059669':he.safety_level==='Nguy hiểm'?'#dc2626':'#d97706';
-  h += `<div style="background:#ecfeff;border:1px solid #a5f3fc;border-radius:8px;padding:10px;margin-bottom:10px">
+  h += _secHead('🏠','II.','MÔI TRƯỜNG SỐNG THỰC TẾ','#475569');
+  const safeColor=he.safety_level==='An toàn'?'#166534':he.safety_level==='Nguy hiểm'?'#dc2626':'#d97706';
+  h += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
       <span style="font-size:12px;font-weight:700;color:${safeColor};background:${safeColor}15;padding:3px 10px;border-radius:12px;border:1px solid ${safeColor}33">${he.safety_level||'Chưa đánh giá'}</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><div style="font-size:10px;font-weight:700;color:#0891b2;margin-bottom:3px">Quan sát chính</div>
-      <ul style="margin:0;padding-left:13px">${(he.key_observations||[]).map(o=>`<li style="font-size:12px;color:#374151;margin:2px 0">${esc(o)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Chưa có</li>'}</ul></div>
+      <div><div style="font-size:10px;font-weight:700;color:#475569;margin-bottom:3px">Quan sát chính</div>
+      <ul style="margin:0;padding-left:13px">${(he.key_observations||[]).map(o=>`<li style="font-size:12px;color:#334155;margin:2px 0">${esc(o)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div>
       <div><div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:3px">Mối lo ngại</div>
-      <ul style="margin:0;padding-left:13px">${(he.concerns||[]).map(c=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không có</li>'}</ul></div></div></div>`;
+      <ul style="margin:0;padding-left:13px">${(he.concerns||[]).map(c=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div></div>`;
 
   // Gia đình
-  h += _secHead('👨‍👩‍👧','III.','NĂNG LỰC GIA ĐÌNH & NGƯỜI CHĂM SÓC','#7c3aed');
-  const capColor=fd.caregiver_capacity==='Cao'?'#059669':fd.caregiver_capacity==='Thấp'?'#dc2626':'#d97706';
-  h += `<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px;margin-bottom:10px">
+  h += _secHead('👨‍👩‍👧','III.','NĂNG LỰC GIA ĐÌNH & NGƯỜI CHĂM SÓC','#0f2d6b');
+  const capColor=fd.caregiver_capacity==='Cao'?'#166534':fd.caregiver_capacity==='Thấp'?'#dc2626':'#d97706';
+  h += `<div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px;margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
       <span style="font-size:11px;font-weight:700">Năng lực người chăm sóc:</span>
       <span style="font-size:11px;font-weight:800;color:${capColor};background:${capColor}15;padding:2px 8px;border-radius:10px;border:1px solid ${capColor}33">${fd.caregiver_capacity||'?'}</span></div>
-    <div style="font-size:12px;color:#374151;margin-bottom:6px">${esc(fd.relationship_quality||'')}</div>
+    <div style="font-size:12px;color:#334155;margin-bottom:6px">${esc(fd.relationship_quality||'')}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><div style="font-size:10px;font-weight:700;color:#059669;margin-bottom:3px">Yếu tố bảo vệ</div>
-      <ul style="margin:0;padding-left:13px">${(fd.protective_factors||[]).map(f=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(f)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Chưa xác định</li>'}</ul></div>
+      <div><div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:3px">Yếu tố bảo vệ</div>
+      <ul style="margin:0;padding-left:13px">${(fd.protective_factors||[]).map(f=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(f)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa xác định</li>'}</ul></div>
       <div><div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:3px">Yếu tố nguy cơ</div>
-      <ul style="margin:0;padding-left:13px">${(fd.risk_factors||[]).map(f=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(f)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không có</li>'}</ul></div></div></div>`;
+      <ul style="margin:0;padding-left:13px">${(fd.risk_factors||[]).map(f=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(f)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div></div>`;
 
   // So sánh GĐ 1
-  h += _secHead('🔄','IV.','SO SÁNH VỚI GĐ 1','#1e40af');
+  h += _secHead('🔄','IV.','SO SÁNH VỚI GĐ 1','#0f2d6b');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px">✅ Xác nhận</div>
-      <ul style="margin:0;padding-left:12px">${(vs.confirmed||[]).map(c=>`<li style="font-size:11.5px;color:#14532d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic;font-size:11px">Chưa có</li>'}</ul></div>
-    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:#1e40af;margin-bottom:4px">🆕 Phát hiện mới</div>
-      <ul style="margin:0;padding-left:12px">${(vs.new_findings||[]).map(f=>`<li style="font-size:11.5px;color:#1e3a8a;margin:2px 0">${esc(f)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic;font-size:11px">Không có</li>'}</ul></div>
+      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Xác nhận</div>
+      <ul style="margin:0;padding-left:12px">${(vs.confirmed||[]).map(c=>`<li style="font-size:11.5px;color:#14532d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic;font-size:11px">Chưa có</li>'}</ul></div>
+    <div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:8px">
+      <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-plus"/></svg> Phát hiện mới</div>
+      <ul style="margin:0;padding-left:12px">${(vs.new_findings||[]).map(f=>`<li style="font-size:11.5px;color:#1e293b;margin:2px 0">${esc(f)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic;font-size:11px">Không có</li>'}</ul></div>
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:4px">⚡ Mâu thuẫn</div>
-      <ul style="margin:0;padding-left:12px">${(vs.contradictions||[]).map(c=>`<li style="font-size:11.5px;color:#7f1d1d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic;font-size:11px">Không có</li>'}</ul></div></div>`;
+      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-bolt"/></svg> Mâu thuẫn</div>
+      <ul style="margin:0;padding-left:12px">${(vs.contradictions||[]).map(c=>`<li style="font-size:11.5px;color:#7f1d1d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic;font-size:11px">Không có</li>'}</ul></div></div>`;
 
   // Nhu cầu cập nhật + Câu hỏi
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#c2410c;margin-bottom:5px">📌 NHU CẦU CẬP NHẬT</div>
-      <div style="display:flex;flex-wrap:wrap;gap:2px">${(nu.needs||[]).map(n=>_chip(n,'#0891b2')).join('')||'<span style="color:#9ca3af;font-style:italic;font-size:11px">Như GĐ 1</span>'}</div></div>
-    <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#6b21a8;margin-bottom:5px">❓ CÂU HỎI CẦN KHAI THÁC</div>
-      <ol style="margin:0;padding-left:13px">${(r.next_questions||[]).map(q=>`<li style="font-size:12px;margin:2px 0;color:#4c1d95;font-style:italic">${esc(q)}</li>`).join('')||'<li style="color:#9ca3af">Chưa có</li>'}</ol></div></div>`;
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px">
+      <div style="font-size:10px;font-weight:700;color:#b45309;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-flag"/></svg> NHU CẦU CẬP NHẬT</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px">${(nu.needs||[]).map(n=>_chip(n,'#475569')).join('')||'<span style="color:#94a3b8;font-style:italic;font-size:11px">Như GĐ 1</span>'}</div></div>
+    <div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px">
+      <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-help"/></svg> CÂU HỎI CẦN KHAI THÁC</div>
+      <ol style="margin:0;padding-left:13px">${(r.next_questions||[]).map(q=>`<li style="font-size:12px;margin:2px 0;color:#1e293b;font-style:italic">${esc(q)}</li>`).join('')||'<li style="color:#94a3b8">Chưa có</li>'}</ol></div></div>`;
 
   h += _supervisionNotes(r.supervision_notes);
   h += `</div>`;
@@ -1943,71 +1966,71 @@ function renderReport2(r) {
 // ════════════════════
 function renderReport3(r) {
   const cb=D?.co_ban||{}, pa=r.plan_assessment||{}, rr=r.resources_review||{};
-  const feasColor=pa.feasibility==='Cao'?'#059669':pa.feasibility==='Thấp'?'#dc2626':'#d97706';
-  const engColor=r.family_engagement==='Tốt'?'#059669':r.family_engagement==='Yếu'?'#dc2626':'#d97706';
-  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1f2937;width:100%;box-sizing:border-box">`;
-  h += _header('Kế hoạch can thiệp',3,'#7c3aed');
+  const feasColor=pa.feasibility==='Cao'?'#166534':pa.feasibility==='Thấp'?'#dc2626':'#d97706';
+  const engColor=r.family_engagement==='Tốt'?'#166534':r.family_engagement==='Yếu'?'#dc2626':'#d97706';
+  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
+  h += _header('Kế hoạch can thiệp',3,'#0f2d6b');
   h += _infoTable(cb);
 
   // Tổng quan kế hoạch
-  h += _secHead('📋','I.','ĐÁNH GIÁ KẾ HOẠCH','#7c3aed');
+  h += _secHead('📋','I.','ĐÁNH GIÁ KẾ HOẠCH','#0f2d6b');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-    <div style="background:#faf5ff;border:1.5px solid #c084fc;border-left:4px solid #7c3aed;border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;margin-bottom:5px">Tính khả thi</div>
+    <div style="background:#f4f6fb;border:1.5px solid #8ba6dd;border-left:4px solid #0f2d6b;border-radius:8px;padding:12px">
+      <div style="font-size:10px;font-weight:700;color:#0f2d6b;text-transform:uppercase;margin-bottom:5px">Tính khả thi</div>
       <div style="font-size:18px;font-weight:900;color:${feasColor}">${pa.feasibility||'?'}</div>
       <div style="margin-top:6px">
-        <div style="font-size:10px;font-weight:700;color:#059669;margin-bottom:3px">Điểm mạnh</div>
-        <ul style="margin:0;padding-left:13px">${(pa.strengths||[]).map(s=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(s)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Chưa có</li>'}</ul></div></div>
+        <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:3px">Điểm mạnh</div>
+        <ul style="margin:0;padding-left:13px">${(pa.strengths||[]).map(s=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(s)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div></div>
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px">
       <div style="font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;margin-bottom:5px">Khoảng trống & Rủi ro</div>
       <div style="margin-bottom:6px">
         <div style="font-size:10px;font-weight:700;color:#d97706;margin-bottom:3px">Khoảng trống</div>
-        <ul style="margin:0;padding-left:13px">${(pa.gaps||[]).map(g=>`<li style="font-size:12px;color:#78350f;margin:2px 0">${esc(g)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không có</li>'}</ul></div>
+        <ul style="margin:0;padding-left:13px">${(pa.gaps||[]).map(g=>`<li style="font-size:12px;color:#78350f;margin:2px 0">${esc(g)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div>
       <div><div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:3px">Rủi ro</div>
-      <ul style="margin:0;padding-left:13px">${(pa.risks||[]).map(r2=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không có</li>'}</ul></div></div></div>`;
+      <ul style="margin:0;padding-left:13px">${(pa.risks||[]).map(r2=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div></div>`;
 
   // Review từng mục tiêu
-  h += _secHead('🎯','II.','NHẬN XÉT TỪNG MỤC TIÊU','#1e40af');
+  h += _secHead('🎯','II.','NHẬN XÉT TỪNG MỤC TIÊU','#0f2d6b');
   h += `<div style="margin-bottom:10px">`;
   (r.goals_review||[]).forEach((g,i) => {
-    const gc=g.realistic?'#059669':'#dc2626';
-    h+=`<div style="display:flex;gap:8px;padding:8px 10px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:5px">
-      <span style="font-size:11px;font-weight:800;color:${gc};background:${gc}15;padding:2px 8px;border-radius:8px;border:1px solid ${gc}33;flex-shrink:0;height:fit-content">${g.realistic?'✅ Khả thi':'⚠️ Cần xem lại'}</span>
-      <div><div style="font-size:12px;font-weight:600;color:#374151">${esc(g.goal||'')}</div>
-      <div style="font-size:11.5px;color:#6b7280;margin-top:2px">${esc(g.comment||'')}</div></div></div>`;
+    const gc=g.realistic?'#166534':'#dc2626';
+    h+=`<div style="display:flex;gap:8px;padding:8px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:5px">
+      <span style="font-size:11px;font-weight:800;color:${gc};background:${gc}15;padding:2px 8px;border-radius:8px;border:1px solid ${gc}33;flex-shrink:0;height:fit-content">${g.realistic?'<svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Khả thi':'<svg class="ic ic-sm" style="vertical-align:-2px;color:#b45309"><use href="#i-alert"/></svg> Cần xem lại'}</span>
+      <div><div style="font-size:12px;font-weight:600;color:#334155">${esc(g.goal||'')}</div>
+      <div style="font-size:11.5px;color:#64748b;margin-top:2px">${esc(g.comment||'')}</div></div></div>`;
   });
-  if (!(r.goals_review||[]).length) h += `<div style="color:#9ca3af;font-style:italic;font-size:12px;padding:8px">Chưa có mục tiêu</div>`;
+  if (!(r.goals_review||[]).length) h += `<div style="color:#94a3b8;font-style:italic;font-size:12px;padding:8px">Chưa có mục tiêu</div>`;
   h += `</div>`;
 
   // Nguồn lực
-  h += _secHead('💡','III.','NGUỒN LỰC','#059669');
+  h += _secHead('💡','III.','NGUỒN LỰC','#166534');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px">✅ Có sẵn</div>
-      <ul style="margin:0;padding-left:13px">${(rr.available||[]).map(a=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(a)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Chưa xác định</li>'}</ul></div>
+      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Có sẵn</div>
+      <ul style="margin:0;padding-left:13px">${(rr.available||[]).map(a=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(a)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa xác định</li>'}</ul></div>
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:4px">❌ Còn thiếu</div>
-      <ul style="margin:0;padding-left:13px">${(rr.missing||[]).map(m=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(m)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không có</li>'}</ul></div></div>`;
+      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#dc2626"><use href="#i-x"/></svg> Còn thiếu</div>
+      <ul style="margin:0;padding-left:13px">${(rr.missing||[]).map(m=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(m)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div>`;
 
   // Tham gia gia đình + Timeline
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#475569;margin-bottom:5px">👨‍👩‍👧 THAM GIA GIA ĐÌNH</div>
+      <div style="font-size:10px;font-weight:700;color:#475569;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-users"/></svg> THAM GIA GIA ĐÌNH</div>
       <span style="font-size:14px;font-weight:800;color:${engColor}">${r.family_engagement||'?'}</span></div>
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#475569;margin-bottom:5px">⏱ ĐÁNH GIÁ THỜI GIAN</div>
-      <div style="font-size:12px;color:#374151">${esc(r.timeline_assessment||'Chưa đánh giá')}</div></div></div>`;
+      <div style="font-size:10px;font-weight:700;color:#475569;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-clock"/></svg> ĐÁNH GIÁ THỜI GIAN</div>
+      <div style="font-size:12px;color:#334155">${esc(r.timeline_assessment||'Chưa đánh giá')}</div></div></div>`;
 
   // Câu hỏi
-  h += `<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px;margin-bottom:10px">
-    <div style="font-size:10px;font-weight:700;color:#6b21a8;margin-bottom:5px">❓ CÂU HỎI CẦN LÀM RÕ</div>
-    <ol style="margin:0;padding-left:13px">${(r.next_questions||[]).map(q=>`<li style="font-size:12px;margin:2px 0;color:#4c1d95;font-style:italic">${esc(q)}</li>`).join('')||'<li style="color:#9ca3af">Chưa có</li>'}</ol></div>`;
+  h += `<div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px;margin-bottom:10px">
+    <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-help"/></svg> CÂU HỎI CẦN LÀM RÕ</div>
+    <ol style="margin:0;padding-left:13px">${(r.next_questions||[]).map(q=>`<li style="font-size:12px;margin:2px 0;color:#1e293b;font-style:italic">${esc(q)}</li>`).join('')||'<li style="color:#94a3b8">Chưa có</li>'}</ol></div>`;
 
   // Thứ tự ưu tiên — trước đây chỉ có trong bản Word, màn hình không hiển thị.
   if ((r.priority_order||[]).length) {
-    h += _secHead('🔢','IV.','THỨ TỰ ƯU TIÊN THỰC HIỆN','#c2410c');
-    h += `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px;margin-bottom:10px">
-      <ol style="margin:0;padding-left:16px">${(r.priority_order||[]).map(x=>`<li style="font-size:12px;margin:3px 0;color:#7c2d12">${esc(x)}</li>`).join('')}</ol></div>`;
+    h += _secHead('🔢','IV.','THỨ TỰ ƯU TIÊN THỰC HIỆN','#b45309');
+    h += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:10px">
+      <ol style="margin:0;padding-left:16px">${(r.priority_order||[]).map(x=>`<li style="font-size:12px;margin:3px 0;color:#78350f">${esc(x)}</li>`).join('')}</ol></div>`;
   }
 
   h += _supervisionNotes(r.supervision_notes);
@@ -2020,82 +2043,82 @@ function renderReport3(r) {
 // ════════════════════
 function renderReport4(r) {
   const cb=D?.co_ban||{}, wb=r.child_wellbeing||{}, ns=r.next_session||{}, pa=r.plan_adjustment||{};
-  function wbColor(v){return v==='Cải thiện'?'#059669':v==='Xấu hơn'?'#dc2626':'#d97706';}
-  function wbIcon(v){return v==='Cải thiện'?'📈':v==='Xấu hơn'?'📉':'➡️';}
-  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1f2937;width:100%;box-sizing:border-box">`;
+  function wbColor(v){return v==='Cải thiện'?'#166534':v==='Xấu hơn'?'#dc2626':'#d97706';}
+  function wbIcon(v){return v==='Cải thiện'?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-trend"/></svg>':v==='Xấu hơn'?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-trend-down"/></svg>':'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-arrow-right"/></svg>';}
+  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
   h += _header('Cập nhật tiến trình',4,'#d97706');
   h += _infoTable(cb);
   h += _urgentBanner(r);
 
   // Tóm tắt tiến trình
   h += _secHead('📊','I.','TÓM TẮT TIẾN TRÌNH','#d97706');
-  h += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12.5px;color:#374151">${esc(r.progress_summary||'Chưa có tóm tắt')}</div>`;
+  h += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12.5px;color:#334155">${esc(r.progress_summary||'Chưa có tóm tắt')}</div>`;
 
   // Wellbeing 3 lĩnh vực
   // Trend wellbeing qua nhiều buổi
   const wbHistory = (D._notes_stage4||[]).length;
   if (wbHistory > 1) {
-    h += _secHead('📊','II.','WELLBEING TREND (' + wbHistory + ' buổi)','#059669');
-    h += '<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#065f46">';
-    h += '📈 Đã theo dõi qua <strong>' + wbHistory + ' buổi</strong>. ';
+    h += _secHead('📊','II.','WELLBEING TREND (' + wbHistory + ' buổi)','#166534');
+    h += '<div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#14532d">';
+    h += '<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-trend"/></svg> Đã theo dõi qua <strong>' + wbHistory + ' buổi</strong>. ';
     const wbVal = {physical:wb.physical,psychological:wb.psychological,education:wb.education};
     const improved = Object.entries(wbVal).filter(([k,v])=>v==='Cải thiện').map(([k])=>({'physical':'Thể chất','psychological':'Tâm lý','education':'Giáo dục'}[k]));
     const worse = Object.entries(wbVal).filter(([k,v])=>v==='Xấu hơn').map(([k])=>({'physical':'Thể chất','psychological':'Tâm lý','education':'Giáo dục'}[k]));
-    if (improved.length) h += '✅ Cải thiện: <strong>' + improved.join(', ') + '</strong>. ';
-    if (worse.length) h += '⚠️ Xấu hơn: <strong>' + worse.join(', ') + '</strong> — cần điều chỉnh kế hoạch. ';
+    if (improved.length) h += '<svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Cải thiện: <strong>' + improved.join(', ') + '</strong>. ';
+    if (worse.length) h += '<svg class="ic ic-sm" style="vertical-align:-2px;color:#b45309"><use href="#i-alert"/></svg> Xấu hơn: <strong>' + worse.join(', ') + '</strong> — cần điều chỉnh kế hoạch. ';
     if (!improved.length && !worse.length) h += 'Ổn định — tiếp tục theo dõi.';
     h += '</div>';
   } else {
-    h += _secHead('💚','II.','WELLBEING CHECK','#059669');
+    h += _secHead('💚','II.','WELLBEING CHECK','#166534');
   }
   h += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">`;
-  [['Thể chất','physical','🏃'],['Tâm lý','psychological','🧠'],['Giáo dục','education','📚']].forEach(([lbl,key,icon])=>{
+  [['Thể chất','physical','<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-heart"/></svg>'],['Tâm lý','psychological','<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-compass"/></svg>'],['Giáo dục','education','<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-book"/></svg>']].forEach(([lbl,key,icon])=>{
     const val=wb[key]||'Ổn định';
     const c=wbColor(val);
     h+=`<div style="background:${c}0d;border:1.5px solid ${c}33;border-radius:8px;padding:10px;text-align:center">
       <div style="font-size:18px;margin-bottom:3px">${icon}</div>
-      <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:4px">${lbl}</div>
+      <div style="font-size:11px;font-weight:700;color:#334155;margin-bottom:4px">${lbl}</div>
       <div style="font-size:11px;font-weight:800;color:${c}">${wbIcon(val)} ${val}</div></div>`;
   });
   h += `</div>`;
 
   // Tiến độ từng mục tiêu
-  h += _secHead('🎯','III.','TIẾN ĐỘ MỤC TIÊU','#1e40af');
+  h += _secHead('🎯','III.','TIẾN ĐỘ MỤC TIÊU','#0f2d6b');
   h += `<div style="margin-bottom:10px">`;
   (r.goals_progress||[]).forEach(g => {
-    const statusColor={'Đạt':'#059669','Đang tiến hành':'#d97706','Chưa đạt':'#dc2626','Bỏ qua':'#6b7280'}[g.status]||'#6b7280';
-    const statusIcon={'Đạt':'✅','Đang tiến hành':'🔄','Chưa đạt':'❌','Bỏ qua':'⏭'}[g.status]||'•';
-    h+=`<div style="padding:8px 10px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:5px;border-left:3px solid ${statusColor}">
+    const statusColor={'Đạt':'#166534','Đang tiến hành':'#d97706','Chưa đạt':'#dc2626','Bỏ qua':'#64748b'}[g.status]||'#64748b';
+    const statusIcon={'Đạt':'<svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg>','Đang tiến hành':'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-refresh"/></svg>','Chưa đạt':'<svg class="ic ic-sm" style="vertical-align:-2px;color:#dc2626"><use href="#i-x"/></svg>','Bỏ qua':'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-collapse"/></svg>'}[g.status]||'•';
+    h+=`<div style="padding:8px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:5px;border-left:3px solid ${statusColor}">
       <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
         <span style="font-size:10px;font-weight:700;color:${statusColor};background:${statusColor}15;padding:2px 7px;border-radius:8px">${statusIcon} ${g.status||'?'}</span>
-        <span style="font-size:12px;font-weight:600;color:#374151">${esc(g.goal||'')}</span></div>
-      ${g.evidence?`<div style="font-size:11.5px;color:#059669;margin-bottom:2px">📌 Bằng chứng: ${esc(g.evidence)}</div>`:''}
-      ${g.comment?`<div style="font-size:11.5px;color:#6b7280">${esc(g.comment)}</div>`:''}</div>`;
+        <span style="font-size:12px;font-weight:600;color:#334155">${esc(g.goal||'')}</span></div>
+      ${g.evidence?`<div style="font-size:11.5px;color:#166534;margin-bottom:2px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-flag"/></svg> Bằng chứng: ${esc(g.evidence)}</div>`:''}
+      ${g.comment?`<div style="font-size:11.5px;color:#64748b">${esc(g.comment)}</div>`:''}</div>`;
   });
-  if (!(r.goals_progress||[]).length) h += `<div style="color:#9ca3af;font-style:italic;font-size:12px;padding:8px">Chưa có dữ liệu mục tiêu</div>`;
+  if (!(r.goals_progress||[]).length) h += `<div style="color:#94a3b8;font-style:italic;font-size:12px;padding:8px">Chưa có dữ liệu mục tiêu</div>`;
   h += `</div>`;
 
   // Thay đổi tích cực + Rào cản
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:5px">✨ THAY ĐỔI TÍCH CỰC</div>
-      <ul style="margin:0;padding-left:13px">${(r.positive_changes||[]).map(c=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Chưa ghi nhận</li>'}</ul></div>
+      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-star"/></svg> THAY ĐỔI TÍCH CỰC</div>
+      <ul style="margin:0;padding-left:13px">${(r.positive_changes||[]).map(c=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa ghi nhận</li>'}</ul></div>
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:5px">🚧 RÀO CẢN</div>
-      <ul style="margin:0;padding-left:13px">${(r.barriers||[]).map(b=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(b)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không có</li>'}</ul></div></div>`;
+      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#b45309"><use href="#i-alert"/></svg> RÀO CẢN</div>
+      <ul style="margin:0;padding-left:13px">${(r.barriers||[]).map(b=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(b)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div>`;
 
   // Điều chỉnh kế hoạch
   if (pa.needed) {
-    h += `<div style="background:#fffbeb;border:1.5px solid #fde047;border-radius:8px;padding:10px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:700;color:#854d0e;margin-bottom:5px">🔄 CẦN ĐIỀU CHỈNH KẾ HOẠCH</div>
-      <ul style="margin:0;padding-left:13px">${(pa.suggestions||[]).map(s=>`<li style="font-size:12px;color:#713f12;margin:2px 0">${esc(s)}</li>`).join('')||'<li style="color:#9ca3af">Chưa có đề xuất</li>'}</ul></div>`;
+    h += `<div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;padding:10px;margin-bottom:10px">
+      <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-refresh"/></svg> CẦN ĐIỀU CHỈNH KẾ HOẠCH</div>
+      <ul style="margin:0;padding-left:13px">${(pa.suggestions||[]).map(s=>`<li style="font-size:12px;color:#78350f;margin:2px 0">${esc(s)}</li>`).join('')||'<li style="color:#94a3b8">Chưa có đề xuất</li>'}</ul></div>`;
   }
 
   // Buổi tiếp theo
-  h += _secHead('📅','IV.','ĐỊNH HƯỚNG BUỔI TIẾP THEO','#7c3aed');
-  h += `<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px;margin-bottom:10px">
-    <div style="font-size:12.5px;font-weight:600;color:#4c1d95;margin-bottom:6px">${esc(ns.focus||'Chưa xác định')}</div>
-    <ul style="margin:0;padding-left:13px">${(ns.actions||[]).map(a=>`<li style="font-size:12px;color:#6b21a8;margin:2px 0">${esc(a)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Chưa có</li>'}</ul></div>`;
+  h += _secHead('📅','IV.','ĐỊNH HƯỚNG BUỔI TIẾP THEO','#0f2d6b');
+  h += `<div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px;margin-bottom:10px">
+    <div style="font-size:12.5px;font-weight:600;color:#1e293b;margin-bottom:6px">${esc(ns.focus||'Chưa xác định')}</div>
+    <ul style="margin:0;padding-left:13px">${(ns.actions||[]).map(a=>`<li style="font-size:12px;color:#0f2d6b;margin:2px 0">${esc(a)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div>`;
 
   h += _supervisionNotes(r.supervision_notes);
   h += `</div>`;
@@ -2107,69 +2130,69 @@ function renderReport4(r) {
 // ════════════════════
 function renderReport5(r) {
   const cb=D?.co_ban||{}, oc=r.outcomes||{}, cs=r.child_status_final||{}, rec=r.recommendations||{};
-  const rateColor=oc.achievement_rate==='Cao'?'#059669':oc.achievement_rate==='Thấp'?'#dc2626':'#d97706';
-  const safeColor=cs.safety==='An toàn'?'#059669':'#d97706';
-  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1f2937;width:100%;box-sizing:border-box">`;
-  h += _header('Kết thúc ca',5,'#059669');
+  const rateColor=oc.achievement_rate==='Cao'?'#166534':oc.achievement_rate==='Thấp'?'#dc2626':'#d97706';
+  const safeColor=cs.safety==='An toàn'?'#166534':'#d97706';
+  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
+  h += _header('Kết thúc ca',5,'#166534');
   h += _infoTable(cb);
 
   // Tóm tắt ca
-  h += _secHead('📋','I.','TÓM TẮT TOÀN CA','#059669');
-  h += `<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12.5px;color:#374151">${esc(r.case_summary||'Chưa có tóm tắt')}</div>`;
+  h += _secHead('📋','I.','TÓM TẮT TOÀN CA','#166534');
+  h += `<div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12.5px;color:#334155">${esc(r.case_summary||'Chưa có tóm tắt')}</div>`;
 
   // Kết quả
-  h += _secHead('🏆','II.','KẾT QUẢ ĐẠT ĐƯỢC','#059669');
+  h += _secHead('🏆','II.','KẾT QUẢ ĐẠT ĐƯỢC','#166534');
   h += `<div style="margin-bottom:6px;display:flex;align-items:center;gap:8px">
     <span style="font-size:11px;font-weight:700;color:#475569">Tỉ lệ đạt mục tiêu:</span>
     <span style="font-size:13px;font-weight:900;color:${rateColor}">${oc.achievement_rate||'?'}</span></div>`;
   h += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px">✅ Đạt được</div>
-      <ul style="margin:0;padding-left:12px">${(oc.achieved||[]).map(a=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(a)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Chưa có</li>'}</ul></div>
+      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Đạt được</div>
+      <ul style="margin:0;padding-left:12px">${(oc.achieved||[]).map(a=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(a)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:4px">⚡ Đạt một phần</div>
-      <ul style="margin:0;padding-left:12px">${(oc.partial||[]).map(p=>`<li style="font-size:12px;color:#78350f;margin:2px 0">${esc(p)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không có</li>'}</ul></div>
+      <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-bolt"/></svg> Đạt một phần</div>
+      <ul style="margin:0;padding-left:12px">${(oc.partial||[]).map(p=>`<li style="font-size:12px;color:#78350f;margin:2px 0">${esc(p)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div>
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:4px">❌ Chưa đạt</div>
-      <ul style="margin:0;padding-left:12px">${(oc.not_achieved||[]).map(n=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(n)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không có</li>'}</ul></div></div>`;
+      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#dc2626"><use href="#i-x"/></svg> Chưa đạt</div>
+      <ul style="margin:0;padding-left:12px">${(oc.not_achieved||[]).map(n=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(n)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div>`;
 
   // Tình trạng trẻ khi đóng ca
-  h += _secHead('👧','III.','TÌNH TRẠNG TRẺ KHI ĐÓNG CA','#0891b2');
+  h += _secHead('👧','III.','TÌNH TRẠNG TRẺ KHI ĐÓNG CA','#475569');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-    <div style="background:#ecfeff;border:1.5px solid ${safeColor}44;border-left:4px solid ${safeColor};border-radius:8px;padding:10px">
+    <div style="background:#f8fafc;border:1.5px solid ${safeColor}44;border-left:4px solid ${safeColor};border-radius:8px;padding:10px">
       <div style="font-size:10px;font-weight:700;color:${safeColor};text-transform:uppercase;margin-bottom:4px">Mức độ an toàn</div>
-      <div style="font-size:16px;font-weight:900;color:${safeColor}">${cs.safety==='An toàn'?'✅':'⚠️'} ${cs.safety||'?'}</div></div>
+      <div style="font-size:16px;font-weight:900;color:${safeColor}">${cs.safety==='An toàn'?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-check"/></svg>':'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-alert"/></svg>'} ${cs.safety||'?'}</div></div>
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px">
       <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px">Wellbeing tổng thể</div>
-      <div style="font-size:14px;font-weight:800;color:#374151">${cs.wellbeing||'?'}</div>
-      <div style="font-size:12px;color:#6b7280;margin-top:3px">${esc(cs.family_situation||'')}</div></div></div>`;
+      <div style="font-size:14px;font-weight:800;color:#334155">${cs.wellbeing||'?'}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:3px">${esc(cs.family_situation||'')}</div></div></div>`;
 
   // Điểm ngoặt + Bài học
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-    <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#7c3aed;margin-bottom:5px">⭐ ĐIỂM NGOẶT QUAN TRỌNG</div>
-      <ul style="margin:0;padding-left:13px">${(r.key_turning_points||[]).map(t=>`<li style="font-size:12px;color:#4c1d95;margin:2px 0">${esc(t)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Chưa ghi nhận</li>'}</ul></div>
-    <div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#854d0e;margin-bottom:5px">📚 BÀI HỌC KINH NGHIỆM</div>
-      <ul style="margin:0;padding-left:13px">${(r.lessons_learned||[]).map(l=>`<li style="font-size:12px;color:#713f12;margin:2px 0">${esc(l)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Chưa có</li>'}</ul></div></div>`;
+    <div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px">
+      <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-star"/></svg> ĐIỂM NGOẶT QUAN TRỌNG</div>
+      <ul style="margin:0;padding-left:13px">${(r.key_turning_points||[]).map(t=>`<li style="font-size:12px;color:#1e293b;margin:2px 0">${esc(t)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa ghi nhận</li>'}</ul></div>
+    <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px">
+      <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-book"/></svg> BÀI HỌC KINH NGHIỆM</div>
+      <ul style="margin:0;padding-left:13px">${(r.lessons_learned||[]).map(l=>`<li style="font-size:12px;color:#78350f;margin:2px 0">${esc(l)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div></div>`;
 
   // Khuyến nghị
-  h += _secHead('💡','IV.','KHUYẾN NGHỊ','#1e40af');
+  h += _secHead('💡','IV.','KHUYẾN NGHỊ','#0f2d6b');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
-    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#1e40af;margin-bottom:4px">👧 Cho trẻ</div>
-      <ul style="margin:0;padding-left:12px">${(rec.for_child||[]).map(r2=>`<li style="font-size:12px;color:#1e3a8a;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không có</li>'}</ul></div>
+    <div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px">
+      <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-child"/></svg> Cho trẻ</div>
+      <ul style="margin:0;padding-left:12px">${(rec.for_child||[]).map(r2=>`<li style="font-size:12px;color:#1e293b;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div>
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px">👨‍👩‍👧 Cho gia đình</div>
-      <ul style="margin:0;padding-left:12px">${(rec.for_family||[]).map(r2=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không có</li>'}</ul></div>
-    <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#7c3aed;margin-bottom:4px">🏢 Cho tổ chức</div>
-      <ul style="margin:0;padding-left:12px">${(rec.for_organization||[]).map(r2=>`<li style="font-size:12px;color:#4c1d95;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#9ca3af;font-style:italic">Không có</li>'}</ul></div></div>`;
+      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-users"/></svg> Cho gia đình</div>
+      <ul style="margin:0;padding-left:12px">${(rec.for_family||[]).map(r2=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div>
+    <div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px">
+      <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-building"/></svg> Cho tổ chức</div>
+      <ul style="margin:0;padding-left:12px">${(rec.for_organization||[]).map(r2=>`<li style="font-size:12px;color:#1e293b;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div>`;
 
   // Theo dõi sau đóng ca
   if (r.follow_up_needed) {
     h += `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:10px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:5px">📌 CẦN THEO DÕI SAU ĐÓNG CA</div>
+      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-flag"/></svg> CẦN THEO DÕI SAU ĐÓNG CA</div>
       <div style="font-size:12.5px;color:#7f1d1d">${esc(r.follow_up_plan||'Chưa có kế hoạch cụ thể')}</div></div>`;
   }
 
@@ -2401,66 +2424,139 @@ window.addEventListener('resize', () => {
 // ── QUICK SUGGESTIONS theo giai đoạn ──
 const STAGE_SUGGESTIONS = {
   1: [
-    {icon:'🤝', text:'Cách tạo rapport với trẻ/gia đình?'},
-    {icon:'👀', text:'Những dấu hiệu cần quan sát khi tiếp cận?'},
-    {icon:'📋', text:'Thông tin nào cần thu thập đầu tiên?'},
-    {icon:'⚠️', text:'Dấu hiệu nguy hiểm cần can thiệp khẩn?'},
-    {icon:'🗣️', text:'Kỹ thuật phỏng vấn trẻ em?'},
+    {icon:'handshake', text:'Cách tạo rapport với trẻ/gia đình?'},
+    {icon:'eye', text:'Những dấu hiệu cần quan sát khi tiếp cận?'},
+    {icon:'clipboard', text:'Thông tin nào cần thu thập đầu tiên?'},
+    {icon:'alert', text:'Dấu hiệu nguy hiểm cần can thiệp khẩn?'},
+    {icon:'users', text:'Kỹ thuật phỏng vấn trẻ em?'},
   ],
   2: [
-    {icon:'🏠', text:'Cần quan sát gì khi vãng gia?'},
-    {icon:'📊', text:'Hướng dẫn vẽ eco-map / genogram?'},
-    {icon:'🔍', text:'Cách đánh giá mức độ rủi ro?'},
-    {icon:'💡', text:'Phân biệt nhu cầu vs yêu cầu?'},
-    {icon:'👨‍👩‍👧', text:'Đánh giá năng lực chăm sóc của gia đình?'},
-    {icon:'📝', text:'Gợi ý câu hỏi phỏng vấn gia đình?'},
+    {icon:'home', text:'Cần quan sát gì khi vãng gia?'},
+    {icon:'chart', text:'Hướng dẫn vẽ eco-map / genogram?'},
+    {icon:'search', text:'Cách đánh giá mức độ rủi ro?'},
+    {icon:'compass', text:'Phân biệt nhu cầu vs yêu cầu?'},
+    {icon:'users', text:'Đánh giá năng lực chăm sóc của gia đình?'},
+    {icon:'doc', text:'Gợi ý câu hỏi phỏng vấn gia đình?'},
   ],
   3: [
-    {icon:'🎯', text:'Hướng dẫn đặt mục tiêu SMART?'},
-    {icon:'🔗', text:'Nguồn lực nào có thể kết nối cho ca này?'},
-    {icon:'📅', text:'Gợi ý timeline can thiệp hợp lý?'},
-    {icon:'⚖️', text:'Ưu tiên nhu cầu nào trước?'},
-    {icon:'🤝', text:'Cách phối hợp đa ngành cho ca này?'},
+    {icon:'target', text:'Hướng dẫn đặt mục tiêu SMART?'},
+    {icon:'link', text:'Nguồn lực nào có thể kết nối cho ca này?'},
+    {icon:'calendar', text:'Gợi ý timeline can thiệp hợp lý?'},
+    {icon:'scale', text:'Ưu tiên nhu cầu nào trước?'},
+    {icon:'handshake', text:'Cách phối hợp đa ngành cho ca này?'},
   ],
   4: [
-    {icon:'📈', text:'Ca này đang tiến triển thế nào?'},
-    {icon:'🔄', text:'Khi nào cần điều chỉnh kế hoạch?'},
-    {icon:'⚠️', text:'Dấu hiệu ca đang đi sai hướng?'},
-    {icon:'📝', text:'Cách ghi nhận thay đổi của trẻ?'},
-    {icon:'💪', text:'Đánh giá kết quả trung gian?'},
+    {icon:'trend', text:'Ca này đang tiến triển thế nào?'},
+    {icon:'refresh', text:'Khi nào cần điều chỉnh kế hoạch?'},
+    {icon:'alert', text:'Dấu hiệu ca đang đi sai hướng?'},
+    {icon:'doc', text:'Cách ghi nhận thay đổi của trẻ?'},
+    {icon:'heart', text:'Đánh giá kết quả trung gian?'},
   ],
   5: [
-    {icon:'✅', text:'Tiêu chí đóng ca là gì?'},
-    {icon:'📋', text:'Cần chuẩn bị gì để kết thúc ca?'},
-    {icon:'🔄', text:'Kế hoạch theo dõi sau kết thúc?'},
-    {icon:'📤', text:'Khi nào cần chuyển gửi?'},
-    {icon:'📊', text:'Tổng kết kết quả ca này?'},
+    {icon:'check', text:'Tiêu chí đóng ca là gì?'},
+    {icon:'clipboard', text:'Cần chuẩn bị gì để kết thúc ca?'},
+    {icon:'refresh', text:'Kế hoạch theo dõi sau kết thúc?'},
+    {icon:'outbox', text:'Khi nào cần chuyển gửi?'},
+    {icon:'chart', text:'Tổng kết kết quả ca này?'},
   ]
 };
 
 const GENERAL_SUGGESTIONS = [
-  {icon:'📖', text:'Quy trình quản lý ca CTXH gồm những bước nào?'},
-  {icon:'👶', text:'Luật trẻ em 2016 quy định gì về bảo vệ trẻ?'},
-  {icon:'🤝', text:'Kỹ thuật tạo rapport với thân chủ?'},
-  {icon:'📋', text:'Cách viết ghi chép ca CTXH chuyên nghiệp?'},
-  {icon:'🔍', text:'Công cụ đánh giá rủi ro cho trẻ em?'},
+  {icon:'book', text:'Quy trình quản lý ca CTXH gồm những bước nào?'},
+  {icon:'child', text:'Luật trẻ em 2016 quy định gì về bảo vệ trẻ?'},
+  {icon:'handshake', text:'Kỹ thuật tạo rapport với thân chủ?'},
+  {icon:'clipboard', text:'Cách viết ghi chép ca CTXH chuyên nghiệp?'},
+  {icon:'search', text:'Công cụ đánh giá rủi ro cho trẻ em?'},
 ];
+
+// ════════════════════
+// KHU CHAT — THU GỌN / MỞ RỘNG
+// ════════════════════
+// 3 trạng thái: 'normal' (mặc định) · 'expanded' (chat chiếm hết bề ngang, ẩn cột trái)
+// · 'collapsed' (chat co thành thanh dọc, cột trái giãn ra). Nhớ lựa chọn trên máy người dùng
+// để lần đăng nhập sau không phải bấm lại.
+const _CHAT_VIEW_KEY = 'thaodan_chat_view_v1';
+
+function setChatView(mode) {
+  const dash = document.querySelector('#panel-dash .dash') || document.querySelector('.dash');
+  if (!dash) return;
+  if (mode !== 'expanded' && mode !== 'collapsed') mode = 'normal';
+  dash.classList.toggle('chat-expanded', mode === 'expanded');
+  dash.classList.toggle('chat-collapsed', mode === 'collapsed');
+
+  const exp = document.getElementById('btn-chat-expand');
+  if (exp) {
+    const on = mode === 'expanded';
+    exp.title = on ? 'Thu về hai cột' : 'Mở rộng khung chat';
+    exp.setAttribute('aria-label', exp.title);
+    exp.innerHTML = `<svg class="ic"><use href="#i-${on ? 'shrink' : 'expand'}"/></svg>`;
+  }
+  try { localStorage.setItem(_CHAT_VIEW_KEY, mode); } catch(e) {}
+}
+
+function toggleChatExpand() {
+  const dash = document.querySelector('#panel-dash .dash') || document.querySelector('.dash');
+  setChatView(dash && dash.classList.contains('chat-expanded') ? 'normal' : 'expanded');
+}
+
+function _restoreChatView() {
+  let mode = 'normal';
+  try { mode = localStorage.getItem(_CHAT_VIEW_KEY) || 'normal'; } catch(e) {}
+  // Trên điện thoại hai cột đã xếp dọc nên "mở rộng" không còn nghĩa gì; luôn về mặc định.
+  if (window.innerWidth <= 900) mode = 'normal';
+  setChatView(mode);
+  // Bấm vào thanh dọc lúc đang thu gọn thì mở lại — không phải nhắm đúng nút nhỏ.
+  const hd = document.querySelector('.chat-panel .chat-hd');
+  if (hd && !hd._chatViewBound) {
+    hd._chatViewBound = true;
+    hd.addEventListener('click', (ev) => {
+      const dash = document.querySelector('#panel-dash .dash') || document.querySelector('.dash');
+      if (dash && dash.classList.contains('chat-collapsed') && !ev.target.closest('button')) setChatView('normal');
+    });
+  }
+}
+
+// Ô nhập cao dần theo nội dung, tối đa 5 dòng (max-height trong CSS lo phần chặn).
+function autoGrowChat(ta) {
+  if (!ta) return;
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+}
+
+function openPolicyInfo() { const el = document.getElementById('policy-overlay'); if (el) el.style.display = 'flex'; }
+function closePolicyInfo() { const el = document.getElementById('policy-overlay'); if (el) el.style.display = 'none'; }
 
 function renderSuggestions() {
   const el = document.getElementById('chat-suggestions');
   if (!el) return;
-  let sug, label;
-  if (D) {
-    sug = STAGE_SUGGESTIONS[currentStage] || STAGE_SUGGESTIONS[1];
-    const stageLabel = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'][currentStage] || '';
-    label = `💡 Gợi ý GĐ${currentStage} — ${stageLabel}:`;
-  } else {
-    sug = GENERAL_SUGGESTIONS;
-    label = '💡 Hỏi chuyên gia CTXH:';
+  const sug = D ? (STAGE_SUGGESTIONS[currentStage] || STAGE_SUGGESTIONS[1]) : GENERAL_SUGGESTIONS;
+  // Chỉ hiện 3 chip đầu; nút "khác" mở đủ danh sách. Trước đây 5 chip kèm một dòng nhãn
+  // luôn xuống 2 hàng, chiếm 72px thường trực trong khi ô nhập chỉ cao 38px.
+  el._sugAll = sug;
+  _paintSuggestions(el, sug, el._sugOpen === true);
+  el.hidden = false;
+  if (!el._sugBound) {
+    el._sugBound = true;
+    // Gán qua data-* + delegation: onclick nội tuyến trước đây phải nhét câu hỏi vào trong
+    // dấu nháy đơn của HTML, nên câu có dấu ' là vỡ cú pháp.
+    el.addEventListener('click', (ev) => {
+      const b = ev.target.closest('button');
+      if (!b) return;
+      if (b.dataset.more === '1') { el._sugOpen = true; _paintSuggestions(el, el._sugAll || [], true); return; }
+      if (b.dataset.q) useSuggestion(b.dataset.q);
+    });
   }
-  el.innerHTML = `<div class="chat-sug-label">${label}</div>` +
-    sug.map(s => `<button class="chat-sug-btn" onclick="useSuggestion('${s.text.replace(/'/g,"\\\'")}')">${s.icon} ${s.text}</button>`).join('');
-  el.style.display = 'flex';
+}
+
+function _paintSuggestions(el, sug, showAll) {
+  const shown = showAll ? sug : sug.slice(0, 3);
+  let h = shown.map(sg =>
+    `<button class="chat-sug-btn" data-q="${escAttr(sg.text)}"><svg class="ic ic-sm"><use href="#i-${esc(sg.icon)}"/></svg>${esc(sg.text)}</button>`
+  ).join('');
+  if (!showAll && sug.length > shown.length) {
+    h += `<button class="chat-sug-btn chat-sug-more" data-more="1"><svg class="ic ic-sm"><use href="#i-plus"/></svg>${sug.length - shown.length} câu khác</button>`;
+  }
+  el.innerHTML = h;
 }
 
 function useSuggestion(text) {
@@ -2474,6 +2570,7 @@ async function sendChat() {
   const msg = input.value.trim();
   if (!msg) return;
   input.value = '';
+  autoGrowChat(input);   // ô nhập tự cao dần khi gõ nên phải co lại sau khi gửi
   const el = document.getElementById('chat-msgs');
   el.innerHTML += `<div class="cb cb-user">${esc(msg)}</div>`;
   const typId = 'typ_'+Date.now();
@@ -3053,7 +3150,7 @@ function F(lbl, val, ic='-', path='') {
   if (g.status === 'no') {
     mark = `<span class="fl-ungrounded" title="Không tìm thấy nội dung này trong ghi chép gốc — AI có thể đã suy diễn. Hãy kiểm tra lại.">❓ chưa có căn cứ</span>`;
   } else if (g.status === 'ok' && g.quote) {
-    mark = `<span class="fl-grounded" title="${esc('Căn cứ trong ghi chép: “' + g.quote + '”')}">📎 có căn cứ</span>`;
+    mark = `<span class="fl-grounded" title="${escAttr('Căn cứ trong ghi chép: “' + g.quote + '”')}">📎 có căn cứ</span>`;
   }
   return `<div class="fl${g.status==='no'?' fl-warn':''}"><div class="fl-ico">${ic}</div><div class="fl-bd"><div class="fl-lb">${lbl}${mark}</div><div class="fl-vl ${s?'ok':'no'}${extra}>${esc(s)||'—'}</div></div></div>`;
 }
@@ -3611,7 +3708,7 @@ function newCase() {
   updateHeader();
   renderCaseList();
   renderEntriesPanel();
-  document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;">Chuyên gia CTXH sẵn sàng</div><div>Hỏi bất kỳ điều gì về CTXH hoặc nhập ghi chép để phân tích ca.</div></div>';
+  document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><svg class="ic chat-empty-ic"><use href="#i-chat"/></svg><div class="chat-empty-t">Chuyên gia CTXH sẵn sàng</div><div>Hỏi bất kỳ điều gì về CTXH hoặc nhập ghi chép để phân tích ca.</div></div>';
   document.getElementById('btn-fill').disabled = true;
   // Bắt buộc re-enable textarea và action bar (không phụ thuộc applyClosedCaseUI)
   const _ta = document.getElementById('dash-notes');
@@ -3865,7 +3962,7 @@ function showCaseDetail(id) {
         <div class="cd-kv"><span class="cd-k">Ghi chép</span><span class="cd-v">${(c.entries||[]).length}</span></div>
         <div class="cd-kv"><span class="cd-k">Giai đoạn</span><span class="cd-v">GĐ ${stage} — ${stageLabels[stage]||''}</span></div>
         ${isClosed ? `<div class="cd-kv"><span class="cd-k">Đóng ca</span><span class="cd-v">${fmtVN(c.closedAt)}</span></div>` : ''}
-        ${isAdmin() ? `<div class="cd-kv"><span class="cd-k">Đội/nhóm</span><span class="cd-v"><input type="text" value="${esc(c.team_id||'')}" placeholder="(chưa gán)" style="border:1px solid var(--bd);border-radius:5px;padding:3px 6px;font-size:11px;font-family:inherit;width:140px;" onchange="_setCaseTeam('${id}', this.value.trim())"></span></div>` : ''}
+        ${isAdmin() ? `<div class="cd-kv"><span class="cd-k">Đội/nhóm</span><span class="cd-v"><input type="text" value="${escAttr(c.team_id||'')}" placeholder="(chưa gán)" style="border:1px solid var(--bd);border-radius:5px;padding:3px 6px;font-size:11px;font-family:inherit;width:140px;" onchange="_setCaseTeam('${id}', this.value.trim())"></span></div>` : ''}
       </div>
     </div>
     <div class="cd-section">
@@ -6150,8 +6247,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function fixHeights() {
-    // Phải trừ CẢ thanh chính sách ở chân trang — bỏ sót nó làm trang tràn 33px trên desktop
-    // và tới 65px trên điện thoại, khiến header bị cắt và không kéo xuống hết được.
+    // Dải chính sách ở chân trang đã bỏ (nội dung chuyển vào nút ⓘ trong khu chat), nhưng vẫn
+    // trừ nếu có: querySelector trả null thì cộng 0, nên phép tính đúng ở cả hai trường hợp.
     const hdr = document.querySelector('.hdr');
     const nav = document.querySelector('.main-nav');
     const foot = document.querySelector('.app-footer-policy');
@@ -6165,6 +6262,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Ẩn các nút của tính năng đang tắt (xem FEATURES trong config.js). Chỉ ẩn nút — modal và
   // hàm xử lý vẫn giữ nguyên để bật lại không phải viết lại gì.
   applyFeatureFlags();
+
+  // Trả khu chat về trạng thái thu gọn / mở rộng mà người dùng chọn lần trước.
+  _restoreChatView();
 
   // Auto-save mỗi 60 giây (nếu có data)
   let _unsaved = false;

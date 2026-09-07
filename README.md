@@ -36,7 +36,7 @@ Ghi lại để phiên sau không phải đoán. Cập nhật bảng này mỗi 
 | Hạng mục | Trạng thái |
 |---|---|
 | Code trên `main` | ✅ đầy đủ |
-| 13 migration Supabase `0001`→`0013` | ✅ đã chạy |
+| 14 migration Supabase `0001`→`0014` | ⬜ `0014` CHƯA chạy — xem bên dưới |
 | Khóa Vault `case_encryption_key` | ✅ đã tạo — kiểm chứng mã hóa/giải mã vòng tròn OK |
 | Mã hóa ca cũ | ✅ 4/4 ca có `data_enc`, 0 ca còn plaintext |
 | Vercel: `GROQ_KEY_1/2/3`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_ANON_KEY` | ✅ đã khai |
@@ -116,6 +116,7 @@ Chạy theo đúng thứ tự trong `supabase/migrations/`, dán từng file và
 | `0011_rbac_team_leader.sql` | Role `officer/team_leader/admin` + `team_id` — mặc định vô hiệu tới khi có ai được gán |
 | `0012_encrypt_case_identity_columns.sql` | Mã hóa 2 cột `child_name`/`child_dob` trong `cases_v2`. **Cần tạo secret Vault trước** (xem comment đầu file), không lưu khóa vào git |
 | `0013_encrypt_full_case_data.sql` | Mã hóa **toàn bộ** khối JSONB `data` qua RPC `encrypt_case_data`/`decrypt_case_data`. Vẫn giữ cột `data` plaintext song song làm dự phòng — nếu giải mã lỗi, app tự dùng lại, không bao giờ mất quyền xem ca. Dùng chung secret Vault với `0012` |
+| `0014_fix_admin_email_policy_permission.sql` | **Sửa lỗi `permission denied for table users` khi lưu ca lần thứ hai.** Các policy admin từ `0003`→`0010` đọc trực tiếp `auth.users`, mà role `authenticated` không có quyền SELECT trên bảng đó; `INSERT … ON CONFLICT DO UPDATE` lại đòi cả policy SELECT nên câu lệnh lưu thất bại. Migration bọc phép so email vào `private.is_super_admin()` (SECURITY DEFINER) rồi dựng lại 5 policy. Không đổi dữ liệu, không đổi ai xem được ca nào |
 
 ### Bước làm tay không nằm trong migration nào
 

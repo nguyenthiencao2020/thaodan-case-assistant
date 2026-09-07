@@ -3,6 +3,10 @@
 // ════════════════════════════════════════════════════════════
 
 const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// esc() chỉ đủ cho phần nội dung giữa hai thẻ. Đặt vào GIÁ TRỊ THUỘC TÍNH thì phải che thêm
+// dấu " và ' — thiếu nó, một câu như: Trẻ nói "con không sao" sẽ cắt đứt thuộc tính ngay ở
+// dấu ngoặc kép đầu tiên, mất phần còn lại và có thể sinh thuộc tính lạ.
+const escAttr = s => esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const formatMd = t => esc(t).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
 
 function clean(v) {
