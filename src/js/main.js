@@ -2693,7 +2693,7 @@ async function dlReferralLetter() {
 
     let footers = {};
     if (imgs[1]) { try { const {Footer:FC}=lib;
-      footers = { default: new FC({ children:[new Paragraph({children:[new ImageRun({data:imgs[1],transformation:{width:794,height:79},type:'png'})],alignment:AlignmentType.CENTER})] }) }; } catch(e) {} }
+      footers = { default: new FC({ children:[new Paragraph({children:[new ImageRun({data:imgs[1],transformation:{width:794,height:79},type:'png'})],alignment:AlignmentType.CENTER,spacing:{before:0,after:0},indent:{left:-MG,right:-MG}})] }) }; } catch(e) {} }
     const doc = new Document({ sections:[{ properties:{page:{size:{width:PW,height:16838},margin:{top:MG,right:MG,bottom:1400,left:MG,footer:0}}}, footers, children: body }] });
     const blob = await lib.Packer.toBlob(doc);
     const url = URL.createObjectURL(blob);
@@ -4458,7 +4458,9 @@ async function dlReportDocx() {
     } catch(e) {}
     if (imgs[1]) {
       try {
-        footerKids.push(new Paragraph({children:[new ImageRun({data:imgs[1],transformation:{width:794,height:79},type:'png'})],alignment:AlignmentType.CENTER}));
+        // Ảnh footer rộng 794px = trọn khổ A4, rộng hơn vùng nội dung (642px) nên phải nới
+        // đoạn văn ra bằng lề âm, giống footer các biểu mẫu; thiếu nó ảnh sẽ tràn sang phải.
+        footerKids.push(new Paragraph({children:[new ImageRun({data:imgs[1],transformation:{width:794,height:79},type:'png'})],alignment:AlignmentType.CENTER,spacing:{before:0,after:0},indent:{left:-MG,right:-MG}}));
       } catch(e){}
     }
     let footerSection={};
