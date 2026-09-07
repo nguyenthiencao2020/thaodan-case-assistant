@@ -1034,11 +1034,17 @@ async function showNotifications() {
       else if (days > 14) localNotifs.push({ type:'reminder', message:`Ca "${c.name}" đã ${days} ngày chưa cập nhật`, created_at: c.updatedAt });
     });
     if (!localNotifs.length) { list.innerHTML = '<div class="notif-empty">🎉 Không có thông báo mới</div>'; return; }
-    list.innerHTML = localNotifs.map(n => `<div class="notif-item ${n.type}">${n.message}<div class="notif-time">${fmtVN(n.created_at)}</div></div>`).join('');
+    // esc() bắt buộc: message có nhúng c.name, mà tên ca lấy từ co_ban.ho_ten do AI trích xuất
+    // từ ghi chép của NVXH (hoặc từ file backup import vào) — tức là nội dung không tin được.
+    // Đường đọc từ DB ngay bên dưới đã esc() từ trước, chỉ đường dự phòng này bị bỏ sót.
+    list.innerHTML = localNotifs.map(n => `<div class="notif-item ${esc(n.type)}">${esc(n.message)}<div class="notif-time">${fmtVN(n.created_at)}</div></div>`).join('');
     return;
   }
   
-  list.innerHTML = notifs.map(n => `<div class="notif-item ${n.type}" onclick="markNotifRead('${n.id}');this.remove();">
+  // id đi vào thuộc tính onclick nên chỉ nhận khuôn dạng an toàn (giống cách siết id ca lúc
+  // import backup) — không tin nguyên văn giá trị từ DB.
+  const safeId = (v) => /^[A-Za-z0-9_-]{1,64}$/.test(String(v || '')) ? v : '';
+  list.innerHTML = notifs.map(n => `<div class="notif-item ${esc(n.type)}" onclick="markNotifRead('${safeId(n.id)}');this.remove();">
     ${esc(n.message)}<div class="notif-time">${fmtVN(n.created_at)}</div>
   </div>`).join('');
   document.getElementById('notif-badge').style.display = 'flex';
@@ -1678,7 +1684,7 @@ function renderReport(report) {
     case 5: renderReport5(report); break;
     default: renderReport1(report);
   }
-  } catch(e) { console.error('renderReport error:', e); document.getElementById('chat-msgs').innerHTML = '<div class="cb cb-ai">⚠️ Lỗi hiển thị báo cáo: ' + e.message + '</div>'; }
+  } catch(e) { console.error('renderReport error:', e); document.getElementById('chat-msgs').innerHTML = '<div class="cb cb-ai">⚠️ Lỗi hiển thị báo cáo: ' + esc(e.message) + '</div>'; }
 }
 
 // ── Helpers dùng chung ──
@@ -2511,7 +2517,7 @@ async function sendChat() {
     chatHistory.push({role:'assistant',content:reply});
     document.getElementById(typId).innerHTML = formatMd(reply);
   } catch(e) {
-    document.getElementById(typId).innerHTML = '❌ '+e.message;
+    document.getElementById(typId).innerHTML = '❌ '+esc(e.message);
   } finally {
     document.getElementById('btn-send').disabled = false;
     el.scrollTop = el.scrollHeight;
@@ -2523,7 +2529,7 @@ async function sendChat() {
 // ════════════════════════════════════════════════════════════
 // Ẩn/hiện nút theo FEATURES. Gọi lúc khởi động; đổi cờ trong config.js là đủ để bật lại.
 function applyFeatureFlags() {
-  const map = { dass: 'btn-dass', genogram: 'btn-genogram' };
+  const map = { dass: 'btn-dass', genogram: 'btn-genogram', ocr: 'btn-ocr' };
   Object.entries(map).forEach(([feat, id]) => {
     const el = document.getElementById(id);
     if (el) el.hidden = !(typeof FEATURES === 'object' && FEATURES[feat]);

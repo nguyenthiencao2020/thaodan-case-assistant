@@ -7,6 +7,56 @@ công tác xã hội nói chung" thành "biết cách Thảo Đàn làm".
 Nếu thư mục này trống hoặc chưa nạp, AI vẫn trả lời — nhưng bằng kiến thức
 chung của internet, không phải quy trình và nguồn lực thật của tổ chức.
 
+## RAG cần những gì
+
+Chia làm 3 phần: hạ tầng đã xong, cấu hình cần chuẩn bị đúng **một** thứ, nội dung là phần quyết
+định RAG có giá trị hay không.
+
+### Hạ tầng — đã xong, không phải làm gì
+
+| Thành phần | Ở đâu |
+|---|---|
+| Bảng `documents` + pgvector + hàm `match_documents` | `supabase/migrations/0001_rag_documents.sql` |
+| Endpoint truy xuất | `api/rag.js` |
+| Script nạp tài liệu (cắt mẩu theo tiêu đề, có `--dry-run`) | `scripts/index-docs.js` |
+| Tự nạp lại mỗi khi push `docs/**` lên `main` | `.github/workflows/index-docs.yml` |
+| App gọi RAG mỗi lần phân tích ca và mỗi câu chat | `fetchRagContext()` trong `src/js/main.js` |
+
+### Cấu hình — chỉ cần một khóa OpenAI
+
+`OPENAI_API_KEY` là thứ **duy nhất** còn thiếu. RAG cần nó để biến chữ thành vector (embedding) —
+cả lúc nạp tài liệu lẫn lúc truy xuất.
+
+- Lấy ở `platform.openai.com` → **API keys** → Create new secret key
+- Tài khoản mới không có credit miễn phí — cần nạp tối thiểu vào **Billing**
+- Model dùng: `text-embedding-3-small`, loại rẻ nhất. 27 mẩu tài liệu hiện có tốn không đáng kể;
+  mỗi lần NVXH bấm Phân tích thêm 1 embedding cho câu truy vấn
+- Nên đặt **Usage limit** ở `platform.openai.com/settings/limits` trước khi phát cho NVXH dùng
+- Khai vào **cả hai nơi**: Vercel (app truy xuất) và GitHub Secrets (Action nạp) — xem README gốc
+
+### Vì sao không có cách thay thế
+
+| Cách | Vấn đề |
+|---|---|
+| Dùng embedding của Groq | Groq **không có** API embedding |
+| Thêm nhà cung cấp thứ ba | Lại thêm một luồng dữ liệu ra nước ngoài cần đưa vào hồ sơ NĐ 13/2023 |
+| Bỏ RAG, nhét thẳng SOP vào prompt | SOP dài 11KB; nhét hết vào mỗi lời gọi Groq tốn token Groq nhiều hơn hẳn và dễ vượt giới hạn. RAG chỉ lấy 3 mẩu liên quan nhất nên rẻ hơn |
+
+Nếu tổ chức quyết định **không dùng OpenAI**, phương án thực tế là bỏ RAG hẳn — tắt qua `FEATURES`
+để không ai mất thời gian tìm lý do AI trả lời chung chung.
+
+### Nội dung — ai chuẩn bị phần nào
+
+| File | Ai chuẩn bị |
+|---|---|
+| `quy-trinh-ctxh-co-ban.md`, `sop-quan-ly-ca-ctxh-v1.md` | ✅ đã có sẵn trong repo |
+| `nguon-luc/danh-ba-nguon-luc.md` | NVXH có kinh nghiệm hoặc giám sát ca — người đã thực sự gọi điện, đi làm thủ tục |
+| `phap-ly/can-cu-phap-ly.md` | Người phụ trách pháp lý của tổ chức |
+| `ca-mau/` | Giám sát ca duyệt trước khi thêm (xem quy tắc ẩn danh trong `ca-mau/README.md`) |
+
+Ngay khi có khóa OpenAI, **27 mẩu quy trình + SOP nạp được liền** — đủ để AI trả lời đúng SLA và
+biểu mẫu bắt buộc của Thảo Đàn thay vì kiến thức chung. Không phải chờ danh bạ.
+
 ## Cấu trúc
 
 | Đường dẫn | Nội dung | Trạng thái |

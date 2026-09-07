@@ -57,11 +57,14 @@ bình thường nên rất dễ tưởng là đã xong:
 |---|---|
 | Truy xuất kho tri thức (RAG) | `api/rag.js` trả `{chunks:[]}` **không báo lỗi** → AI trả lời bằng kiến thức chung của internet thay vì quy trình và nguồn lực thật của Thảo Đàn |
 | Nạp tài liệu vào kho | GitHub Action dừng, chỉ thấy ✗ trong tab Actions — app không báo gì |
-| Đọc ảnh trang sổ tay (nút 📷) | Báo rõ *"Chưa cấu hình OPENAI_API_KEY"* — đây là cái duy nhất báo lỗi tử tế |
+| Đọc ảnh trang sổ tay | **Đã TẮT** qua `FEATURES.ocr` — quyết định của tổ chức, xem mục dưới |
 
 **Cách kiểm RAG đã chạy hay chưa** (vì nó không báo lỗi): phân tích một ca rồi hỏi trong khung chat
 *"Quy trình giai đoạn 2 của Thảo Đàn yêu cầu những gì?"* — trả lời đúng **SLA 72 giờ** và tên biểu
 mẫu bắt buộc là đang chạy; trả lời chung chung là chưa.
+
+RAG cần chuẩn bị những gì, vì sao không có cách thay thế khóa OpenAI, ai chuẩn bị nội dung nào —
+xem [`docs/README.md`](docs/README.md).
 
 Những phần **không** phụ thuộc khóa OpenAI và đang chạy đủ: phân tích ca và chat (Groq), 10 biểu
 mẫu, truy vết nguồn, dấu BẢN NHÁP, ẩn danh, tra cứu tiền lệ, nhập bằng giọng nói, xuất Word/PDF,
@@ -141,7 +144,13 @@ update cases_v2 set data_enc = encrypt_case_data(data) where data_enc is null an
 
 Đã vá: XSS lưu trữ (hiển thị form/report, import file backup ca), API proxy không xác thực, PII trẻ em gửi gần nguyên văn cho AI, prototype pollution qua lệnh chat sửa form, RLS thiếu/dư trên nhiều bảng, hàm `SECURITY DEFINER` thiếu khóa `search_path`, lộ file nội bộ qua static hosting, race condition mất dữ liệu khi đăng nhập mạng chậm.
 
-Vá tiếp trong các phiên sau: lưu thất bại nhưng vẫn báo "Đã lưu" (nay `await` kết quả và hiện
+Vá ở phiên QA 07/09/2026: **XSS lưu trữ qua tên ca trong bảng thông báo** — đường đọc từ DB đã
+`esc()` từ trước nhưng đường dự phòng cục bộ (khi bảng `notifications` rỗng) chèn thẳng
+`n.message` vào `innerHTML`, mà message có nhúng tên ca lấy từ `co_ban.ho_ten` do AI trích xuất từ
+ghi chép (hoặc từ file backup import vào) — tức nội dung không tin được. Cùng lúc siết `n.id`
+trước khi chèn vào thuộc tính `onclick` và `esc(e.message)` ở 2 chỗ hiển thị lỗi.
+
+Vá trong các phiên trước đó: lưu thất bại nhưng vẫn báo "Đã lưu" (nay `await` kết quả và hiện
 cảnh báo kèm nút Thử lại), ghi chép đang gõ không có lớp bảo vệ nào (nay lưu nháp xuống
 `localStorage` mỗi lần gõ), lưu 1 ca nhưng ghi lại toàn bộ ca (nay chỉ ghi ca thực sự đổi), số nhà
 và tên đường vẫn gửi nguyên văn cho AI (nay che, giữ phường/quận), và 2 lỗi che tên chỉ lộ ra khi
@@ -187,8 +196,42 @@ tự, chạy cục bộ, không gửi gì cho AI) · popup cảnh báo khi AI th
 `CA-YYYY-MM-STT` · xuất Word/PDF có chữ ký và số trang · **soạn công văn chuyển gửi** từ Form 7 ·
 theo dõi sau đóng ca · audit log.
 
-**Đang tạm ẩn** (`FEATURES` trong `src/js/config.js`, đổi `false`→`true` để bật lại): DASS-21/42 và
-sơ đồ phả hệ. Code, modal và dữ liệu đã lưu vẫn còn nguyên.
+**Đang tạm tắt** — công tắc `FEATURES` trong `src/js/config.js`, đổi `false`→`true` để bật lại.
+Code, modal, endpoint và dữ liệu đã lưu đều còn nguyên, không phải viết lại gì:
+
+| Cờ | Tính năng | Vì sao tắt |
+|---|---|---|
+| `dass` | Thang đo DASS-21/42 | Chờ thiết kế lại — bộ câu hỏi là bản tự khai ngôi thứ nhất của người lớn, chỉ thẩm định cho ≥17 tuổi, mà màn hình không hỏi ai là người trả lời |
+| `genogram` | Sơ đồ phả hệ | Chờ thiết kế lại — thiếu đúng phần cốt lõi là đường quan hệ (thân thiết/xung đột/xa cách/cắt đứt) và không sửa được bằng tay |
+| `ocr` | Đọc chữ trong ảnh sổ tay | **Quyết định của tổ chức.** Đây là luồng DUY NHẤT gửi dữ liệu định danh chưa che ra ngoài — tên thật và địa chỉ nằm ngay trong nét chữ, không regex nào che được. Bật lại cần cả `OPENAI_API_KEY` và quyết định về NĐ 13/2023 |
+
+Nút 🎤 **nhập bằng giọng nói vẫn bật** — dùng Web Speech API sẵn trong Chrome/Edge, miễn phí, và
+văn bản đọc ra vẫn đi qua đúng bộ che tên/SĐT/địa chỉ trước khi tới Groq. Với NVXH vừa đi vãng gia
+về, kể lại bằng miệng còn nhanh hơn chụp ảnh trang sổ rồi sửa lỗi đọc.
+
+## Kiểm thử
+
+Không có test tự động trong repo (app là script không module, không có bước build cho `main.js`).
+Kiểm thử được viết dưới dạng script Playwright chạy ngoài, dựng máy chủ tĩnh trên `localhost:8899`
+và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồng mà không cần khóa thật.
+
+**Lần QA gần nhất: 07/09/2026 — 226 kiểm tra, 0 lỗi**, phủ 17 nhóm:
+
+| Nhóm | Phủ những gì |
+|---|---|
+| Quy trình 5 giai đoạn | Phân tích → đổ dữ liệu vào form → chuyển giai đoạn → đóng ca; `deepMerge` không ghi đè dữ liệu giai đoạn trước; GĐ4 nối thêm đúng |
+| Nhánh phụ | Lùi giai đoạn, mở lại ca, backup/khôi phục (id độc bị vô hiệu), cảnh báo thiếu trường |
+| Truy vết nguồn | 10 ca thử, trong đó bắt đúng 3 giá trị bịa hoàn toàn và không báo động giả với giá trị chuẩn hóa |
+| Dấu BẢN NHÁP | Dấu trên cả 3 đường xuất; xác nhận rồi thì đổi dấu; phân tích lại thì thu hồi |
+| Che danh tính | Địa chỉ (12 câu mẫu: 5 phải che, 7 phải giữ nguyên), nhiều tên với placeholder riêng |
+| Chống mất dữ liệu | Mất mạng khi lưu, nháp `localStorage`, chỉ ghi ca thực sự đổi (200 ca: 0 và 1 lệnh ghi) |
+| XSS | Khai thác thật bằng tên ca chứa `<img onerror>` và id độc trong `onclick` |
+| Giao diện | 6 kích thước × 4 tab, ngăn kéo biểu mẫu, nút ghim đáy, hàng nút theo số tính năng bật |
+| In & xuất | Đọc XML file Word xuất ra: số mục La Mã, KHẨN CẤP, chữ ký, số trang, 10 biểu mẫu, công văn chuyển gửi |
+| Tính năng có cờ | Tắt thì ẩn nút, bật lại thì chạy đúng (kiểm cả hai chiều) |
+
+Script kiểm thử **không lưu trong repo** — chúng dùng dữ liệu giả và bám vào chi tiết cài đặt nội
+bộ, nên giữ lại dễ mục ruỗng hơn là có ích. Khi cần QA lại, dựng lại theo mô tả trong bảng trên.
 
 ## Khôi phục lịch sử/quyết định
 
