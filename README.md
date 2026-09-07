@@ -8,14 +8,16 @@ Vanilla JS (không framework, không bundler cho `main.js`) + Vite (chỉ dùng 
 
 ```
 index.html              # 1 trang duy nhất, load 4 file JS qua <script> thường (không phải module)
-src/js/config.js        # Hằng số, STAGE_CONFIG
+                        # + bộ 45 icon nét dạng <symbol> nhúng sẵn ngay sau <body>
+src/js/config.js        # Hằng số, STAGE_CONFIG, công tắc FEATURES
 src/js/prompts.js       # Toàn bộ system prompt gửi cho AI
-src/js/utils.js         # Hàm tiện ích (esc, deepMerge, showNotif...)
-src/js/main.js          # Toàn bộ logic app (~5600 dòng)
-src/css/main.css        # Design system
+src/js/utils.js         # Hàm tiện ích (esc, escAttr, deepMerge, showNotif...)
+src/js/main.js          # Toàn bộ logic app (~6900 dòng)
+src/css/main.css        # Design system — biến màu, thang chữ, vùng bấm tối thiểu
 api/chat.js             # Proxy gọi Groq — yêu cầu Supabase access token
 api/rag.js              # Proxy tìm tài liệu liên quan (pgvector) — yêu cầu token
-api/_auth.js            # Helper xác thực token dùng chung cho 2 route trên
+api/ocr.js              # Proxy đọc chữ trong ảnh (OpenAI vision) — đang tắt bằng cờ FEATURES
+api/_auth.js            # Helper xác thực token dùng chung cho các route trên
 supabase/migrations/    # Toàn bộ migration SQL, đánh số thứ tự — xem bên dưới
 docs/                   # Tài liệu nghiệp vụ CTXH cho AI học (RAG) — xem docs/README.md
 ```
@@ -29,7 +31,7 @@ npm install
 npm run dev
 ```
 
-## Trạng thái triển khai (cập nhật 04/09/2026)
+## Trạng thái triển khai (cập nhật 07/09/2026)
 
 Ghi lại để phiên sau không phải đoán. Cập nhật bảng này mỗi khi cấu hình đổi.
 
@@ -145,6 +147,48 @@ update cases_v2 set data_enc = encrypt_case_data(data) where data_enc is null an
 
 **Cơ chế admin hiện tại:** hard-code theo email (`ADMIN_EMAIL` trong `src/js/main.js`, khớp với `hangcong.nguyen@thaodancenter.org.vn` trong các policy SQL) — nếu đổi admin, sửa cả 2 chỗ.
 
+## Phân quyền — ai xem được ca nào
+
+| Vai | Xem được | Sửa/xóa | Xác định bằng |
+|---|---|---|---|
+| NVXH (`officer`) | chỉ ca của chính mình | ✅ ca của mình | `cases_v2.user_id = auth.uid()` |
+| Trưởng nhóm (`team_leader`) | ca của mình **+ ca cùng `team_id`** | ❌ chỉ xem | `profiles.role` + `profiles.team_id` |
+| Admin | **toàn bộ ca của mọi người** | ❌ chỉ xem | **email viết cứng** |
+
+Chỉ **một** người xem được hết ca: `hangcong.nguyen@thaodancenter.org.vn`. Email này phải khớp ở
+hai nơi — `ADMIN_EMAIL` trong `src/js/main.js` (quyết định giao diện có tải hết ca không) và hàm
+`private.is_super_admin()` trong DB (quyết định RLS có cho đọc không).
+
+Ba điều dễ hiểu sai, đã trả giá để biết:
+
+1. **Gán `profiles.role = 'admin'` KHÔNG cho ai xem hết ca.** Cột `role` chỉ dùng cho policy của
+   bảng `profiles`. Bốn policy cũ trên `cases_v2` dựa theo `is_admin()` đã bị xóa ở migration
+   `0007`. Muốn thêm người xem hết ca thì sửa `private.is_super_admin()` hoặc thêm policy.
+2. **Admin xem được nhưng không sửa được ca người khác** (`admin_all_cases` là `FOR SELECT`). Admin
+   mở ca của NVXH khác rồi bấm Lưu thì DB từ chối — giao diện hiện chưa nói trước việc này.
+3. **Trưởng nhóm chỉ có hiệu lực khi gán đủ 3 chỗ**: `role` và `team_id` cho người, `team_id` cho
+   ca. Policy đòi `team_id IS NOT NULL` ở cả hai, mà trong SQL `NULL = NULL` không bao giờ đúng.
+   Gán `team_id` cho ca thì app có sẵn (chỉ admin thấy); gán `role`/`team_id` cho người **chưa có
+   UI**, phải chạy SQL:
+
+```sql
+update profiles set role = 'team_leader', team_id = 'nhom-1' where id = '<uid trưởng nhóm>';
+update profiles set team_id = 'nhom-1'                        where id = '<uid NVXH>';
+```
+
+Xem trạng thái thật bất cứ lúc nào:
+
+```sql
+select policyname, cmd, qual from pg_policies where tablename = 'cases_v2' order by policyname;
+select p.id, u.email, p.role, p.team_id from profiles p join auth.users u on u.id = p.id;
+```
+
+**Một điểm cần lưu ý về mã hóa:** `decrypt_case_data(text)` là `SECURITY DEFINER` và cấp `EXECUTE`
+cho mọi người đã đăng nhập, tức ai cũng gọi được nó với bất kỳ chuỗi ciphertext nào. Thực tế RLS
+vẫn chặn họ đọc `data_enc` của ca người khác nên không có chuỗi để giải; nhưng nếu ciphertext lọt
+ra bằng đường khác (bản backup, log, hoặc một lỗi RLS về sau) thì lớp mã hóa không còn chặn được
+người đã đăng nhập. Siết được bằng cách thêm kiểm tra chủ sở hữu vào chính hàm đó.
+
 ## Tình trạng bảo mật (tính đến phiên rà soát gần nhất)
 
 Đã vá: XSS lưu trữ (hiển thị form/report, import file backup ca), API proxy không xác thực, PII trẻ em gửi gần nguyên văn cho AI, prototype pollution qua lệnh chat sửa form, RLS thiếu/dư trên nhiều bảng, hàm `SECURITY DEFINER` thiếu khóa `search_path`, lộ file nội bộ qua static hosting, race condition mất dữ liệu khi đăng nhập mạng chậm.
@@ -154,6 +198,13 @@ Vá ở phiên QA 07/09/2026: **XSS lưu trữ qua tên ca trong bảng thông b
 `n.message` vào `innerHTML`, mà message có nhúng tên ca lấy từ `co_ban.ho_ten` do AI trích xuất từ
 ghi chép (hoặc từ file backup import vào) — tức nội dung không tin được. Cùng lúc siết `n.id`
 trước khi chèn vào thuộc tính `onclick` và `esc(e.message)` ở 2 chỗ hiển thị lỗi.
+
+Vá cùng phiên: **`esc()` không che dấu `"` và `'`** nên chuỗi đặt trong GIÁ TRỊ THUỘC TÍNH HTML bị
+cắt ngang ở dấu nháy đầu tiên (một câu như `Trẻ nói "con không sao"` mất phần còn lại và có thể
+sinh thuộc tính lạ). Thêm `escAttr()` trong `src/js/utils.js` và áp cho 3 chỗ đang dùng sai.
+**`permission denied for table users` khi lưu ca lần thứ hai** — 5 policy admin đọc trực tiếp
+`auth.users` mà role `authenticated` không có quyền SELECT trên bảng đó, còn
+`INSERT … ON CONFLICT DO UPDATE` lại đòi cả policy SELECT (migration `0014`).
 
 Vá trong các phiên trước đó: lưu thất bại nhưng vẫn báo "Đã lưu" (nay `await` kết quả và hiện
 cảnh báo kèm nút Thử lại), ghi chép đang gõ không có lớp bảo vệ nào (nay lưu nháp xuống
@@ -201,6 +252,18 @@ tự, chạy cục bộ, không gửi gì cho AI) · popup cảnh báo khi AI th
 `CA-YYYY-MM-STT` · xuất Word/PDF có chữ ký và số trang · **soạn công văn chuyển gửi** từ Form 7 ·
 theo dõi sau đóng ca · audit log.
 
+**Giao diện — thiết kế cho NVXH lớn tuổi, dùng trên cả điện thoại:**
+
+| Điểm | Chi tiết |
+|---|---|
+| Cỡ chữ | Thang chữ đã nâng một bậc toàn app (542 chỗ): sàn 11px cho nhãn nhỏ nhất, thân chữ 15–16px, chữ nền trang 16px. Cỡ chữ trong bản xuất `.docx` **giữ nguyên** Times New Roman 12pt theo quy cách văn bản hành chính |
+| Vùng bấm | Sàn 32px ở mọi kích cỡ màn hình, 34–36px trên màn hẹp — người lớn tuổi bấm kém chính xác hơn |
+| Icon | Bộ 45 icon nét nhúng sẵn dạng `<symbol>`, `stroke:currentColor` nên tự ăn theo màu chữ, không thêm request nào. Emoji đã bỏ trong khu chat và toàn bộ báo cáo (mỗi hệ điều hành vẽ emoji một kiểu, một sắc độ — đây là thứ làm giao diện trông thô nhất). Cột trái và thanh menu vẫn còn emoji |
+| Màu | Bảng màu báo cáo từ 65 giá trị còn 28, gom về **4 họ mang nghĩa**: đỏ = rủi ro · vàng = việc NVXH phải làm · xanh = đạt/an toàn · navy = thông tin chuyên môn. Tím, lam lạc tông, lục lam, cam trước đây chỉ để trang trí |
+| Khu chat | Ô nhập và nút gửi gộp thành một composer, textarea tự cao tới 5 dòng; gợi ý còn 3 chip một hàng + nút "n câu khác"; ba lời cảnh báo trùng nhau gộp thành một dòng, toàn văn Điều 45 / Thông tư 35 / chính sách bảo mật nằm trong nút ⓘ. Khung chrome từ 198px còn 114px |
+| Thu gọn / mở rộng | 3 trạng thái, nhớ lựa chọn trên máy người dùng. Mở rộng = báo cáo chiếm cả bề ngang (ẩn cột trái); thu gọn = chat còn thanh 44px, cột trái giãn ra. Trên điện thoại thành "báo cáo cả màn hình" / "ô ghi chép cả màn hình" |
+| Điện thoại | Header một hàng, các thao tác phụ (Thống kê, Thông báo, Xuất/Nhập JSON, Đăng xuất) dồn vào menu **⋯**; dải mã ca dưới thanh tab để biết đang mở ca nào; nhãn tab bản ngắn để cả 4 tab lọt từ màn 360px |
+
 **Đang tạm tắt** — công tắc `FEATURES` trong `src/js/config.js`, đổi `false`→`true` để bật lại.
 Code, modal, endpoint và dữ liệu đã lưu đều còn nguyên, không phải viết lại gì:
 
@@ -220,7 +283,23 @@ Không có test tự động trong repo (app là script không module, không c�
 Kiểm thử được viết dưới dạng script Playwright chạy ngoài, dựng máy chủ tĩnh trên `localhost:8899`
 và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồng mà không cần khóa thật.
 
-**Lần QA gần nhất: 07/09/2026 — 226 kiểm tra, 0 lỗi**, phủ 17 nhóm:
+**Lần QA gần nhất: 07/09/2026 — 7 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
+
+| Bộ | Kết quả | Phủ những gì |
+|---|---|---|
+| Quy trình + logic | 226 kiểm tra, 0 lỗi | 5 giai đoạn, nhánh phụ, truy vết nguồn, dấu BẢN NHÁP, che danh tính, chống mất dữ liệu, XSS, in & xuất, cờ tính năng — xem bảng dưới |
+| `desk` | 20/20 trang sạch | 4 tab × 5 khổ desktop (1920 → 1024): tràn ngang/dọc, phần tử vượt mép, nút bị cắt, nút dưới 30px, lỗi JS |
+| `mob` | 24/24 trang sạch | 4 tab × 6 khổ điện thoại/tablet (360 → 768): thêm header một hàng, 4 tab lọt bề ngang, dải mã ca, nút ⋯ |
+| `chatui` | tất cả đạt | Composer, chip gợi ý (câu hỏi chứa `"` và `'`), 3 trạng thái thu gọn/mở rộng + ghi nhớ, ô nhập tự cao rồi co lại, hộp thoại ⓘ, bảng màu + emoji trong cả 5 giai đoạn báo cáo |
+| `mob2` | tất cả đạt | Menu ⋯ (5 mục ≥44px, bấm ra ngoài đóng, mang theo số thông báo), thu gọn/mở rộng trên phone, tab biểu mẫu |
+| `contrast` | tất cả đạt | Tương phản WCAG mọi phần tử có chữ, chặn dưới 2.5:1; soi file CSS tìm `var()` trỏ vào biến chưa khai báo mà không có giá trị dự phòng |
+| `hover` | 73/73 phần tử | Tương phản ở **cả** trạng thái nghỉ và trỏ chuột — bộ cũ chỉ kiểm lúc đứng yên nên bỏ sót chip gợi ý mất chữ khi hover |
+| `clip` | 0 chỗ bị cắt | Chữ **không** tràn khỏi trang nhưng bị chính khung bao (`overflow:hidden`) hoặc chiều cao đặt cứng cắt mất. Bộ dò phân biệt "tới được bằng cách cuộn" với "mất hẳn", bỏ qua thứ đang ẩn có chủ ý |
+
+Ba bộ cuối (`contrast`, `hover`, `clip`) sinh ra từ chính các lỗi đã gặp — chúng bắt được lớp lỗi
+mà kiểm tra tràn trang không bao giờ thấy. Nếu QA lại, dựng ba bộ này trước.
+
+Bảng phủ của bộ quy trình + logic:
 
 | Nhóm | Phủ những gì |
 |---|---|
@@ -230,9 +309,8 @@ và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồn
 | Dấu BẢN NHÁP | Dấu trên cả 3 đường xuất; xác nhận rồi thì đổi dấu; phân tích lại thì thu hồi |
 | Che danh tính | Địa chỉ (12 câu mẫu: 5 phải che, 7 phải giữ nguyên), nhiều tên với placeholder riêng |
 | Chống mất dữ liệu | Mất mạng khi lưu, nháp `localStorage`, chỉ ghi ca thực sự đổi (200 ca: 0 và 1 lệnh ghi) |
-| XSS | Khai thác thật bằng tên ca chứa `<img onerror>` và id độc trong `onclick` |
-| Giao diện | 6 kích thước × 4 tab, ngăn kéo biểu mẫu, nút ghim đáy, hàng nút theo số tính năng bật |
-| In & xuất | Đọc XML file Word xuất ra: số mục La Mã, KHẨN CẤP, chữ ký, số trang, 10 biểu mẫu, công văn chuyển gửi |
+| XSS | Khai thác thật bằng tên ca chứa `<img onerror>` và id độc trong `onclick`; `escAttr()` cho giá trị thuộc tính |
+| In & xuất | Đọc XML file Word xuất ra: số mục La Mã, KHẨN CẤP, chữ ký, số trang, ảnh footer trải trọn khổ giấy, 10 biểu mẫu, công văn chuyển gửi |
 | Tính năng có cờ | Tắt thì ẩn nút, bật lại thì chạy đúng (kiểm cả hai chiều) |
 
 Script kiểm thử **không lưu trong repo** — chúng dùng dữ liệu giả và bám vào chi tiết cài đặt nội
@@ -240,4 +318,16 @@ bộ, nên giữ lại dễ mục ruỗng hơn là có ích. Khi cần QA lại,
 
 ## Khôi phục lịch sử/quyết định
 
-Các quyết định thiết kế quan trọng (vì sao chọn cách này thay vì cách khác) được ghi chú trực tiếp trong code — đặc biệt xem comment đầu mỗi file migration trong `supabase/migrations/`, và các đoạn comment trong `main.js` gần `pseudonymizeForAI`, `_maskPiiKeys`, `F()`.
+Các quyết định thiết kế quan trọng (vì sao chọn cách này thay vì cách khác) được ghi chú trực tiếp
+trong code. Nơi nên đọc trước:
+
+| Chủ đề | Đọc ở đâu |
+|---|---|
+| Vì sao mỗi migration làm như vậy | comment đầu mỗi file trong `supabase/migrations/` — đặc biệt `0014` (lỗi phân quyền khi lưu ca) và `0015` (lỗi ràng buộc `role` mà `0011` bỏ sót) |
+| Che danh tính, khôi phục tên | `main.js` gần `pseudonymizeForAI`, `_maskPiiKeys`, `maskAddressInText` |
+| Truy vết nguồn (chặn AI bịa) | `main.js` gần `F()`, `_checkGround`, `_GROUND_RATIO` |
+| Thu gọn / mở rộng khu chat | `main.js` gần `setChatView`, `_restoreChatView` |
+| Emoji → icon nét, 3 tông màu báo cáo | `main.js` gần `_SEC_ICON`, `_SEC_TONE`, `_secHead` |
+| Vì sao có `escAttr` riêng | `src/js/utils.js` ngay dưới `esc` |
+| Bảng quy đổi cỡ chữ, vùng bấm tối thiểu | `src/css/main.css` — khối `VÙNG BẤM TỐI THIỂU` và các comment trong `@media` |
+| Biến CSS từng bị dùng mà chưa khai báo | `src/css/main.css` trong khối `:root` (`--bg`, `--bg2`, `--t1`, `--bd2`, `--navy-tint`) |
