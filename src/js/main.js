@@ -225,13 +225,13 @@ async function logoutUser() {
   document.querySelectorAll('.fi-ck').forEach(el => el.remove());
   document.querySelectorAll('.form-item').forEach(el => { el.classList.remove('form-locked'); el.style.opacity = ''; el.title = ''; });
   const fp = document.getElementById('form-preview');
-  if (fp) fp.innerHTML = '<div class="fv-placeholder"><div style="font-size:40px;margin-bottom:10px">📋</div><div style="font-weight:700;font-size:14px;margin-bottom:6px">Chưa có dữ liệu</div><div style="font-size:12px">Phân tích ghi chép để điền biểu mẫu tự động</div></div>';
+  if (fp) fp.innerHTML = '<div class="fv-placeholder"><div style="font-size:42px;margin-bottom:10px">📋</div><div style="font-weight:700;font-size:17px;margin-bottom:6px">Chưa có dữ liệu</div><div style="font-size:15px">Phân tích ghi chép để điền biểu mẫu tự động</div></div>';
   // Entries panel
   const ep = document.getElementById('entries-panel');
   if (ep) ep.innerHTML = '';
   // Cases tab
-  document.getElementById('cases-list').innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12px;">Chưa có ca nào</div>';
-  document.getElementById('cases-main').innerHTML = '<div class="case-detail-empty"><div><div style="font-size:36px;margin-bottom:12px;">🗂</div><div style="font-size:14px;font-weight:600;margin-bottom:6px;">Chọn một ca để xem</div></div></div>';
+  document.getElementById('cases-list').innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:15px;">Chưa có ca nào</div>';
+  document.getElementById('cases-main').innerHTML = '<div class="case-detail-empty"><div><div style="font-size:38px;margin-bottom:12px;">🗂</div><div style="font-size:17px;font-weight:600;margin-bottom:6px;">Chọn một ca để xem</div></div></div>';
   // Analysis tab
   const eo = document.getElementById('eval-output');
   if (eo) eo.innerHTML = '<div class="eval-placeholder"><div class="ep-icon">📝</div><div class="ep-title">Báo cáo Phân tích & Đánh giá Tổng hợp</div><div class="ep-sub">Nhấn nút bên trên để AI tạo báo cáo đánh giá toàn diện.</div></div>';
@@ -280,11 +280,11 @@ function _onLogin(user) {
     document.getElementById('btn-fill').disabled = true;
     document.getElementById('btn-send').disabled = false;
     document.getElementById('chat-input').disabled = false;
-    document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;margin-bottom:4px;">Chào mừng trở lại!</div><div>Chọn ca từ tab <strong>Danh sách ca</strong> hoặc nhấn <strong>+ Ca mới</strong> để bắt đầu.</div></div>';
+    document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:31px;margin-bottom:8px;">💬</div><div style="font-weight:600;margin-bottom:4px;">Chào mừng trở lại!</div><div>Chọn ca từ tab <strong>Danh sách ca</strong> hoặc nhấn <strong>+ Ca mới</strong> để bắt đầu.</div></div>';
     setHdrCase('', '');
     const dl = document.getElementById('dash-case-label'); if (dl) dl.textContent = '';
     const fp = document.getElementById('form-preview');
-    if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">📋</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Chưa có dữ liệu</div><div style="font-size:12.5px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> để điền form</div></div></div>';
+    if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:50px;margin-bottom:14px;opacity:.3;">📋</div><div style="font-weight:800;font-size:18px;margin-bottom:6px;color:var(--t2)">Chưa có dữ liệu</div><div style="font-size:15px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> để điền form</div></div></div>';
     document.getElementById('closed-banner')?.classList.remove('show');
     updateStageUI();
     renderEntriesPanel();
@@ -979,35 +979,35 @@ async function showStats() {
       <div class="stat-card" style="background:#fef3c7;"><div class="stat-num" style="color:#92400e;">${stale.length}</div><div class="stat-label">Lâu chưa CN</div></div>
     </div>
 
-    <div style="font-weight:700;font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px;">📊 Ca đang mở theo giai đoạn</div>
+    <div style="font-weight:700;font-size:14px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px;">📊 Ca đang mở theo giai đoạn</div>
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
       ${[1,2,3,4,5].map(s => `
         <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:72px;font-size:10px;font-weight:600;color:${stageColors[s]};flex-shrink:0;">GĐ${s} ${stageLabels[s]}</div>
+          <div style="width:72px;font-size:13px;font-weight:600;color:${stageColors[s]};flex-shrink:0;">GĐ${s} ${stageLabels[s]}</div>
           ${bar(stages[s], maxStage, stageColors[s], '#f1f5f9')}
-          <div style="width:20px;text-align:right;font-size:11px;font-weight:700;color:var(--text);flex-shrink:0;">${stages[s]}</div>
+          <div style="width:20px;text-align:right;font-size:14px;font-weight:700;color:var(--text);flex-shrink:0;">${stages[s]}</div>
         </div>`).join('')}
     </div>
 
-    <div style="font-weight:700;font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">🎯 Phân bổ mức rủi ro</div>
+    <div style="font-weight:700;font-size:14px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">🎯 Phân bổ mức rủi ro</div>
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
       ${riskData.map(r => `
         <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:82px;font-size:10px;font-weight:600;color:${r.color};flex-shrink:0;">${r.label}</div>
+          <div style="width:82px;font-size:13px;font-weight:600;color:${r.color};flex-shrink:0;">${r.label}</div>
           ${bar(r.val, maxRisk, r.color, r.bg)}
-          <div style="width:20px;text-align:right;font-size:11px;font-weight:700;color:var(--text);flex-shrink:0;">${r.val}</div>
+          <div style="width:20px;text-align:right;font-size:14px;font-weight:700;color:var(--text);flex-shrink:0;">${r.val}</div>
         </div>`).join('')}
     </div>
 
-    ${stale.length ? `<div style="font-weight:600;font-size:12px;margin-bottom:8px;color:#dc2626;">⚠️ Ca lâu chưa cập nhật (${stale.length}):</div>
-    <div style="font-size:12px;">${stale.map(c => {
+    ${stale.length ? `<div style="font-weight:600;font-size:15px;margin-bottom:8px;color:#dc2626;">⚠️ Ca lâu chưa cập nhật (${stale.length}):</div>
+    <div style="font-size:15px;">${stale.map(c => {
       const days = Math.floor((now - new Date(c.updatedAt)) / 86400000);
       const risk2 = c.lastAnalysis?._report?.risk?.level || c.lastAnalysis?._report?.risk_level || '';
       const dot = risk2 === 'Cao' ? '🔴' : risk2 === 'Trung bình' ? '🟡' : '⚪';
-      return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd);font-size:11.5px;">`
+      return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd);font-size:14px;">`
         + `<span>${dot} ${esc(c.name)}</span>`
         + `<span style="color:#dc2626;font-weight:700;">${days} ngày · GĐ${c.currentStage||1}</span></div>`;
-    }).join('')}</div>` : '<div style="color:#16a34a;font-size:12px;padding:6px 0;">✅ Tất cả ca đều được cập nhật đều đặn</div>'}
+    }).join('')}</div>` : '<div style="color:#16a34a;font-size:15px;padding:6px 0;">✅ Tất cả ca đều được cập nhật đều đặn</div>'}
   `;
 }
 
@@ -1079,7 +1079,7 @@ async function refreshFileList(caseId) {
     return `<div class="file-item">
       ${isImg ? `<img src="${url}" alt="">` : '<div style="width:40px;height:40px;background:var(--bg2);border-radius:6px;display:flex;align-items:center;justify-content:center;">📄</div>'}
       <div class="file-info"><div class="file-name">${esc(f.file_name)}</div><div class="file-meta">GĐ${f.stage} · ${size} · ${fmtVN(f.created_at)}</div></div>
-      ${isImg ? `<a href="${url}" target="_blank" style="font-size:14px;">🔍</a>` : `<a href="${url}" target="_blank" style="font-size:14px;">⬇</a>`}
+      ${isImg ? `<a href="${url}" target="_blank" style="font-size:17px;">🔍</a>` : `<a href="${url}" target="_blank" style="font-size:17px;">⬇</a>`}
       <span class="file-del" onclick="if(confirm('Xóa file này?')){deleteCaseFile('${f.id}','${f.file_path}').then(()=>refreshFileList('${caseId}'))}">🗑</span>
     </div>`;
   }));
@@ -1266,7 +1266,7 @@ function previewStage(s) {
   if (!D && !restoredTs) {
     const chatMsgs = document.getElementById('chat-msgs');
     if (chatMsgs && !chatMsgs.querySelector('.chat-empty')) {
-      chatMsgs.innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">📋</div><div style="font-weight:600;">Chưa có dữ liệu cho giai đoạn này</div><div>Hãy nhập ghi chép và bấm "Phân tích"</div></div>';
+      chatMsgs.innerHTML = '<div class="chat-empty"><div style="font-size:31px;margin-bottom:8px;">📋</div><div style="font-weight:600;">Chưa có dữ liệu cho giai đoạn này</div><div>Hãy nhập ghi chép và bấm "Phân tích"</div></div>';
     }
   }
   updateStageUI();
@@ -1331,12 +1331,12 @@ function completeStage() {
         const _rn = document.getElementById('dash-real-name'); if (_rn) _rn.value = '';
         document.getElementById('dash-cc').textContent = '0 ký tự';
         document.getElementById('btn-fill').disabled = true;
-        document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
+        document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:31px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
         setHdrCase('', '');
         const dl = document.getElementById('dash-case-label'); if (dl) dl.textContent = '';
         document.getElementById('closed-banner')?.classList.remove('show');
         const fp = document.getElementById('form-preview');
-        if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">✅</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Ca đã đóng</div><div style="font-size:12.5px;">Chọn ca khác từ <strong>Danh sách ca</strong></div></div></div>';
+        if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:50px;margin-bottom:14px;opacity:.3;">✅</div><div style="font-weight:800;font-size:18px;margin-bottom:6px;color:var(--t2)">Ca đã đóng</div><div style="font-size:15px;">Chọn ca khác từ <strong>Danh sách ca</strong></div></div></div>';
         renderCaseList(); updateCasesCount(); updateStageUI(); renderEntriesPanel();
         showNotif('✅ Đã đóng ca thành công!');
 		// Xóa cache khi đóng ca
@@ -1661,8 +1661,8 @@ function _validateData(data) {
   if (existBanner) existBanner.remove();
   const banner = document.createElement('div');
   banner.id = '_val-banner';
-  banner.style.cssText = 'background:#fff8e1;border:1px solid #f9a825;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;line-height:1.7;';
-  banner.innerHTML = `<div style="font-weight:700;margin-bottom:6px;color:#e65100;">🔍 Cảnh báo dữ liệu</div>${warnings.map(w=>`<div>${w}</div>`).join('')}<div style="text-align:right;margin-top:6px;"><button onclick="this.closest('#_val-banner').remove()" style="background:none;border:none;color:#999;cursor:pointer;font-size:11px;">Đóng ×</button></div>`;
+  banner.style.cssText = 'background:#fff8e1;border:1px solid #f9a825;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:15px;line-height:1.7;';
+  banner.innerHTML = `<div style="font-weight:700;margin-bottom:6px;color:#e65100;">🔍 Cảnh báo dữ liệu</div>${warnings.map(w=>`<div>${w}</div>`).join('')}<div style="text-align:right;margin-top:6px;"><button onclick="this.closest('#_val-banner').remove()" style="background:none;border:none;color:#999;cursor:pointer;font-size:14px;">Đóng ×</button></div>`;
   eo.insertAdjacentElement('beforebegin', banner);
 }
 
@@ -1697,10 +1697,10 @@ function _levelBadge(obj) {
   const cm={C:['#dc2626','#fef2f2'],TB:['#d97706','#fffbeb'],T:['#16a34a','#f0fdf4'],KR:['#64748b','#f1f5f9']};
   const lm={C:'Cao',TB:'TB',T:'Thấp',KR:'Chưa rõ'};
   const [c,bg]=cm[obj.level]||cm.KR;
-  return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${bg};color:${c};border:1px solid ${c}33">${lm[obj.level]||obj.level}</span>`;
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:13px;font-weight:700;background:${bg};color:${c};border:1px solid ${c}33">${lm[obj.level]||obj.level}</span>`;
 }
 function _chip(txt,color) {
-  return `<span style="display:inline-flex;padding:3px 9px;border-radius:16px;font-size:11px;font-weight:600;background:${color}15;color:${color};border:1px solid ${color}33;margin:2px">${esc(txt)}</span>`;
+  return `<span style="display:inline-flex;padding:3px 9px;border-radius:16px;font-size:14px;font-weight:600;background:${color}15;color:${color};border:1px solid ${color}33;margin:2px">${esc(txt)}</span>`;
 }
 // Emoji trong tiêu đề mục do mỗi hệ điều hành vẽ một kiểu, một sắc độ — đây là thứ làm báo cáo
 // trông thô nhất. Đổi sang icon nét ăn theo màu chữ. Bảng dịch đặt ở đây nên không phải sửa
@@ -1723,8 +1723,8 @@ function _secHead(icon,num,title,color='#0f2d6b') {
   const [c,bg] = _SEC_TONE[color] || ['#0f2d6b','#f4f6fb'];
   const name = _SEC_ICON[icon] || 'doc';
   return `<div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;padding:7px 12px;background:${bg};border-left:3px solid ${c};border-radius:0 6px 6px 0">
-    <svg class="ic" style="color:${c}"><use href="#i-${name}"/></svg><span style="color:${c};font-size:11px;font-weight:700">${num}</span>
-    <span style="font-size:13px;font-weight:700;color:${c}">${title}</span></div>`;
+    <svg class="ic" style="color:${c}"><use href="#i-${name}"/></svg><span style="color:${c};font-size:14px;font-weight:700">${num}</span>
+    <span style="font-size:16px;font-weight:700;color:${c}">${title}</span></div>`;
 }
 function _header(stageName,stageNum,color) {
   const cb=D?.co_ban||{};
@@ -1732,24 +1732,24 @@ function _header(stageName,stageNum,color) {
   return `<div style="background:linear-gradient(135deg,#0f2d6b 0%,#1a3f8f 60%,${color} 100%);border-radius:12px;padding:14px 18px;margin-bottom:14px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;width:100%;box-sizing:border-box">
     <div style="display:flex;align-items:center;gap:10px">
       <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center"><svg class="ic" style="width:19px;height:19px"><use href="#i-leaf"/></svg></div>
-      <div><div style="font-size:14px;font-weight:900">Báo cáo GĐ ${stageNum} — ${stageName}</div>
-      <div style="font-size:10px;opacity:.6;margin-top:2px">${esc(cb.ho_ten||'—')} · ${now}</div></div>
+      <div><div style="font-size:17px;font-weight:900">Báo cáo GĐ ${stageNum} — ${stageName}</div>
+      <div style="font-size:13px;opacity:.6;margin-top:2px">${esc(cb.ho_ten||'—')} · ${now}</div></div>
     </div>
-    <button class="btn-noprint" onclick="dlReportDocx()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:5px 12px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-download"/></svg> .docx</button>
+    <button class="btn-noprint" onclick="dlReportDocx()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:5px 12px;border-radius:7px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-download"/></svg> .docx</button>
   </div>`;
 }
 function _urgentBanner(report) {
   if (!report.urgent||!report.urgent_reason) return '';
-  return `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#7f1d1d"><strong><svg class="ic" style="color:#dc2626;vertical-align:-2px"><use href="#i-alert"/></svg> KHẨN CẤP:</strong> ${esc(report.urgent_reason)}</div>`;
+  return `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:15px;color:#7f1d1d"><strong><svg class="ic" style="color:#dc2626;vertical-align:-2px"><use href="#i-alert"/></svg> KHẨN CẤP:</strong> ${esc(report.urgent_reason)}</div>`;
 }
 function _supervisionNotes(notes) {
   if (!notes||!notes.length) return '';
   return `<div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-top:10px">
-    <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-clipboard"/></svg> GHI CHÚ GIÁM SÁT VIÊN</div>
-    <ul style="margin:0;padding-left:14px">${notes.map(n=>`<li style="font-size:12px;color:#78350f;margin:2px 0">${esc(n)}</li>`).join('')}</ul></div>`;
+    <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-clipboard"/></svg> GHI CHÚ GIÁM SÁT VIÊN</div>
+    <ul style="margin:0;padding-left:14px">${notes.map(n=>`<li style="font-size:15px;color:#78350f;margin:2px 0">${esc(n)}</li>`).join('')}</ul></div>`;
 }
 function _infoTable(cb) {
-  return `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px">
+  return `<table style="width:100%;border-collapse:collapse;font-size:15px;margin-bottom:10px">
     <tr><td style="padding:5px 10px;font-weight:600;color:#555;background:#f8fafc;border:1px solid #e2e8f0;width:20%">Họ tên</td>
     <td style="padding:5px 10px;border:1px solid #e2e8f0;color:#0f2d6b;font-weight:700">${esc(cb.ho_ten||'—')}</td>
     <td style="padding:5px 10px;font-weight:600;color:#555;background:#f8fafc;border:1px solid #e2e8f0;width:18%">Tuổi / Giới</td>
@@ -1766,7 +1766,7 @@ function _setReport(html) {
 function renderReport1(r) {
   const cb=D?.co_ban||{}, rm=r.risk_matrix||{}, nw=r.needs_vs_wants||{}, pf=r.parentification||{}, dr=r.data_reliability||[];
   const rC=_riskColor(r.risk), rBg=_riskBg(r.risk), rI=_riskIcon(r.risk);
-  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
+  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:16px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
   h += _header('Tiếp cận ban đầu',1,'#0f2d6b');
   h += _infoTable(cb);
   h += _urgentBanner(r);
@@ -1781,14 +1781,14 @@ function renderReport1(r) {
   const _drGuess = dr.filter(d => d && d.type !== 'sự kiện').length;
   if ((r.next_questions||[]).length || dr.length) {
     h += `<div style="background:#fffbeb;border:1.5px solid #fcd34d;border-left:5px solid #d97706;border-radius:0 10px 10px 0;padding:12px 14px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">
+      <div style="font-size:14px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">
         <svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-clipboard"/></svg> Việc của NVXH trước khi kết luận</div>`;
     if ((r.next_questions||[]).length) {
-      h += `<div style="font-size:11px;font-weight:700;color:#78350f;margin-bottom:3px">Cần khai thác / kiểm chứng thêm:</div>
-        <ol style="margin:0 0 8px;padding-left:16px">${(r.next_questions||[]).map(q=>`<li style="font-size:12.5px;margin:3px 0;color:#78350f">${esc(q)}</li>`).join('')}</ol>`;
+      h += `<div style="font-size:14px;font-weight:700;color:#78350f;margin-bottom:3px">Cần khai thác / kiểm chứng thêm:</div>
+        <ol style="margin:0 0 8px;padding-left:16px">${(r.next_questions||[]).map(q=>`<li style="font-size:15px;margin:3px 0;color:#78350f">${esc(q)}</li>`).join('')}</ol>`;
     }
     if (dr.length) {
-      h += `<div style="font-size:11.5px;color:#78350f">
+      h += `<div style="font-size:14px;color:#78350f">
         Trong ghi chép có <strong>${dr.length}</strong> nhận định, trong đó
         <strong style="color:#b45309">${_drGuess} là suy diễn</strong> chưa có bằng chứng —
         xem chi tiết ở mục "Độ tin cậy dữ liệu" bên dưới.</div>`;
@@ -1802,8 +1802,8 @@ function renderReport1(r) {
     h += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:10px">`;
     dr.forEach(d => {
       h+=`<div style="display:flex;gap:7px;margin-bottom:5px;padding:4px 8px;background:#fff;border-radius:5px;border:1px solid #e2e8f0">
-        <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;${d.type==='sự kiện'?'background:#dcfce7;color:#166534':'background:#fef3c7;color:#92400e'};flex-shrink:0">${esc(d.type)}</span>
-        <div style="font-size:12px;flex:1">"${esc(d.content)}"${d.note?`<div style="color:#475569;font-size:11px;margin-top:1px">→ ${esc(d.note)}</div>`:''}</div></div>`;
+        <span style="font-size:13px;font-weight:700;padding:2px 6px;border-radius:8px;${d.type==='sự kiện'?'background:#dcfce7;color:#166534':'background:#fef3c7;color:#92400e'};flex-shrink:0">${esc(d.type)}</span>
+        <div style="font-size:15px;flex:1">"${esc(d.content)}"${d.note?`<div style="color:#475569;font-size:14px;margin-top:1px">→ ${esc(d.note)}</div>`:''}</div></div>`;
     });
     h += `</div>`;
   }
@@ -1811,7 +1811,7 @@ function renderReport1(r) {
   // Tóm tắt chuyên môn — AI vẫn sinh ra trường "summary" nhưng trước đây không hiển thị ở đâu.
   if (r.summary) {
     h += _secHead('🧭',_rn(),'TÓM TẮT CHUYÊN MÔN','#0f2d6b');
-    h += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #0f2d6b;border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:10px;font-size:12.5px;color:#1e293b">${esc(r.summary)}</div>`;
+    h += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #0f2d6b;border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:10px;font-size:15px;color:#1e293b">${esc(r.summary)}</div>`;
   }
 
   // Ma trận rủi ro
@@ -1821,59 +1821,59 @@ function renderReport1(r) {
     const lb=['<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-shield"/></svg> An toàn Thể chất','<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-compass"/></svg> An toàn Tâm lý','<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-home"/></svg> Môi trường Sống','<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-book"/></svg> Giáo dục & Phát triển','<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-users"/></svg> Hệ thống Bảo vệ'];
     const obj=rm[k]||{};
     h+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:6px">
-      <span style="font-size:12px;min-width:175px;font-weight:600;color:#334155">${lb[i]}</span>${_levelBadge(obj)}
-      <span style="font-size:11.5px;color:#64748b;flex:1">${esc(obj.detail||'')}</span></div>`;
+      <span style="font-size:15px;min-width:175px;font-weight:600;color:#334155">${lb[i]}</span>${_levelBadge(obj)}
+      <span style="font-size:14px;color:#64748b;flex:1">${esc(obj.detail||'')}</span></div>`;
   });
   h += `</div>`;
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:${rBg};border:1.5px solid ${rC}44;border-left:4px solid ${rC};border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:${rC};text-transform:uppercase;margin-bottom:5px">Mức rủi ro — AI gợi ý</div>
-      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:19px">${rI}</span>
-      <div><div style="font-size:15px;font-weight:800;color:${rC}">${r.risk||'?'}</div>
-      ${r.urgent?'<div style="font-size:10px;background:#dc2626;color:#fff;padding:1px 7px;border-radius:10px;margin-top:2px;display:inline-block"><svg class="ic ic-sm" style="vertical-align:-2px;color:#b45309"><use href="#i-alert"/></svg> KHẨN CẤP</div>':''}</div></div>
-      <div style="margin-top:6px;font-size:12px;color:#334155">${esc(r.risk_reason||'')}</div>
-      <div style="margin-top:7px;padding-top:6px;border-top:1px dashed ${rC}55;font-size:10.5px;color:#64748b;font-style:italic">
+      <div style="font-size:13px;font-weight:700;color:${rC};text-transform:uppercase;margin-bottom:5px">Mức rủi ro — AI gợi ý</div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:22px">${rI}</span>
+      <div><div style="font-size:18px;font-weight:800;color:${rC}">${r.risk||'?'}</div>
+      ${r.urgent?'<div style="font-size:13px;background:#dc2626;color:#fff;padding:1px 7px;border-radius:10px;margin-top:2px;display:inline-block"><svg class="ic ic-sm" style="vertical-align:-2px;color:#b45309"><use href="#i-alert"/></svg> KHẨN CẤP</div>':''}</div></div>
+      <div style="margin-top:6px;font-size:15px;color:#334155">${esc(r.risk_reason||'')}</div>
+      <div style="margin-top:7px;padding-top:6px;border-top:1px dashed ${rC}55;font-size:13px;color:#64748b;font-style:italic">
         Đây là gợi ý của máy dựa trên ghi chép, <strong>không phải kết luận chuyên môn</strong>.
         Mức rủi ro chính thức do NVXH và giám sát ca quyết định.</div></div>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-flag"/></svg> Red Flags</div>
-      <ul style="margin:0;padding-left:14px">${(r.red_flags||[]).map(f=>`<li style="font-size:12px;margin:2px 0;color:#78350f">${esc(f)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không phát hiện</li>'}</ul>
+      <div style="font-size:13px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-flag"/></svg> Red Flags</div>
+      <ul style="margin:0;padding-left:14px">${(r.red_flags||[]).map(f=>`<li style="font-size:15px;margin:2px 0;color:#78350f">${esc(f)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không phát hiện</li>'}</ul>
     </div></div>`;
 
   // Phụ mẫu hóa
   if (pf.detected) {
     h += `<div style="background:#f4f6fb;border:1.5px solid #8ba6dd;border-radius:8px;padding:10px 14px;margin-bottom:10px">
       <div style="font-weight:800;color:#0f2d6b;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-bolt"/></svg> PHỤ MẪU HÓA — ${esc(pf.type||'')}</div>
-      <div style="font-size:12.5px;color:#1e293b">${esc(pf.description||'')}</div></div>`;
+      <div style="font-size:15px;color:#1e293b">${esc(pf.description||'')}</div></div>`;
   }
 
   // Nhu cầu vs Yêu cầu
   h += _secHead('📌',_rn(),'NHU CẦU vs YÊU CẦU','#0f2d6b');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:5px">NHU CẦU (khách quan)</div>
-      <div style="display:flex;flex-wrap:wrap;gap:2px">${(nw.needs||[]).map(n=>_chip(n,'#0f2d6b')).join('')||'<span style="color:#94a3b8;font-style:italic;font-size:11px">Chưa xác định</span>'}</div></div>
+      <div style="font-size:13px;font-weight:700;color:#0f2d6b;margin-bottom:5px">NHU CẦU (khách quan)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px">${(nw.needs||[]).map(n=>_chip(n,'#0f2d6b')).join('')||'<span style="color:#94a3b8;font-style:italic;font-size:14px">Chưa xác định</span>'}</div></div>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#b45309;margin-bottom:5px">YÊU CẦU (chủ quan)</div>
-      <div style="display:flex;flex-wrap:wrap;gap:2px">${(nw.wants||[]).map(w=>_chip(w,'#b45309')).join('')||'<span style="color:#94a3b8;font-style:italic;font-size:11px">Chưa thu thập</span>'}</div></div></div>`;
+      <div style="font-size:13px;font-weight:700;color:#b45309;margin-bottom:5px">YÊU CẦU (chủ quan)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px">${(nw.wants||[]).map(w=>_chip(w,'#b45309')).join('')||'<span style="color:#94a3b8;font-style:italic;font-size:14px">Chưa thu thập</span>'}</div></div></div>`;
 
   // Gợi ý can thiệp
   h += _secHead('🎯',_rn(),'GỢI Ý CAN THIỆP','#0f2d6b');
   h += `<div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px;margin-bottom:10px">`;
   (r.suggestions||[]).sort((a,b)=>(a.priority||9)-(b.priority||9)).forEach((s,i)=>{
     h+=`<div style="display:flex;gap:8px;padding:7px 8px;background:#fff;border:1px solid #dbe3f3;border-radius:6px;margin-bottom:5px">
-      <div style="background:linear-gradient(135deg,#0f2d6b,#0f2d6b);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">${i+1}</div>
-      <div><div style="font-weight:700;color:#1e293b;font-size:12px">${esc(s.action)}</div>
-      <div style="font-size:11.5px;color:#0f2d6b">${esc(s.reason)}</div>
-      ${s.who||s.timeline?`<div style="font-size:10.5px;color:#0f2d6b;margin-top:2px">${s.who?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-user"/></svg> '+esc(s.who):''}${s.timeline?' · <svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-clock"/></svg> '+esc(s.timeline):''}</div>`:''}</div></div>`;
+      <div style="background:linear-gradient(135deg,#0f2d6b,#0f2d6b);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${i+1}</div>
+      <div><div style="font-weight:700;color:#1e293b;font-size:15px">${esc(s.action)}</div>
+      <div style="font-size:14px;color:#0f2d6b">${esc(s.reason)}</div>
+      ${s.who||s.timeline?`<div style="font-size:13px;color:#0f2d6b;margin-top:2px">${s.who?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-user"/></svg> '+esc(s.who):''}${s.timeline?' · <svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-clock"/></svg> '+esc(s.timeline):''}</div>`:''}</div></div>`;
   });
   h += `</div>`;
 
   // Ưu thế (câu hỏi cần khai thác đã đưa lên khối đầu báo cáo)
   h += `<div style="margin-bottom:10px">
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-shield"/></svg> ƯU THẾ & BẢO VỆ</div>
-      <ul style="margin:0;padding-left:13px">${(r.strengths||[]).map(s=>`<li style="font-size:12px;margin:2px 0;color:#14532d">${esc(s)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa xác định</li>'}</ul></div></div>`;
+      <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-shield"/></svg> ƯU THẾ & BẢO VỆ</div>
+      <ul style="margin:0;padding-left:13px">${(r.strengths||[]).map(s=>`<li style="font-size:15px;margin:2px 0;color:#14532d">${esc(s)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa xác định</li>'}</ul></div></div>`;
 
   h += _supervisionNotes(r.supervision_notes);
   h += `</div>`;
@@ -1887,7 +1887,7 @@ function renderReport2(r) {
   const cb=D?.co_ban||{}, he=r.home_environment||{}, fd=r.family_dynamics||{}, vs=r.vs_stage1||{}, nu=r.needs_updated||{};
   const updColor=r.risk_update==='Tăng'?'#dc2626':r.risk_update==='Giảm'?'#16a34a':'#d97706';
   const updIcon=r.risk_update==='Tăng'?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-trend"/></svg>':r.risk_update==='Giảm'?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-trend-down"/></svg>':'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-arrow-right"/></svg>';
-  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
+  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:16px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
   h += _header('Vãng gia & Đánh giá',2,'#475569');
   h += _infoTable(cb);
   h += _urgentBanner(r);
@@ -1896,62 +1896,62 @@ function renderReport2(r) {
   h += _secHead('⚠️','I.','CẬP NHẬT MỨC RỦI RO','#dc2626');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:${_riskBg(r.risk_current)};border:1.5px solid ${_riskColor(r.risk_current)}44;border-left:4px solid ${_riskColor(r.risk_current)};border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:${_riskColor(r.risk_current)};text-transform:uppercase;margin-bottom:5px">Mức rủi ro hiện tại — AI gợi ý</div>
-      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:24px">${_riskIcon(r.risk_current)}</span>
-      <span style="font-size:17px;font-weight:900;color:${_riskColor(r.risk_current)}">${r.risk_current||'?'}</span></div></div>
+      <div style="font-size:13px;font-weight:700;color:${_riskColor(r.risk_current)};text-transform:uppercase;margin-bottom:5px">Mức rủi ro hiện tại — AI gợi ý</div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:27px">${_riskIcon(r.risk_current)}</span>
+      <span style="font-size:20px;font-weight:900;color:${_riskColor(r.risk_current)}">${r.risk_current||'?'}</span></div></div>
     <div style="background:#f8fafc;border:1.5px solid ${updColor}44;border-left:4px solid ${updColor};border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:${updColor};text-transform:uppercase;margin-bottom:5px">So với GĐ 1</div>
-      <div style="display:flex;align-items:center;gap:6px"><span style="font-size:20px">${updIcon}</span>
-      <span style="font-size:15px;font-weight:800;color:${updColor}">${r.risk_update||'?'}</span></div>
-      <div style="font-size:11.5px;color:#334155;margin-top:5px">${esc(r.risk_change_reason||'')}</div></div></div>`;
+      <div style="font-size:13px;font-weight:700;color:${updColor};text-transform:uppercase;margin-bottom:5px">So với GĐ 1</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="font-size:23px">${updIcon}</span>
+      <span style="font-size:18px;font-weight:800;color:${updColor}">${r.risk_update||'?'}</span></div>
+      <div style="font-size:14px;color:#334155;margin-top:5px">${esc(r.risk_change_reason||'')}</div></div></div>`;
 
   // Môi trường sống
   h += _secHead('🏠','II.','MÔI TRƯỜNG SỐNG THỰC TẾ','#475569');
   const safeColor=he.safety_level==='An toàn'?'#166534':he.safety_level==='Nguy hiểm'?'#dc2626':'#d97706';
   h += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-      <span style="font-size:12px;font-weight:700;color:${safeColor};background:${safeColor}15;padding:3px 10px;border-radius:12px;border:1px solid ${safeColor}33">${he.safety_level||'Chưa đánh giá'}</span></div>
+      <span style="font-size:15px;font-weight:700;color:${safeColor};background:${safeColor}15;padding:3px 10px;border-radius:12px;border:1px solid ${safeColor}33">${he.safety_level||'Chưa đánh giá'}</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><div style="font-size:10px;font-weight:700;color:#475569;margin-bottom:3px">Quan sát chính</div>
-      <ul style="margin:0;padding-left:13px">${(he.key_observations||[]).map(o=>`<li style="font-size:12px;color:#334155;margin:2px 0">${esc(o)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div>
-      <div><div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:3px">Mối lo ngại</div>
-      <ul style="margin:0;padding-left:13px">${(he.concerns||[]).map(c=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div></div>`;
+      <div><div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:3px">Quan sát chính</div>
+      <ul style="margin:0;padding-left:13px">${(he.key_observations||[]).map(o=>`<li style="font-size:15px;color:#334155;margin:2px 0">${esc(o)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div>
+      <div><div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:3px">Mối lo ngại</div>
+      <ul style="margin:0;padding-left:13px">${(he.concerns||[]).map(c=>`<li style="font-size:15px;color:#7f1d1d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div></div>`;
 
   // Gia đình
   h += _secHead('👨‍👩‍👧','III.','NĂNG LỰC GIA ĐÌNH & NGƯỜI CHĂM SÓC','#0f2d6b');
   const capColor=fd.caregiver_capacity==='Cao'?'#166534':fd.caregiver_capacity==='Thấp'?'#dc2626':'#d97706';
   h += `<div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px;margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-      <span style="font-size:11px;font-weight:700">Năng lực người chăm sóc:</span>
-      <span style="font-size:11px;font-weight:800;color:${capColor};background:${capColor}15;padding:2px 8px;border-radius:10px;border:1px solid ${capColor}33">${fd.caregiver_capacity||'?'}</span></div>
-    <div style="font-size:12px;color:#334155;margin-bottom:6px">${esc(fd.relationship_quality||'')}</div>
+      <span style="font-size:14px;font-weight:700">Năng lực người chăm sóc:</span>
+      <span style="font-size:14px;font-weight:800;color:${capColor};background:${capColor}15;padding:2px 8px;border-radius:10px;border:1px solid ${capColor}33">${fd.caregiver_capacity||'?'}</span></div>
+    <div style="font-size:15px;color:#334155;margin-bottom:6px">${esc(fd.relationship_quality||'')}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:3px">Yếu tố bảo vệ</div>
-      <ul style="margin:0;padding-left:13px">${(fd.protective_factors||[]).map(f=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(f)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa xác định</li>'}</ul></div>
-      <div><div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:3px">Yếu tố nguy cơ</div>
-      <ul style="margin:0;padding-left:13px">${(fd.risk_factors||[]).map(f=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(f)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div></div>`;
+      <div><div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:3px">Yếu tố bảo vệ</div>
+      <ul style="margin:0;padding-left:13px">${(fd.protective_factors||[]).map(f=>`<li style="font-size:15px;color:#14532d;margin:2px 0">${esc(f)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa xác định</li>'}</ul></div>
+      <div><div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:3px">Yếu tố nguy cơ</div>
+      <ul style="margin:0;padding-left:13px">${(fd.risk_factors||[]).map(f=>`<li style="font-size:15px;color:#7f1d1d;margin:2px 0">${esc(f)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div></div>`;
 
   // So sánh GĐ 1
   h += _secHead('🔄','IV.','SO SÁNH VỚI GĐ 1','#0f2d6b');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Xác nhận</div>
-      <ul style="margin:0;padding-left:12px">${(vs.confirmed||[]).map(c=>`<li style="font-size:11.5px;color:#14532d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic;font-size:11px">Chưa có</li>'}</ul></div>
+      <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Xác nhận</div>
+      <ul style="margin:0;padding-left:12px">${(vs.confirmed||[]).map(c=>`<li style="font-size:14px;color:#14532d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic;font-size:14px">Chưa có</li>'}</ul></div>
     <div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-plus"/></svg> Phát hiện mới</div>
-      <ul style="margin:0;padding-left:12px">${(vs.new_findings||[]).map(f=>`<li style="font-size:11.5px;color:#1e293b;margin:2px 0">${esc(f)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic;font-size:11px">Không có</li>'}</ul></div>
+      <div style="font-size:13px;font-weight:700;color:#0f2d6b;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-plus"/></svg> Phát hiện mới</div>
+      <ul style="margin:0;padding-left:12px">${(vs.new_findings||[]).map(f=>`<li style="font-size:14px;color:#1e293b;margin:2px 0">${esc(f)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic;font-size:14px">Không có</li>'}</ul></div>
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-bolt"/></svg> Mâu thuẫn</div>
-      <ul style="margin:0;padding-left:12px">${(vs.contradictions||[]).map(c=>`<li style="font-size:11.5px;color:#7f1d1d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic;font-size:11px">Không có</li>'}</ul></div></div>`;
+      <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-bolt"/></svg> Mâu thuẫn</div>
+      <ul style="margin:0;padding-left:12px">${(vs.contradictions||[]).map(c=>`<li style="font-size:14px;color:#7f1d1d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic;font-size:14px">Không có</li>'}</ul></div></div>`;
 
   // Nhu cầu cập nhật + Câu hỏi
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#b45309;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-flag"/></svg> NHU CẦU CẬP NHẬT</div>
-      <div style="display:flex;flex-wrap:wrap;gap:2px">${(nu.needs||[]).map(n=>_chip(n,'#475569')).join('')||'<span style="color:#94a3b8;font-style:italic;font-size:11px">Như GĐ 1</span>'}</div></div>
+      <div style="font-size:13px;font-weight:700;color:#b45309;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-flag"/></svg> NHU CẦU CẬP NHẬT</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px">${(nu.needs||[]).map(n=>_chip(n,'#475569')).join('')||'<span style="color:#94a3b8;font-style:italic;font-size:14px">Như GĐ 1</span>'}</div></div>
     <div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-help"/></svg> CÂU HỎI CẦN KHAI THÁC</div>
-      <ol style="margin:0;padding-left:13px">${(r.next_questions||[]).map(q=>`<li style="font-size:12px;margin:2px 0;color:#1e293b;font-style:italic">${esc(q)}</li>`).join('')||'<li style="color:#94a3b8">Chưa có</li>'}</ol></div></div>`;
+      <div style="font-size:13px;font-weight:700;color:#0f2d6b;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-help"/></svg> CÂU HỎI CẦN KHAI THÁC</div>
+      <ol style="margin:0;padding-left:13px">${(r.next_questions||[]).map(q=>`<li style="font-size:15px;margin:2px 0;color:#1e293b;font-style:italic">${esc(q)}</li>`).join('')||'<li style="color:#94a3b8">Chưa có</li>'}</ol></div></div>`;
 
   h += _supervisionNotes(r.supervision_notes);
   h += `</div>`;
@@ -1965,7 +1965,7 @@ function renderReport3(r) {
   const cb=D?.co_ban||{}, pa=r.plan_assessment||{}, rr=r.resources_review||{};
   const feasColor=pa.feasibility==='Cao'?'#166534':pa.feasibility==='Thấp'?'#dc2626':'#d97706';
   const engColor=r.family_engagement==='Tốt'?'#166534':r.family_engagement==='Yếu'?'#dc2626':'#d97706';
-  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
+  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:16px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
   h += _header('Kế hoạch can thiệp',3,'#0f2d6b');
   h += _infoTable(cb);
 
@@ -1973,18 +1973,18 @@ function renderReport3(r) {
   h += _secHead('📋','I.','ĐÁNH GIÁ KẾ HOẠCH','#0f2d6b');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:#f4f6fb;border:1.5px solid #8ba6dd;border-left:4px solid #0f2d6b;border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:#0f2d6b;text-transform:uppercase;margin-bottom:5px">Tính khả thi</div>
-      <div style="font-size:18px;font-weight:900;color:${feasColor}">${pa.feasibility||'?'}</div>
+      <div style="font-size:13px;font-weight:700;color:#0f2d6b;text-transform:uppercase;margin-bottom:5px">Tính khả thi</div>
+      <div style="font-size:21px;font-weight:900;color:${feasColor}">${pa.feasibility||'?'}</div>
       <div style="margin-top:6px">
-        <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:3px">Điểm mạnh</div>
-        <ul style="margin:0;padding-left:13px">${(pa.strengths||[]).map(s=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(s)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div></div>
+        <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:3px">Điểm mạnh</div>
+        <ul style="margin:0;padding-left:13px">${(pa.strengths||[]).map(s=>`<li style="font-size:15px;color:#14532d;margin:2px 0">${esc(s)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div></div>
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;margin-bottom:5px">Khoảng trống & Rủi ro</div>
+      <div style="font-size:13px;font-weight:700;color:#dc2626;text-transform:uppercase;margin-bottom:5px">Khoảng trống & Rủi ro</div>
       <div style="margin-bottom:6px">
-        <div style="font-size:10px;font-weight:700;color:#d97706;margin-bottom:3px">Khoảng trống</div>
-        <ul style="margin:0;padding-left:13px">${(pa.gaps||[]).map(g=>`<li style="font-size:12px;color:#78350f;margin:2px 0">${esc(g)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div>
-      <div><div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:3px">Rủi ro</div>
-      <ul style="margin:0;padding-left:13px">${(pa.risks||[]).map(r2=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div></div>`;
+        <div style="font-size:13px;font-weight:700;color:#d97706;margin-bottom:3px">Khoảng trống</div>
+        <ul style="margin:0;padding-left:13px">${(pa.gaps||[]).map(g=>`<li style="font-size:15px;color:#78350f;margin:2px 0">${esc(g)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div>
+      <div><div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:3px">Rủi ro</div>
+      <ul style="margin:0;padding-left:13px">${(pa.risks||[]).map(r2=>`<li style="font-size:15px;color:#7f1d1d;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div></div>`;
 
   // Review từng mục tiêu
   h += _secHead('🎯','II.','NHẬN XÉT TỪNG MỤC TIÊU','#0f2d6b');
@@ -1992,42 +1992,42 @@ function renderReport3(r) {
   (r.goals_review||[]).forEach((g,i) => {
     const gc=g.realistic?'#166534':'#dc2626';
     h+=`<div style="display:flex;gap:8px;padding:8px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:5px">
-      <span style="font-size:11px;font-weight:800;color:${gc};background:${gc}15;padding:2px 8px;border-radius:8px;border:1px solid ${gc}33;flex-shrink:0;height:fit-content">${g.realistic?'<svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Khả thi':'<svg class="ic ic-sm" style="vertical-align:-2px;color:#b45309"><use href="#i-alert"/></svg> Cần xem lại'}</span>
-      <div><div style="font-size:12px;font-weight:600;color:#334155">${esc(g.goal||'')}</div>
-      <div style="font-size:11.5px;color:#64748b;margin-top:2px">${esc(g.comment||'')}</div></div></div>`;
+      <span style="font-size:14px;font-weight:800;color:${gc};background:${gc}15;padding:2px 8px;border-radius:8px;border:1px solid ${gc}33;flex-shrink:0;height:fit-content">${g.realistic?'<svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Khả thi':'<svg class="ic ic-sm" style="vertical-align:-2px;color:#b45309"><use href="#i-alert"/></svg> Cần xem lại'}</span>
+      <div><div style="font-size:15px;font-weight:600;color:#334155">${esc(g.goal||'')}</div>
+      <div style="font-size:14px;color:#64748b;margin-top:2px">${esc(g.comment||'')}</div></div></div>`;
   });
-  if (!(r.goals_review||[]).length) h += `<div style="color:#94a3b8;font-style:italic;font-size:12px;padding:8px">Chưa có mục tiêu</div>`;
+  if (!(r.goals_review||[]).length) h += `<div style="color:#94a3b8;font-style:italic;font-size:15px;padding:8px">Chưa có mục tiêu</div>`;
   h += `</div>`;
 
   // Nguồn lực
   h += _secHead('💡','III.','NGUỒN LỰC','#166534');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Có sẵn</div>
-      <ul style="margin:0;padding-left:13px">${(rr.available||[]).map(a=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(a)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa xác định</li>'}</ul></div>
+      <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Có sẵn</div>
+      <ul style="margin:0;padding-left:13px">${(rr.available||[]).map(a=>`<li style="font-size:15px;color:#14532d;margin:2px 0">${esc(a)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa xác định</li>'}</ul></div>
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#dc2626"><use href="#i-x"/></svg> Còn thiếu</div>
-      <ul style="margin:0;padding-left:13px">${(rr.missing||[]).map(m=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(m)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div>`;
+      <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#dc2626"><use href="#i-x"/></svg> Còn thiếu</div>
+      <ul style="margin:0;padding-left:13px">${(rr.missing||[]).map(m=>`<li style="font-size:15px;color:#7f1d1d;margin:2px 0">${esc(m)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div>`;
 
   // Tham gia gia đình + Timeline
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#475569;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-users"/></svg> THAM GIA GIA ĐÌNH</div>
-      <span style="font-size:14px;font-weight:800;color:${engColor}">${r.family_engagement||'?'}</span></div>
+      <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-users"/></svg> THAM GIA GIA ĐÌNH</div>
+      <span style="font-size:17px;font-weight:800;color:${engColor}">${r.family_engagement||'?'}</span></div>
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#475569;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-clock"/></svg> ĐÁNH GIÁ THỜI GIAN</div>
-      <div style="font-size:12px;color:#334155">${esc(r.timeline_assessment||'Chưa đánh giá')}</div></div></div>`;
+      <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-clock"/></svg> ĐÁNH GIÁ THỜI GIAN</div>
+      <div style="font-size:15px;color:#334155">${esc(r.timeline_assessment||'Chưa đánh giá')}</div></div></div>`;
 
   // Câu hỏi
   h += `<div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px;margin-bottom:10px">
-    <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-help"/></svg> CÂU HỎI CẦN LÀM RÕ</div>
-    <ol style="margin:0;padding-left:13px">${(r.next_questions||[]).map(q=>`<li style="font-size:12px;margin:2px 0;color:#1e293b;font-style:italic">${esc(q)}</li>`).join('')||'<li style="color:#94a3b8">Chưa có</li>'}</ol></div>`;
+    <div style="font-size:13px;font-weight:700;color:#0f2d6b;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-help"/></svg> CÂU HỎI CẦN LÀM RÕ</div>
+    <ol style="margin:0;padding-left:13px">${(r.next_questions||[]).map(q=>`<li style="font-size:15px;margin:2px 0;color:#1e293b;font-style:italic">${esc(q)}</li>`).join('')||'<li style="color:#94a3b8">Chưa có</li>'}</ol></div>`;
 
   // Thứ tự ưu tiên — trước đây chỉ có trong bản Word, màn hình không hiển thị.
   if ((r.priority_order||[]).length) {
     h += _secHead('🔢','IV.','THỨ TỰ ƯU TIÊN THỰC HIỆN','#b45309');
     h += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:10px">
-      <ol style="margin:0;padding-left:16px">${(r.priority_order||[]).map(x=>`<li style="font-size:12px;margin:3px 0;color:#78350f">${esc(x)}</li>`).join('')}</ol></div>`;
+      <ol style="margin:0;padding-left:16px">${(r.priority_order||[]).map(x=>`<li style="font-size:15px;margin:3px 0;color:#78350f">${esc(x)}</li>`).join('')}</ol></div>`;
   }
 
   h += _supervisionNotes(r.supervision_notes);
@@ -2042,21 +2042,21 @@ function renderReport4(r) {
   const cb=D?.co_ban||{}, wb=r.child_wellbeing||{}, ns=r.next_session||{}, pa=r.plan_adjustment||{};
   function wbColor(v){return v==='Cải thiện'?'#166534':v==='Xấu hơn'?'#dc2626':'#d97706';}
   function wbIcon(v){return v==='Cải thiện'?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-trend"/></svg>':v==='Xấu hơn'?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-trend-down"/></svg>':'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-arrow-right"/></svg>';}
-  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
+  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:16px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
   h += _header('Cập nhật tiến trình',4,'#d97706');
   h += _infoTable(cb);
   h += _urgentBanner(r);
 
   // Tóm tắt tiến trình
   h += _secHead('📊','I.','TÓM TẮT TIẾN TRÌNH','#d97706');
-  h += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12.5px;color:#334155">${esc(r.progress_summary||'Chưa có tóm tắt')}</div>`;
+  h += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:10px;font-size:15px;color:#334155">${esc(r.progress_summary||'Chưa có tóm tắt')}</div>`;
 
   // Wellbeing 3 lĩnh vực
   // Trend wellbeing qua nhiều buổi
   const wbHistory = (D._notes_stage4||[]).length;
   if (wbHistory > 1) {
     h += _secHead('📊','II.','WELLBEING TREND (' + wbHistory + ' buổi)','#166534');
-    h += '<div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#14532d">';
+    h += '<div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:10px;margin-bottom:10px;font-size:14px;color:#14532d">';
     h += '<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-trend"/></svg> Đã theo dõi qua <strong>' + wbHistory + ' buổi</strong>. ';
     const wbVal = {physical:wb.physical,psychological:wb.psychological,education:wb.education};
     const improved = Object.entries(wbVal).filter(([k,v])=>v==='Cải thiện').map(([k])=>({'physical':'Thể chất','psychological':'Tâm lý','education':'Giáo dục'}[k]));
@@ -2073,9 +2073,9 @@ function renderReport4(r) {
     const val=wb[key]||'Ổn định';
     const c=wbColor(val);
     h+=`<div style="background:${c}0d;border:1.5px solid ${c}33;border-radius:8px;padding:10px;text-align:center">
-      <div style="font-size:18px;margin-bottom:3px">${icon}</div>
-      <div style="font-size:11px;font-weight:700;color:#334155;margin-bottom:4px">${lbl}</div>
-      <div style="font-size:11px;font-weight:800;color:${c}">${wbIcon(val)} ${val}</div></div>`;
+      <div style="font-size:21px;margin-bottom:3px">${icon}</div>
+      <div style="font-size:14px;font-weight:700;color:#334155;margin-bottom:4px">${lbl}</div>
+      <div style="font-size:14px;font-weight:800;color:${c}">${wbIcon(val)} ${val}</div></div>`;
   });
   h += `</div>`;
 
@@ -2087,35 +2087,35 @@ function renderReport4(r) {
     const statusIcon={'Đạt':'<svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg>','Đang tiến hành':'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-refresh"/></svg>','Chưa đạt':'<svg class="ic ic-sm" style="vertical-align:-2px;color:#dc2626"><use href="#i-x"/></svg>','Bỏ qua':'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-collapse"/></svg>'}[g.status]||'•';
     h+=`<div style="padding:8px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:5px;border-left:3px solid ${statusColor}">
       <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
-        <span style="font-size:10px;font-weight:700;color:${statusColor};background:${statusColor}15;padding:2px 7px;border-radius:8px">${statusIcon} ${g.status||'?'}</span>
-        <span style="font-size:12px;font-weight:600;color:#334155">${esc(g.goal||'')}</span></div>
-      ${g.evidence?`<div style="font-size:11.5px;color:#166534;margin-bottom:2px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-flag"/></svg> Bằng chứng: ${esc(g.evidence)}</div>`:''}
-      ${g.comment?`<div style="font-size:11.5px;color:#64748b">${esc(g.comment)}</div>`:''}</div>`;
+        <span style="font-size:13px;font-weight:700;color:${statusColor};background:${statusColor}15;padding:2px 7px;border-radius:8px">${statusIcon} ${g.status||'?'}</span>
+        <span style="font-size:15px;font-weight:600;color:#334155">${esc(g.goal||'')}</span></div>
+      ${g.evidence?`<div style="font-size:14px;color:#166534;margin-bottom:2px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-flag"/></svg> Bằng chứng: ${esc(g.evidence)}</div>`:''}
+      ${g.comment?`<div style="font-size:14px;color:#64748b">${esc(g.comment)}</div>`:''}</div>`;
   });
-  if (!(r.goals_progress||[]).length) h += `<div style="color:#94a3b8;font-style:italic;font-size:12px;padding:8px">Chưa có dữ liệu mục tiêu</div>`;
+  if (!(r.goals_progress||[]).length) h += `<div style="color:#94a3b8;font-style:italic;font-size:15px;padding:8px">Chưa có dữ liệu mục tiêu</div>`;
   h += `</div>`;
 
   // Thay đổi tích cực + Rào cản
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-star"/></svg> THAY ĐỔI TÍCH CỰC</div>
-      <ul style="margin:0;padding-left:13px">${(r.positive_changes||[]).map(c=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa ghi nhận</li>'}</ul></div>
+      <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-star"/></svg> THAY ĐỔI TÍCH CỰC</div>
+      <ul style="margin:0;padding-left:13px">${(r.positive_changes||[]).map(c=>`<li style="font-size:15px;color:#14532d;margin:2px 0">${esc(c)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa ghi nhận</li>'}</ul></div>
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#b45309"><use href="#i-alert"/></svg> RÀO CẢN</div>
-      <ul style="margin:0;padding-left:13px">${(r.barriers||[]).map(b=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(b)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div>`;
+      <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#b45309"><use href="#i-alert"/></svg> RÀO CẢN</div>
+      <ul style="margin:0;padding-left:13px">${(r.barriers||[]).map(b=>`<li style="font-size:15px;color:#7f1d1d;margin:2px 0">${esc(b)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div>`;
 
   // Điều chỉnh kế hoạch
   if (pa.needed) {
     h += `<div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;padding:10px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-refresh"/></svg> CẦN ĐIỀU CHỈNH KẾ HOẠCH</div>
-      <ul style="margin:0;padding-left:13px">${(pa.suggestions||[]).map(s=>`<li style="font-size:12px;color:#78350f;margin:2px 0">${esc(s)}</li>`).join('')||'<li style="color:#94a3b8">Chưa có đề xuất</li>'}</ul></div>`;
+      <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-refresh"/></svg> CẦN ĐIỀU CHỈNH KẾ HOẠCH</div>
+      <ul style="margin:0;padding-left:13px">${(pa.suggestions||[]).map(s=>`<li style="font-size:15px;color:#78350f;margin:2px 0">${esc(s)}</li>`).join('')||'<li style="color:#94a3b8">Chưa có đề xuất</li>'}</ul></div>`;
   }
 
   // Buổi tiếp theo
   h += _secHead('📅','IV.','ĐỊNH HƯỚNG BUỔI TIẾP THEO','#0f2d6b');
   h += `<div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px;margin-bottom:10px">
-    <div style="font-size:12.5px;font-weight:600;color:#1e293b;margin-bottom:6px">${esc(ns.focus||'Chưa xác định')}</div>
-    <ul style="margin:0;padding-left:13px">${(ns.actions||[]).map(a=>`<li style="font-size:12px;color:#0f2d6b;margin:2px 0">${esc(a)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div>`;
+    <div style="font-size:15px;font-weight:600;color:#1e293b;margin-bottom:6px">${esc(ns.focus||'Chưa xác định')}</div>
+    <ul style="margin:0;padding-left:13px">${(ns.actions||[]).map(a=>`<li style="font-size:15px;color:#0f2d6b;margin:2px 0">${esc(a)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div>`;
 
   h += _supervisionNotes(r.supervision_notes);
   h += `</div>`;
@@ -2129,68 +2129,68 @@ function renderReport5(r) {
   const cb=D?.co_ban||{}, oc=r.outcomes||{}, cs=r.child_status_final||{}, rec=r.recommendations||{};
   const rateColor=oc.achievement_rate==='Cao'?'#166534':oc.achievement_rate==='Thấp'?'#dc2626':'#d97706';
   const safeColor=cs.safety==='An toàn'?'#166534':'#d97706';
-  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
+  let h = `<div style="font-family:'Segoe UI',system-ui,sans-serif;font-size:16px;line-height:1.6;color:#1e293b;width:100%;box-sizing:border-box">`;
   h += _header('Kết thúc ca',5,'#166534');
   h += _infoTable(cb);
 
   // Tóm tắt ca
   h += _secHead('📋','I.','TÓM TẮT TOÀN CA','#166534');
-  h += `<div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12.5px;color:#334155">${esc(r.case_summary||'Chưa có tóm tắt')}</div>`;
+  h += `<div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:10px;margin-bottom:10px;font-size:15px;color:#334155">${esc(r.case_summary||'Chưa có tóm tắt')}</div>`;
 
   // Kết quả
   h += _secHead('🏆','II.','KẾT QUẢ ĐẠT ĐƯỢC','#166534');
   h += `<div style="margin-bottom:6px;display:flex;align-items:center;gap:8px">
-    <span style="font-size:11px;font-weight:700;color:#475569">Tỉ lệ đạt mục tiêu:</span>
-    <span style="font-size:13px;font-weight:900;color:${rateColor}">${oc.achievement_rate||'?'}</span></div>`;
+    <span style="font-size:14px;font-weight:700;color:#475569">Tỉ lệ đạt mục tiêu:</span>
+    <span style="font-size:16px;font-weight:900;color:${rateColor}">${oc.achievement_rate||'?'}</span></div>`;
   h += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Đạt được</div>
-      <ul style="margin:0;padding-left:12px">${(oc.achieved||[]).map(a=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(a)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div>
+      <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#166534"><use href="#i-check"/></svg> Đạt được</div>
+      <ul style="margin:0;padding-left:12px">${(oc.achieved||[]).map(a=>`<li style="font-size:15px;color:#14532d;margin:2px 0">${esc(a)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-bolt"/></svg> Đạt một phần</div>
-      <ul style="margin:0;padding-left:12px">${(oc.partial||[]).map(p=>`<li style="font-size:12px;color:#78350f;margin:2px 0">${esc(p)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div>
+      <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-bolt"/></svg> Đạt một phần</div>
+      <ul style="margin:0;padding-left:12px">${(oc.partial||[]).map(p=>`<li style="font-size:15px;color:#78350f;margin:2px 0">${esc(p)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div>
     <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#dc2626"><use href="#i-x"/></svg> Chưa đạt</div>
-      <ul style="margin:0;padding-left:12px">${(oc.not_achieved||[]).map(n=>`<li style="font-size:12px;color:#7f1d1d;margin:2px 0">${esc(n)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div>`;
+      <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px;color:#dc2626"><use href="#i-x"/></svg> Chưa đạt</div>
+      <ul style="margin:0;padding-left:12px">${(oc.not_achieved||[]).map(n=>`<li style="font-size:15px;color:#7f1d1d;margin:2px 0">${esc(n)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div>`;
 
   // Tình trạng trẻ khi đóng ca
   h += _secHead('👧','III.','TÌNH TRẠNG TRẺ KHI ĐÓNG CA','#475569');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:#f8fafc;border:1.5px solid ${safeColor}44;border-left:4px solid ${safeColor};border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:${safeColor};text-transform:uppercase;margin-bottom:4px">Mức độ an toàn</div>
-      <div style="font-size:16px;font-weight:900;color:${safeColor}">${cs.safety==='An toàn'?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-check"/></svg>':'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-alert"/></svg>'} ${cs.safety||'?'}</div></div>
+      <div style="font-size:13px;font-weight:700;color:${safeColor};text-transform:uppercase;margin-bottom:4px">Mức độ an toàn</div>
+      <div style="font-size:19px;font-weight:900;color:${safeColor}">${cs.safety==='An toàn'?'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-check"/></svg>':'<svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-alert"/></svg>'} ${cs.safety||'?'}</div></div>
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px">Wellbeing tổng thể</div>
-      <div style="font-size:14px;font-weight:800;color:#334155">${cs.wellbeing||'?'}</div>
-      <div style="font-size:12px;color:#64748b;margin-top:3px">${esc(cs.family_situation||'')}</div></div></div>`;
+      <div style="font-size:13px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px">Wellbeing tổng thể</div>
+      <div style="font-size:17px;font-weight:800;color:#334155">${cs.wellbeing||'?'}</div>
+      <div style="font-size:15px;color:#64748b;margin-top:3px">${esc(cs.family_situation||'')}</div></div></div>`;
 
   // Điểm ngoặt + Bài học
   h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
     <div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-star"/></svg> ĐIỂM NGOẶT QUAN TRỌNG</div>
-      <ul style="margin:0;padding-left:13px">${(r.key_turning_points||[]).map(t=>`<li style="font-size:12px;color:#1e293b;margin:2px 0">${esc(t)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa ghi nhận</li>'}</ul></div>
+      <div style="font-size:13px;font-weight:700;color:#0f2d6b;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-star"/></svg> ĐIỂM NGOẶT QUAN TRỌNG</div>
+      <ul style="margin:0;padding-left:13px">${(r.key_turning_points||[]).map(t=>`<li style="font-size:15px;color:#1e293b;margin:2px 0">${esc(t)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa ghi nhận</li>'}</ul></div>
     <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-book"/></svg> BÀI HỌC KINH NGHIỆM</div>
-      <ul style="margin:0;padding-left:13px">${(r.lessons_learned||[]).map(l=>`<li style="font-size:12px;color:#78350f;margin:2px 0">${esc(l)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div></div>`;
+      <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-book"/></svg> BÀI HỌC KINH NGHIỆM</div>
+      <ul style="margin:0;padding-left:13px">${(r.lessons_learned||[]).map(l=>`<li style="font-size:15px;color:#78350f;margin:2px 0">${esc(l)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Chưa có</li>'}</ul></div></div>`;
 
   // Khuyến nghị
   h += _secHead('💡','IV.','KHUYẾN NGHỊ','#0f2d6b');
   h += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
     <div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-child"/></svg> Cho trẻ</div>
-      <ul style="margin:0;padding-left:12px">${(rec.for_child||[]).map(r2=>`<li style="font-size:12px;color:#1e293b;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div>
+      <div style="font-size:13px;font-weight:700;color:#0f2d6b;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-child"/></svg> Cho trẻ</div>
+      <ul style="margin:0;padding-left:12px">${(rec.for_child||[]).map(r2=>`<li style="font-size:15px;color:#1e293b;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div>
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-users"/></svg> Cho gia đình</div>
-      <ul style="margin:0;padding-left:12px">${(rec.for_family||[]).map(r2=>`<li style="font-size:12px;color:#14532d;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div>
+      <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-users"/></svg> Cho gia đình</div>
+      <ul style="margin:0;padding-left:12px">${(rec.for_family||[]).map(r2=>`<li style="font-size:15px;color:#14532d;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div>
     <div style="background:#f4f6fb;border:1px solid #dbe3f3;border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:#0f2d6b;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-building"/></svg> Cho tổ chức</div>
-      <ul style="margin:0;padding-left:12px">${(rec.for_organization||[]).map(r2=>`<li style="font-size:12px;color:#1e293b;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div>`;
+      <div style="font-size:13px;font-weight:700;color:#0f2d6b;margin-bottom:4px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-building"/></svg> Cho tổ chức</div>
+      <ul style="margin:0;padding-left:12px">${(rec.for_organization||[]).map(r2=>`<li style="font-size:15px;color:#1e293b;margin:2px 0">${esc(r2)}</li>`).join('')||'<li style="color:#94a3b8;font-style:italic">Không có</li>'}</ul></div></div>`;
 
   // Theo dõi sau đóng ca
   if (r.follow_up_needed) {
     h += `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:10px;margin-bottom:10px">
-      <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-flag"/></svg> CẦN THEO DÕI SAU ĐÓNG CA</div>
-      <div style="font-size:12.5px;color:#7f1d1d">${esc(r.follow_up_plan||'Chưa có kế hoạch cụ thể')}</div></div>`;
+      <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:5px"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-flag"/></svg> CẦN THEO DÕI SAU ĐÓNG CA</div>
+      <div style="font-size:15px;color:#7f1d1d">${esc(r.follow_up_plan||'Chưa có kế hoạch cụ thể')}</div></div>`;
   }
 
   h += _supervisionNotes(r.supervision_notes);
@@ -2253,9 +2253,9 @@ function renderEntriesPanel() {
 
   if (!stageEntries.length && !D) {
     panel.innerHTML = `<div id="entries-empty" style="text-align:center;padding:28px 16px;color:var(--t3);">
-      <div style="font-size:28px;margin-bottom:8px;opacity:.4">📋</div>
-      <div style="font-size:12.5px;font-weight:700;color:var(--t2);margin-bottom:4px">Chưa có ghi chép</div>
-      <div style="font-size:11.5px">GĐ ${currentStage} chưa có lịch sử. Nhập ghi chép và nhấn <strong>Phân tích</strong></div>
+      <div style="font-size:31px;margin-bottom:8px;opacity:.4">📋</div>
+      <div style="font-size:15px;font-weight:700;color:var(--t2);margin-bottom:4px">Chưa có ghi chép</div>
+      <div style="font-size:14px">GĐ ${currentStage} chưa có lịch sử. Nhập ghi chép và nhấn <strong>Phân tích</strong></div>
     </div>`;
     return;
   }
@@ -2685,7 +2685,7 @@ function showForm(idx) {
   document.querySelectorAll('.form-item').forEach(el => el.classList.toggle('active', parseInt(el.dataset.fi)===idx));
   const fv = document.getElementById('fv');
   if (!D) {
-    fv.innerHTML = '<div style="padding:40px;text-align:center;color:var(--t3);"><div style="font-size:36px;margin-bottom:12px;">📋</div><div style="font-weight:700;margin-bottom:6px;">Chưa có dữ liệu</div><div style="font-size:12px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> trước</div></div>';
+    fv.innerHTML = '<div style="padding:40px;text-align:center;color:var(--t3);"><div style="font-size:38px;margin-bottom:12px;">📋</div><div style="font-weight:700;margin-bottom:6px;">Chưa có dữ liệu</div><div style="font-size:15px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> trước</div></div>';
     fv.style.display = 'block'; return;
   }
   renderFormTab(idx);
@@ -3014,31 +3014,31 @@ function openPrecedents() {
   const body = document.getElementById('precedent-body');
   if (!list.length) {
     body.innerHTML = `<div style="padding:40px 20px;text-align:center;color:#94a3b8">
-      <div style="font-size:34px;margin-bottom:10px;opacity:.4">🗂</div>
+      <div style="font-size:36px;margin-bottom:10px;opacity:.4">🗂</div>
       <div style="font-weight:700;color:#64748b;margin-bottom:5px">Chưa tìm được ca tương tự</div>
-      <div style="font-size:12px">Cần thêm ca đã phân tích để đối chiếu. Tính năng này càng dùng lâu càng hữu ích.</div></div>`;
+      <div style="font-size:15px">Cần thêm ca đã phân tích để đối chiếu. Tính năng này càng dùng lâu càng hữu ích.</div></div>`;
   } else {
-    body.innerHTML = `<div style="font-size:11.5px;color:#64748b;margin-bottom:12px;background:#f8fafc;border-left:3px solid #94a3b8;padding:8px 12px;border-radius:0 6px 6px 0">
+    body.innerHTML = `<div style="font-size:14px;color:#64748b;margin-bottom:12px;background:#f8fafc;border-left:3px solid #94a3b8;padding:8px 12px;border-radius:0 6px 6px 0">
         Đây là <strong>tiền lệ để tham khảo</strong>, không phải khuyến nghị. Hoàn cảnh mỗi trẻ khác nhau —
         quyết định vẫn thuộc NVXH và giám sát ca.</div>`
       + list.map(c => {
       const pct = Math.round(Math.min(c.score, 1) * 100);
-      const st = c.status === 'closed' ? '<span style="background:#dcfce7;color:#166534;padding:1px 7px;border-radius:9px;font-size:9.5px;font-weight:700">ĐÃ ĐÓNG</span>'
-                                       : '<span style="background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:9px;font-size:9.5px;font-weight:700">ĐANG MỞ · GĐ '+c.stage+'</span>';
+      const st = c.status === 'closed' ? '<span style="background:#dcfce7;color:#166534;padding:1px 7px;border-radius:9px;font-size:12px;font-weight:700">ĐÃ ĐÓNG</span>'
+                                       : '<span style="background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:9px;font-size:12px;font-weight:700">ĐANG MỞ · GĐ '+c.stage+'</span>';
       return `<div style="border:1px solid #e2e8f0;border-radius:9px;padding:11px 13px;margin-bottom:9px;background:#fff">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#64748b">${esc(c.code)}</span>
-          <strong style="font-size:13px;color:#0f2d6b;flex:1;min-width:100px">${esc(c.name)}</strong>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#64748b">${esc(c.code)}</span>
+          <strong style="font-size:16px;color:#0f2d6b;flex:1;min-width:100px">${esc(c.name)}</strong>
           ${st}
-          <span style="font-size:10px;color:#7c3aed;font-weight:700">giống ~${pct}%</span>
+          <span style="font-size:13px;color:#7c3aed;font-weight:700">giống ~${pct}%</span>
         </div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:6px">
+        <div style="font-size:14px;color:#64748b;margin-bottom:6px">
           ${c.age != null ? c.age + ' tuổi · ' : ''}${c.risk ? 'rủi ro ' + esc(c.risk) + ' · ' : ''}${c.shared} đặc điểm trùng</div>
-        ${c.plan.length ? `<div style="font-size:11.5px;margin-bottom:4px"><strong style="color:#1e40af">Đã đặt mục tiêu:</strong> ${esc(c.plan.slice(0,3).join(' · '))}</div>` : ''}
-        ${c.outcome ? `<div style="font-size:11.5px;margin-bottom:3px"><strong style="color:#15803d">✅ Kết quả đạt:</strong> ${esc(c.outcome)}</div>` : ''}
-        ${c.notAchieved ? `<div style="font-size:11.5px;margin-bottom:3px"><strong style="color:#b45309">⚠ Chưa đạt:</strong> ${esc(c.notAchieved)}</div>` : ''}
-        ${!c.outcome && !c.notAchieved ? '<div style="font-size:11px;color:#9ca3af;font-style:italic">Ca chưa kết thúc — chưa có kết quả để tham khảo</div>' : ''}
-        <button class="btn-secondary" style="font-size:10.5px;padding:4px 10px;margin-top:7px" onclick="closePrecedents();selectCase('${c.id}')">Mở hồ sơ ca này</button>
+        ${c.plan.length ? `<div style="font-size:14px;margin-bottom:4px"><strong style="color:#1e40af">Đã đặt mục tiêu:</strong> ${esc(c.plan.slice(0,3).join(' · '))}</div>` : ''}
+        ${c.outcome ? `<div style="font-size:14px;margin-bottom:3px"><strong style="color:#15803d">✅ Kết quả đạt:</strong> ${esc(c.outcome)}</div>` : ''}
+        ${c.notAchieved ? `<div style="font-size:14px;margin-bottom:3px"><strong style="color:#b45309">⚠ Chưa đạt:</strong> ${esc(c.notAchieved)}</div>` : ''}
+        ${!c.outcome && !c.notAchieved ? '<div style="font-size:14px;color:#9ca3af;font-style:italic">Ca chưa kết thúc — chưa có kết quả để tham khảo</div>' : ''}
+        <button class="btn-secondary" style="font-size:13px;padding:4px 10px;margin-top:7px" onclick="closePrecedents();selectCase('${c.id}')">Mở hồ sơ ca này</button>
       </div>`;
     }).join('');
   }
@@ -3365,24 +3365,24 @@ function _verifyBanner() {
   if (!D) return '';
   if (_isVerified()) {
     return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f0fdf4;border:1.5px solid #86efac;border-left:5px solid #16a34a;border-radius:0 8px 8px 0;padding:9px 13px;margin-bottom:14px">
-      <div style="flex:1;min-width:180px;font-size:12px;color:#14532d">
+      <div style="flex:1;min-width:180px;font-size:15px;color:#14532d">
         <strong>✔️ Đã được NVXH xác nhận</strong>
-        <div style="font-size:11px;color:#3f6212;margin-top:2px">${esc(_verifiedLabel())}</div></div>
-      <button class="btn-secondary" style="font-size:11px;padding:6px 12px" onclick="toggleVerify()">↩️ Bỏ xác nhận</button>
+        <div style="font-size:14px;color:#3f6212;margin-top:2px">${esc(_verifiedLabel())}</div></div>
+      <button class="btn-secondary" style="font-size:14px;padding:6px 12px" onclick="toggleVerify()">↩️ Bỏ xác nhận</button>
     </div>`;
   }
   // Tổng kết truy vết: chỉ ra ĐÚNG những ô cần soi, thay vì bắt NVXH đọc lại toàn bộ ghi chép.
   const g = _groundNotesNorm ? _countUngrounded(D) : null;
   const gLine = !g ? ''
     : g.no === 0
-      ? `<div style="font-size:11px;color:#166534;margin-top:3px">📎 Cả ${g.total} thông tin trích xuất đều tìm thấy căn cứ trong ghi chép.</div>`
-      : `<div style="font-size:11px;color:#b91c1c;margin-top:3px"><strong>❓ ${g.no}/${g.total} thông tin KHÔNG tìm thấy căn cứ</strong> trong ghi chép — chỉ cần soi những ô có dấu <em>❓ chưa có căn cứ</em>, không phải đọc lại tất cả.</div>`;
+      ? `<div style="font-size:14px;color:#166534;margin-top:3px">📎 Cả ${g.total} thông tin trích xuất đều tìm thấy căn cứ trong ghi chép.</div>`
+      : `<div style="font-size:14px;color:#b91c1c;margin-top:3px"><strong>❓ ${g.no}/${g.total} thông tin KHÔNG tìm thấy căn cứ</strong> trong ghi chép — chỉ cần soi những ô có dấu <em>❓ chưa có căn cứ</em>, không phải đọc lại tất cả.</div>`;
   return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fffbeb;border:1.5px solid #fcd34d;border-left:5px solid #d97706;border-radius:0 8px 8px 0;padding:9px 13px;margin-bottom:14px">
-    <div style="flex:1;min-width:200px;font-size:12px;color:#78350f">
+    <div style="flex:1;min-width:200px;font-size:15px;color:#78350f">
       <strong>⚠️ BẢN NHÁP — do AI trích xuất, chưa kiểm chứng</strong>
-      <div style="font-size:11px;color:#92400e;margin-top:2px">Đối chiếu các ô được đánh dấu bên dưới rồi bấm xác nhận.</div>
+      <div style="font-size:14px;color:#92400e;margin-top:2px">Đối chiếu các ô được đánh dấu bên dưới rồi bấm xác nhận.</div>
       ${gLine}</div>
-    <button class="btn-analyze" style="flex:0 0 auto;height:34px;font-size:11.5px;padding:0 14px" onclick="toggleVerify()">✔ Tôi đã kiểm chứng</button>
+    <button class="btn-analyze" style="flex:0 0 auto;height:34px;font-size:14px;padding:0 14px" onclick="toggleVerify()">✔ Tôi đã kiểm chứng</button>
   </div>`;
 }
 
@@ -3489,8 +3489,8 @@ function renderFormTab(idx) {
       h+=Sec("Nhận xét & đề xuất của NVXH","s7b",F("Nhận xét tiến trình",ttm.nhan_xet)+F("Đề xuất buổi tiếp theo",ttm.de_xuat_tiep_theo),'📝');
   } else if (idx===8) {
     h+=`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 13px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <div style="flex:1;min-width:180px;font-size:12px;color:#1e3a8a"><strong>📨 Công văn chuyển gửi</strong>
-      <div style="font-size:11px;color:#3b82f6;margin-top:2px">Soạn sẵn bản Word theo thể thức hành chính từ dữ liệu phiếu này — chỉ cần sửa và ký.</div></div>
+      <div style="flex:1;min-width:180px;font-size:15px;color:#1e3a8a"><strong>📨 Công văn chuyển gửi</strong>
+      <div style="font-size:14px;color:#3b82f6;margin-top:2px">Soạn sẵn bản Word theo thể thức hành chính từ dữ liệu phiếu này — chỉ cần sửa và ký.</div></div>
       <button class="btn-dl-docx-brand" onclick="dlReferralLetter()">📨 Soạn công văn</button></div>`;
     h+=Sec("Trẻ cần chuyển gửi","s8a",F("Họ tên",cb.ho_ten)+F("Năm sinh",cb.ngay_sinh)+F("Người chăm sóc",ncs.ho_ten));
     h+=Sec("Người chuyển gửi","s8b",F("Họ tên",cg.nguoi_chuyen)+F("Đơn vị",cg.don_vi_chuyen));
@@ -3878,8 +3878,8 @@ function renderCasesStats() {
   const card = (icon, label, short, count, color) => `
     <div class="cstat" style="flex:1;min-width:0;background:#fff;border:1px solid #e2e8f0;border-left:3px solid ${color};border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:9px;">
       <svg class="ic" style="width:18px;height:18px;color:${color}"><use href="#i-${icon}"/></svg>
-      <div style="min-width:0"><div style="font-size:18px;font-weight:800;color:${color};line-height:1.1;">${count}</div>
-      <div class="cstat-l" style="font-size:10px;color:var(--t3);font-weight:600;line-height:1.35;">
+      <div style="min-width:0"><div style="font-size:21px;font-weight:800;color:${color};line-height:1.1;">${count}</div>
+      <div class="cstat-l" style="font-size:13px;color:var(--t3);font-weight:600;line-height:1.35;">
         <span class="cstat-long">${label}</span><span class="cstat-short">${short}</span></div></div>
     </div>`;
   el.innerHTML =
@@ -3902,7 +3902,7 @@ function renderCaseList() {
   });
   if (fStatus) filtered = filtered.filter(c => (c.status||'open') === fStatus);
   if (fStage) filtered = filtered.filter(c => String(c.currentStage||1) === fStage);
-  if (!filtered.length) { el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:12px;">Chưa có ca nào</div>'; return; }
+  if (!filtered.length) { el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:15px;">Chưa có ca nào</div>'; return; }
   
   const now = new Date();
   el.innerHTML = filtered.map(c => {
@@ -3935,7 +3935,7 @@ function renderCaseList() {
     const ownerTag = isAdmin() && c._ownerId ? `<div class="ci-owner">👤 ${esc(c._ownerEmail || c._ownerId.slice(0,8))}</div>` : '';
     return `<div class="case-item${c.id===curCaseId?' active':''}${isStale?' stale':''}${isDraft?' draft':''}" onclick="selectCase('${c.id}')">
       <div class="ci-top">
-        <div class="ci-name">${c.caseCode ? `<span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--t3);margin-right:5px;">${esc(c.caseCode)}</span>` : ''}${esc(c.name||'?')}</div>
+        <div class="ci-name">${c.caseCode ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--t3);margin-right:5px;">${esc(c.caseCode)}</span>` : ''}${esc(c.name||'?')}</div>
         <div style="display:flex;gap:4px;align-items:center;">
           ${fupBadge}
           <span class="ci-badge ${isDraft?'ci-draft':c.status==='open'?'ci-open':'ci-closed'}">${isDraft?'✏️ Chưa lưu':c.status==='open'?'Mở':'Đóng'}</span>
@@ -3978,15 +3978,15 @@ function showCaseDetail(id) {
   const stageDots = [1,2,3,4,5].map(s => 
     `<div style="display:flex;align-items:center;gap:3px;">
       <div style="width:8px;height:8px;border-radius:50%;background:${s < stage ? '#16a34a' : s === stage ? 'var(--org)' : '#e2e8f0'};"></div>
-      <span style="font-size:9px;color:${s === stage ? 'var(--org)' : 'var(--t3)'};font-weight:${s === stage ? '700' : '400'};">${s}</span>
+      <span style="font-size:12px;color:${s === stage ? 'var(--org)' : 'var(--t3)'};font-weight:${s === stage ? '700' : '400'};">${s}</span>
     </div>`
   ).join('<div style="flex:1;height:2px;background:#e2e8f0;min-width:8px;"></div>');
 
   const isClosed = c.status === 'closed';
   const closedAtTxt = c.closedAt ? ' · Đóng: '+fmtVN(c.closedAt) : '';
   const statusBadge = isClosed
-    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">✅ Đã đóng</span>`
-    : `<span style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">🔵 Đang mở</span>`;
+    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:20px;padding:2px 10px;font-size:14px;font-weight:700;">✅ Đã đóng</span>`
+    : `<span style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:20px;padding:2px 10px;font-size:14px;font-weight:700;">🔵 Đang mở</span>`;
   const closeBtn = isClosed
     ? `<button class="btn-secondary" style="color:#16a34a;border-color:#bbf7d0;" onclick="_reopenCaseFromList('${id}')">🔓 Mở lại ca</button>`
     : `<button class="btn-secondary" style="color:#f07020;border-color:#fed7aa;" onclick="_closeCaseFromList('${id}')">✅ Đóng ca</button>`;
@@ -4003,7 +4003,7 @@ function showCaseDetail(id) {
         <div class="cd-kv"><span class="cd-k">Ghi chép</span><span class="cd-v">${(c.entries||[]).length}</span></div>
         <div class="cd-kv"><span class="cd-k">Giai đoạn</span><span class="cd-v">GĐ ${stage} — ${stageLabels[stage]||''}</span></div>
         ${isClosed ? `<div class="cd-kv"><span class="cd-k">Đóng ca</span><span class="cd-v">${fmtVN(c.closedAt)}</span></div>` : ''}
-        ${isAdmin() ? `<div class="cd-kv"><span class="cd-k">Đội/nhóm</span><span class="cd-v"><input type="text" value="${escAttr(c.team_id||'')}" placeholder="(chưa gán)" style="border:1px solid var(--bd);border-radius:5px;padding:3px 6px;font-size:11px;font-family:inherit;width:140px;" onchange="_setCaseTeam('${id}', this.value.trim())"></span></div>` : ''}
+        ${isAdmin() ? `<div class="cd-kv"><span class="cd-k">Đội/nhóm</span><span class="cd-v"><input type="text" value="${escAttr(c.team_id||'')}" placeholder="(chưa gán)" style="border:1px solid var(--bd);border-radius:5px;padding:3px 6px;font-size:14px;font-family:inherit;width:140px;" onchange="_setCaseTeam('${id}', this.value.trim())"></span></div>` : ''}
       </div>
     </div>
     <div class="cd-section">
@@ -4108,11 +4108,11 @@ function _closeCaseFromList(id) {
         const _rn = document.getElementById('dash-real-name'); if (_rn) _rn.value = '';
         document.getElementById('dash-cc').textContent = '0 ký tự';
         document.getElementById('btn-fill').disabled = true;
-        document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
+        document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:31px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
         setHdrCase('', '');
         document.getElementById('closed-banner')?.classList.remove('show');
         const fp = document.getElementById('form-preview');
-        if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">✅</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Ca đã đóng</div><div style="font-size:12.5px;">Chọn ca khác từ <strong>Danh sách ca</strong></div></div></div>';
+        if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:50px;margin-bottom:14px;opacity:.3;">✅</div><div style="font-weight:800;font-size:18px;margin-bottom:6px;color:var(--t2)">Ca đã đóng</div><div style="font-size:15px;">Chọn ca khác từ <strong>Danh sách ca</strong></div></div></div>';
         updateStageUI();
       }
       renderCaseList(); showCaseDetail(id);
@@ -5725,7 +5725,7 @@ function closePov() { document.getElementById('pov').style.display = 'none'; }
 let _lastEvalReportHtml = '';
 function exportEvalPDF() {
   if (!_lastEvalReportHtml) { showNotif('⚠️ Chưa có báo cáo để xuất', 'warn'); return; }
-  document.getElementById('ph-body').innerHTML = `<div style="font-family:'Be Vietnam Pro',sans-serif;font-size:13px;line-height:1.75;color:#1a1a2e;padding:10px;">${_lastEvalReportHtml}</div>`;
+  document.getElementById('ph-body').innerHTML = `<div style="font-family:'Be Vietnam Pro',sans-serif;font-size:16px;line-height:1.75;color:#1a1a2e;padding:10px;">${_lastEvalReportHtml}</div>`;
   document.getElementById('pov').style.display = 'block';
   showNotif('💡 Trong hộp thoại in, chọn đích đến "Lưu dưới dạng PDF" để xuất file', 'ok');
 }
@@ -5770,21 +5770,21 @@ function printFullCase() {
     });
   };
 
-  let h = '<div style="font-family:serif;font-size:13px;line-height:1.7;color:#1a1a2e;max-width:800px;margin:0 auto;">';
+  let h = '<div style="font-family:serif;font-size:16px;line-height:1.7;color:#1a1a2e;max-width:800px;margin:0 auto;">';
 
   // Cover
   h += '<div style="text-align:center;padding:30px 0 20px;border-bottom:3px double #0f2d6b;margin-bottom:20px;">';
-  h += '<div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:3px;">Thảo Đàn Social Service Center</div>';
-  h += '<div style="font-size:22px;font-weight:bold;color:#0f2d6b;margin:10px 0;">BÁO CÁO TỔNG HỢP QUẢN LÝ TRƯỜNG HỢP</div>';
-  h += '<div style="font-size:16px;color:#333;">Trẻ: <strong>' + esc(caseName) + '</strong></div>';
-  h += '<div style="font-size:12px;color:#555;margin-top:6px;">Mã hồ sơ: <strong>' + esc(_caseCodeNow()) + '</strong> · Số TT: ' + esc(_caseSeqNow()) + '</div>';
-  h += '<div style="font-size:12px;color:#888;margin-top:4px;">NVXH phụ trách: ' + esc(_nvxhNow() || '—') + ' · Ngày in: ' + now + ' · Giai đoạn: ' + currentStage + '/5</div>';
+  h += '<div style="font-size:14px;color:#666;text-transform:uppercase;letter-spacing:3px;">Thảo Đàn Social Service Center</div>';
+  h += '<div style="font-size:25px;font-weight:bold;color:#0f2d6b;margin:10px 0;">BÁO CÁO TỔNG HỢP QUẢN LÝ TRƯỜNG HỢP</div>';
+  h += '<div style="font-size:19px;color:#333;">Trẻ: <strong>' + esc(caseName) + '</strong></div>';
+  h += '<div style="font-size:15px;color:#555;margin-top:6px;">Mã hồ sơ: <strong>' + esc(_caseCodeNow()) + '</strong> · Số TT: ' + esc(_caseSeqNow()) + '</div>';
+  h += '<div style="font-size:15px;color:#888;margin-top:4px;">NVXH phụ trách: ' + esc(_nvxhNow() || '—') + ' · Ngày in: ' + now + ' · Giai đoạn: ' + currentStage + '/5</div>';
   // Dấu tình trạng kiểm chứng — người nhận hồ sơ phải biết đây là bản nháp hay bản đã xác nhận.
   if (_isVerified()) {
-    h += '<div style="display:inline-block;margin-top:10px;border:1.5px solid #16a34a;color:#15803d;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;">'
+    h += '<div style="display:inline-block;margin-top:10px;border:1.5px solid #16a34a;color:#15803d;border-radius:6px;padding:5px 12px;font-size:14px;font-weight:700;">'
        + '✔ ĐÃ ĐƯỢC NVXH XÁC NHẬN · ' + esc(_verifiedLabel()) + '</div>';
   } else {
-    h += '<div style="display:inline-block;margin-top:10px;border:2px solid #d97706;color:#b45309;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:800;letter-spacing:.5px;">'
+    h += '<div style="display:inline-block;margin-top:10px;border:2px solid #d97706;color:#b45309;border-radius:6px;padding:6px 14px;font-size:15px;font-weight:800;letter-spacing:.5px;">'
        + '⚠ ' + DRAFT_STAMP + '</div>';
   }
   h += '</div>';
@@ -5811,8 +5811,8 @@ function printFullCase() {
       const clean = _cleanForPrint(origFv.innerHTML);
       if (!_hasData(clean)) { skipped.push(fs.title.replace(/ —.*$/, '')); return; }
       h += "<div style=\"page-break-inside:avoid;margin-bottom:24px;\">";
-      h += "<div style=\"background:#0f2d6b;color:#fff;padding:8px 14px;border-radius:6px 6px 0 0;font-size:13px;font-weight:700;display:flex;justify-content:space-between;gap:10px;\"><span>" + fs.title + "</span>"
-         + (_isVerified() ? "" : "<span style=\"font-size:9.5px;font-weight:800;color:#fcd34d;letter-spacing:.5px;align-self:center;\">BẢN NHÁP</span>") + "</div>";
+      h += "<div style=\"background:#0f2d6b;color:#fff;padding:8px 14px;border-radius:6px 6px 0 0;font-size:16px;font-weight:700;display:flex;justify-content:space-between;gap:10px;\"><span>" + fs.title + "</span>"
+         + (_isVerified() ? "" : "<span style=\"font-size:12px;font-weight:800;color:#fcd34d;letter-spacing:.5px;align-self:center;\">BẢN NHÁP</span>") + "</div>";
       h += "<div style=\"border:1px solid #ddd;border-top:none;padding:12px 14px;border-radius:0 0 6px 6px;\">" + clean.innerHTML + "</div>";
       h += "</div>";
     } catch(e) {}
@@ -5822,7 +5822,7 @@ function printFullCase() {
   if (D._report) {
     const rep = _cleanForPrint(document.getElementById("chat-msgs")?.innerHTML || "");
     h += "<div style=\"page-break-before:always;margin-top:20px;\">";
-    h += "<div style=\"background:#0f2d6b;color:#fff;padding:8px 14px;border-radius:6px 6px 0 0;font-size:13px;font-weight:700;\">BÁO CÁO PHÂN TÍCH AI</div>";
+    h += "<div style=\"background:#0f2d6b;color:#fff;padding:8px 14px;border-radius:6px 6px 0 0;font-size:16px;font-weight:700;\">BÁO CÁO PHÂN TÍCH AI</div>";
     h += "<div style=\"border:1px solid #ddd;border-top:none;padding:12px 14px;border-radius:0 0 6px 6px;\">";
     h += rep.innerHTML;
     h += "</div></div>";
@@ -5830,18 +5830,18 @@ function printFullCase() {
 
   // Ghi rõ biểu mẫu chưa có dữ liệu (thay vì in ra hàng loạt trang toàn dấu "—")
   if (skipped.length) {
-    h += '<div style="margin-top:16px;font-size:11.5px;color:#666;font-style:italic;border-top:1px dashed #ccc;padding-top:8px;">'
+    h += '<div style="margin-top:16px;font-size:14px;color:#666;font-style:italic;border-top:1px dashed #ccc;padding-top:8px;">'
       + 'Biểu mẫu chưa có dữ liệu (không in): ' + esc(skipped.join(', ')) + '</div>';
   }
 
   // Khối chữ ký — bản in tổng hợp trước đây không có, nên không dùng được làm hồ sơ lưu.
   h += '<div style="page-break-inside:avoid;margin-top:34px;">';
-  h += '<div style="text-align:right;font-style:italic;font-size:12px;color:#333;margin-bottom:14px;">TP.HCM, ngày ' + now + '</div>';
-  h += '<table style="width:100%;border-collapse:collapse;text-align:center;font-size:12px;"><tr>';
+  h += '<div style="text-align:right;font-style:italic;font-size:15px;color:#333;margin-bottom:14px;">TP.HCM, ngày ' + now + '</div>';
+  h += '<table style="width:100%;border-collapse:collapse;text-align:center;font-size:15px;"><tr>';
   ['Giám sát ca', 'Nhân viên xã hội'].forEach(role => {
     h += '<td style="width:50%;vertical-align:top;padding:0 10px;">'
       + '<div style="font-weight:700;color:#0f2d6b;">' + role + '</div>'
-      + '<div style="font-size:11px;color:#777;font-style:italic;">(Ký, ghi rõ họ tên)</div>'
+      + '<div style="font-size:14px;color:#777;font-style:italic;">(Ký, ghi rõ họ tên)</div>'
       + '<div style="height:66px;"></div>'
       + '<div style="border-top:1px dotted #999;padding-top:4px;">'
       + (role === 'Nhân viên xã hội' ? esc(_nvxhNow() || '') : '') + '</div></td>';
@@ -5910,7 +5910,7 @@ function checkReminders() {
   const panel = document.getElementById('reminder-alerts');
   if (panel && alerts.length) {
     panel.innerHTML = alerts.map(a =>
-      '<div style="padding:6px 10px;margin-bottom:4px;border-radius:6px;border-left:3px solid '+a.color+';background:'+a.color+'0d;font-size:11px;color:'+a.color+';font-weight:600;">'+esc(a.msg)+'</div>'
+      '<div style="padding:6px 10px;margin-bottom:4px;border-radius:6px;border-left:3px solid '+a.color+';background:'+a.color+'0d;font-size:14px;color:'+a.color+';font-weight:600;">'+esc(a.msg)+'</div>'
     ).join('');
     panel.style.display = 'block';
   } else if (panel) {
@@ -5955,7 +5955,7 @@ function applyClosedCaseUI() {
       if (D?._report) {
         renderReport(D._report);
       } else {
-        chatMsgs.innerHTML = `<div class="chat-empty"><div style="font-size:32px;margin-bottom:10px;">✅</div><div style="font-weight:700;font-size:14px;color:#065f46;">Ca đã đóng</div><div style="margin-top:6px;font-size:12px;color:#047857;">Xem lại phân tích ở tab Phân tích & Đánh giá</div></div>`;
+        chatMsgs.innerHTML = `<div class="chat-empty"><div style="font-size:34px;margin-bottom:10px;">✅</div><div style="font-weight:700;font-size:17px;color:#065f46;">Ca đã đóng</div><div style="margin-top:6px;font-size:15px;color:#047857;">Xem lại phân tích ở tab Phân tích & Đánh giá</div></div>`;
       }
     }
   } else {
@@ -6100,14 +6100,14 @@ function renderAnalysisPanel() {
   // ── Case summary card ──
   html += `<div class="analysis-card">
     <div class="analysis-card-title">📁 THÔNG TIN CA</div>
-    <div style="font-size:14px;font-weight:800;color:var(--navy);margin-bottom:5px">${esc(c?.name || 'Ca chưa đặt tên')}</div>`;
-  if (cobaN.ho_ten) html += `<div style="font-size:12px;color:var(--t2);margin-bottom:6px">👤 <strong>${esc(cobaN.ho_ten)}</strong>${cobaN.tuoi?' · '+esc(cobaN.tuoi)+' tuổi':''}${cobaN.gioi_tinh?' · '+esc(cobaN.gioi_tinh):''}</div>`;
+    <div style="font-size:17px;font-weight:800;color:var(--navy);margin-bottom:5px">${esc(c?.name || 'Ca chưa đặt tên')}</div>`;
+  if (cobaN.ho_ten) html += `<div style="font-size:15px;color:var(--t2);margin-bottom:6px">👤 <strong>${esc(cobaN.ho_ten)}</strong>${cobaN.tuoi?' · '+esc(cobaN.tuoi)+' tuổi':''}${cobaN.gioi_tinh?' · '+esc(cobaN.gioi_tinh):''}</div>`;
   const _closed = c?.status === 'closed';
   html += `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">
-    <span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;background:${_closed?'#ecfdf5':'#dbeafe'};color:${_closed?'#065f46':'#1d4ed8'}">${_closed?'✅ Đã đóng':'🟢 Đang mở'}</span>
-    <span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;background:${si.bg};color:${si.color}">${_closed?'GĐ 5 ✓':'GĐ '+stage+'/5'}</span>
-    ${createdAt?`<span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;background:#f3f4f6;color:#374151">⏱ ${daysOpen} ngày</span>`:''}
-    ${_closed&&c.closedAt?`<span style="padding:3px 9px;border-radius:10px;font-size:10px;font-weight:600;background:#ecfdf5;color:#059669">📅 Đóng: ${fmtVN(c.closedAt)}</span>`:''}
+    <span style="padding:3px 9px;border-radius:10px;font-size:13px;font-weight:700;background:${_closed?'#ecfdf5':'#dbeafe'};color:${_closed?'#065f46':'#1d4ed8'}">${_closed?'✅ Đã đóng':'🟢 Đang mở'}</span>
+    <span style="padding:3px 9px;border-radius:10px;font-size:13px;font-weight:700;background:${si.bg};color:${si.color}">${_closed?'GĐ 5 ✓':'GĐ '+stage+'/5'}</span>
+    ${createdAt?`<span style="padding:3px 9px;border-radius:10px;font-size:13px;font-weight:700;background:#f3f4f6;color:#374151">⏱ ${daysOpen} ngày</span>`:''}
+    ${_closed&&c.closedAt?`<span style="padding:3px 9px;border-radius:10px;font-size:13px;font-weight:600;background:#ecfdf5;color:#059669">📅 Đóng: ${fmtVN(c.closedAt)}</span>`:''}
   </div></div>`;
 
   // ── Risk level card ──
@@ -6117,9 +6117,9 @@ function renderAnalysisPanel() {
       <div class="analysis-card-title">⚠️ MỨC ĐỘ RỦI RO</div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <span class="risk-pill" style="background:${rBg};color:${rC};border:1.5px solid ${rC}33">${rI} ${risk}</span>
-        ${report.urgent?`<span style="font-size:10px;font-weight:700;color:#dc2626;background:#fef2f2;padding:3px 8px;border-radius:8px">⚡ KHẨN CẤP</span>`:''}
+        ${report.urgent?`<span style="font-size:13px;font-weight:700;color:#dc2626;background:#fef2f2;padding:3px 8px;border-radius:8px">⚡ KHẨN CẤP</span>`:''}
       </div>
-      ${report.risk_reason?`<div style="font-size:11.5px;color:var(--t2);line-height:1.5;padding:7px 9px;background:${rBg};border-radius:7px">${esc(report.risk_reason)}</div>`:''}
+      ${report.risk_reason?`<div style="font-size:14px;color:var(--t2);line-height:1.5;padding:7px 9px;background:${rBg};border-radius:7px">${esc(report.risk_reason)}</div>`:''}
     </div>`;
   }
 
@@ -6136,7 +6136,7 @@ function renderAnalysisPanel() {
       const lvi = levelMap[lv] || {label:lv||'—', color:'#9ca3af', bg:'#f3f4f6'};
       html += `<div class="risk-matrix-row">
         <span style="color:var(--t2)">${label}</span>
-        <span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${lvi.bg};color:${lvi.color}">${lvi.label}</span>
+        <span style="padding:2px 8px;border-radius:10px;font-size:13px;font-weight:700;background:${lvi.bg};color:${lvi.color}">${lvi.label}</span>
       </div>`;
     });
     html += `</div>`;
@@ -6165,8 +6165,8 @@ function renderAnalysisPanel() {
       <div class="stage-tl-content">
         <div class="stage-tl-label" style="color:${isLocked?'#9ca3af':info.color}">${info.label}</div>
         ${lastEntry?`<div class="stage-tl-date">📅 ${fmtVN(lastEntry.date)}</div>`:''}
-        ${isActive?`<span style="font-size:10px;background:${info.bg};color:${info.color};padding:2px 7px;border-radius:8px;display:inline-block;margin-top:2px;font-weight:600">Đang thực hiện</span>`:''}
-        ${isDone?`<span style="font-size:10px;background:#f0fdf4;color:#16a34a;padding:2px 7px;border-radius:8px;display:inline-block;margin-top:2px;font-weight:600">✅ Hoàn thành</span>`:''}
+        ${isActive?`<span style="font-size:13px;background:${info.bg};color:${info.color};padding:2px 7px;border-radius:8px;display:inline-block;margin-top:2px;font-weight:600">Đang thực hiện</span>`:''}
+        ${isDone?`<span style="font-size:13px;background:#f0fdf4;color:#16a34a;padding:2px 7px;border-radius:8px;display:inline-block;margin-top:2px;font-weight:600">✅ Hoàn thành</span>`:''}
       </div>
     </div>`;
   }
@@ -6178,14 +6178,14 @@ function renderAnalysisPanel() {
     <div class="analysis-card-title">📈 THỐNG KÊ</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
       <div style="text-align:center;padding:10px;background:var(--cream);border-radius:8px">
-        <div style="font-size:22px;font-weight:800;color:var(--navy)">${entries.length}</div>
-        <div style="font-size:10px;color:var(--t3)">Lần ghi chép</div>
+        <div style="font-size:25px;font-weight:800;color:var(--navy)">${entries.length}</div>
+        <div style="font-size:13px;color:var(--t3)">Lần ghi chép</div>
       </div>
       <div style="text-align:center;padding:10px;background:var(--cream);border-radius:8px">
-        <div style="font-size:22px;font-weight:800;color:#d97706">${stage4Updates}</div>
-        <div style="font-size:10px;color:var(--t3)">Cập nhật GĐ4</div>
+        <div style="font-size:25px;font-weight:800;color:#d97706">${stage4Updates}</div>
+        <div style="font-size:13px;color:var(--t3)">Cập nhật GĐ4</div>
       </div>
-      ${updatedAt?`<div style="grid-column:span 2;padding:7px 10px;background:var(--cream);border-radius:8px;font-size:11px;color:var(--t2)">🕒 Cập nhật lần cuối: <strong>${fmtVN(updatedAt.toISOString())}</strong></div>`:''}
+      ${updatedAt?`<div style="grid-column:span 2;padding:7px 10px;background:var(--cream);border-radius:8px;font-size:14px;color:var(--t2)">🕒 Cập nhật lần cuối: <strong>${fmtVN(updatedAt.toISOString())}</strong></div>`:''}
     </div>
   </div>`;
 
@@ -6212,9 +6212,9 @@ async function generateComprehensiveEval() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> AI đang tạo báo cáo...';
   out.innerHTML = `<div style="text-align:center;padding:40px;color:var(--t3)">
-    <span class="spin" style="font-size:20px;display:inline-block"></span>
-    <div style="margin-top:12px;font-size:13px;font-weight:500">AI đang phân tích toàn bộ tiến trình ca...</div>
-    <div style="margin-top:6px;font-size:11px">Quá trình này mất 15–30 giây</div>
+    <span class="spin" style="font-size:23px;display:inline-block"></span>
+    <div style="margin-top:12px;font-size:16px;font-weight:500">AI đang phân tích toàn bộ tiến trình ca...</div>
+    <div style="margin-top:6px;font-size:14px">Quá trình này mất 15–30 giây</div>
   </div>`;
 
   try {
@@ -6246,9 +6246,9 @@ async function generateComprehensiveEval() {
     out.innerHTML = `<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px;">
         <button class="btn-hdr" style="background:var(--navy);color:#fff;" onclick="exportEvalPDF()">📄 Xuất PDF</button>
       </div>
-      <div style="font-family:'Be Vietnam Pro',sans-serif;font-size:13px;line-height:1.75;color:var(--text)">${_lastEvalReportHtml}</div>`;
+      <div style="font-family:'Be Vietnam Pro',sans-serif;font-size:16px;line-height:1.75;color:var(--text)">${_lastEvalReportHtml}</div>`;
   } catch(e) {
-    out.innerHTML = `<div style="color:#dc2626;padding:20px;text-align:center;font-size:13px">❌ ${esc(e.message)}</div>`;
+    out.innerHTML = `<div style="color:#dc2626;padding:20px;text-align:center;font-size:16px">❌ ${esc(e.message)}</div>`;
     showNotif('❌ Lỗi tạo báo cáo: ' + e.message, 'err');
   } finally {
     btn.disabled = false;
@@ -6261,7 +6261,7 @@ function _formatEvalReport(text) {
   let h = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   // headings
   h = h.replace(/^## (.+)$/gm, '<div class="eval-section-head">$1</div>');
-  h = h.replace(/^### (.+)$/gm, '<div style="font-size:12.5px;font-weight:700;color:var(--navy2);margin:12px 0 5px">$1</div>');
+  h = h.replace(/^### (.+)$/gm, '<div style="font-size:15px;font-weight:700;color:var(--navy2);margin:12px 0 5px">$1</div>');
   // bold
   h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   // list items → collect into <ul>
@@ -6710,8 +6710,8 @@ function _buildGenogram() {
   parts.push(`<text x="14" y="${H-9}" font-size="8.5" fill="#94a3b8" font-family="system-ui">□ Nam  ○ Nữ  ◇ Không rõ  ✕ Đã mất  [- -] Trẻ CTXH</text>`);
 
   const childName=cb.ho_ten||'Chưa có tên', age=cb.tuoi||'';
-  return `<div style="font-weight:800;font-size:15px;color:#1e293b;margin-bottom:2px;">🧬 Sơ đồ gia đình — ${esc(childName)}${age?' ('+age+' tuổi)':''}</div>
-    <div style="font-size:11px;color:#64748b;margin-bottom:12px;">Từ dữ liệu Form 0 · Cập nhật bằng cách bổ sung thành viên GĐ1</div>
+  return `<div style="font-weight:800;font-size:18px;color:#1e293b;margin-bottom:2px;">🧬 Sơ đồ gia đình — ${esc(childName)}${age?' ('+age+' tuổi)':''}</div>
+    <div style="font-size:14px;color:#64748b;margin-bottom:12px;">Từ dữ liệu Form 0 · Cập nhật bằng cách bổ sung thành viên GĐ1</div>
     <div style="overflow-x:auto">
     <svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:380px;max-width:${W}px;display:block;margin:0 auto;overflow:visible">
       ${parts.join('\n')}
@@ -6856,7 +6856,7 @@ function _renderFollowUpSection(id, c) {
   const plan = c.lastAnalysis?.ket_thuc?.ke_hoach_theo_doi || c.lastAnalysis?._report?.follow_up_plan || '';
   const today = new Date().toISOString().split('T')[0];
   const dr = _fupDraft[id] || {};
-  const inp = 'height:30px;padding:0 8px;border:1px solid var(--bd);border-radius:6px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--t1);';
+  const inp = 'height:30px;padding:0 8px;border:1px solid var(--bd);border-radius:6px;font-size:15px;font-family:inherit;background:var(--bg);color:var(--t1);';
 
   // --- Lịch hẹn ---
   const mocDone = m => log.some(e => e.moc === m);
@@ -6882,22 +6882,22 @@ function _renderFollowUpSection(id, c) {
       ['Học tập',cs.hoc_tap],['ĐK sống',cs.dieu_kien_song],['Dịch vụ',cs.ket_noi_dich_vu],
     ].filter(([,v])=>v).map(([k,v])=>{
       const c=cs2Color(v);
-      return `<span style="font-size:10px;padding:1px 6px;border-radius:10px;border:1px solid ${c}40;color:${c};background:${c}0d;">${k}: ${v}</span>`;
+      return `<span style="font-size:13px;padding:1px 6px;border-radius:10px;border:1px solid ${c}40;color:${c};background:${c}0d;">${k}: ${v}</span>`;
     }).join('');
     const klC = e.ket_luan==='Ổn định'?'#16a34a':e.ket_luan==='Cần mở lại ca'?'#dc2626':e.ket_luan==='Không liên lạc được'?'#94a3b8':'#d97706';
-    const mocBadge = e.moc ? `<span style="background:#eff6ff;color:#1e40af;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;">Mốc ${e.moc}T</span>` : '';
+    const mocBadge = e.moc ? `<span style="background:#eff6ff;color:#1e40af;border-radius:4px;padding:1px 5px;font-size:13px;font-weight:600;">Mốc ${e.moc}T</span>` : '';
     return `<div style="padding:7px 0;border-bottom:1px solid #f1f5f9;">
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;">
-        <span style="font-size:11px;color:var(--t3);font-weight:600;">${esc(e.ngay||'?')}</span>
+        <span style="font-size:14px;color:var(--t3);font-weight:600;">${esc(e.ngay||'?')}</span>
         ${mocBadge}
-        <span style="font-size:11px;color:var(--t2);">${esc(e.hinh_thuc||'')}</span>
+        <span style="font-size:14px;color:var(--t2);">${esc(e.hinh_thuc||'')}</span>
         <span style="flex:1"></span>
-        ${e.ket_luan?`<span style="font-size:10px;font-weight:700;color:${klC};">${esc(e.ket_luan)}</span>`:''}
-        <button onclick="deleteFollowUp('${id}','${e.id}')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:15px;padding:0;line-height:1;">×</button>
+        ${e.ket_luan?`<span style="font-size:13px;font-weight:700;color:${klC};">${esc(e.ket_luan)}</span>`:''}
+        <button onclick="deleteFollowUp('${id}','${e.id}')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:18px;padding:0;line-height:1;">×</button>
       </div>
       ${csChips?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:3px;">${csChips}</div>`:''}
-      ${e.ghi_chu?`<div style="font-size:12px;color:var(--t1);margin-bottom:3px;">${esc(e.ghi_chu)}</div>`:''}
-      ${e.ai_phan_tich?`<details style="margin-top:4px;"><summary style="font-size:10px;font-weight:700;color:#6d28d9;cursor:pointer;list-style:none;">🤖 Nhận xét AI ▸</summary><div style="font-size:11.5px;color:#4c1d95;background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;padding:8px;margin-top:4px;white-space:pre-wrap;line-height:1.6;">${esc(e.ai_phan_tich)}</div></details>`:''}
+      ${e.ghi_chu?`<div style="font-size:15px;color:var(--t1);margin-bottom:3px;">${esc(e.ghi_chu)}</div>`:''}
+      ${e.ai_phan_tich?`<details style="margin-top:4px;"><summary style="font-size:13px;font-weight:700;color:#6d28d9;cursor:pointer;list-style:none;">🤖 Nhận xét AI ▸</summary><div style="font-size:14px;color:#4c1d95;background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;padding:8px;margin-top:4px;white-space:pre-wrap;line-height:1.6;">${esc(e.ai_phan_tich)}</div></details>`:''}
     </div>`;
   }).join('');
 
@@ -6916,18 +6916,18 @@ function _renderFollowUpSection(id, c) {
     const isWarn=['Lo ngại','Mất kết nối'].includes(val), isOk=['Tốt','Duy trì'].includes(val);
     const c=isWarn?'#dc2626':isOk?'#16a34a':'#d97706';
     return `<button class="fup-opt" data-fc="${id}" data-ff="${key}" data-fv="${val}" onclick="_fupSet('${id}','${key}','${val}')"
-      style="padding:3px 8px;border:1.5px solid ${act?c:c+'40'};border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;background:${act?c:'transparent'};color:${act?'#fff':c};transition:all .12s;">${val}</button>`;
+      style="padding:3px 8px;border:1.5px solid ${act?c:c+'40'};border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;background:${act?c:'transparent'};color:${act?'#fff':c};transition:all .12s;">${val}</button>`;
   };
   const klBtn = val => {
     const act = dr.ket_luan===val;
     const c=val==='Ổn định'?'#16a34a':val==='Cần mở lại ca'?'#dc2626':val==='Không liên lạc được'?'#94a3b8':'#d97706';
     return `<button class="fup-opt" data-fc="${id}" data-ff="ket_luan" data-fv="${val}" onclick="_fupSet('${id}','ket_luan','${val}')"
-      style="padding:4px 11px;border:1.5px solid ${act?c:c+'40'};border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:${act?c:'transparent'};color:${act?'#fff':c};transition:all .12s;">${val}</button>`;
+      style="padding:4px 11px;border:1.5px solid ${act?c:c+'40'};border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;background:${act?c:'transparent'};color:${act?'#fff':c};transition:all .12s;">${val}</button>`;
   };
 
   return `<div class="followup-section">
-    <div style="font-weight:700;font-size:13px;color:var(--t1);margin-bottom:10px;">📋 Theo dõi sau đóng ca</div>
-    ${plan?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 10px;font-size:11.5px;color:#166534;margin-bottom:10px;">📌 KH: ${esc(plan)}</div>`:''}
+    <div style="font-weight:700;font-size:16px;color:var(--t1);margin-bottom:10px;">📋 Theo dõi sau đóng ca</div>
+    ${plan?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 10px;font-size:14px;color:#166534;margin-bottom:10px;">📌 KH: ${esc(plan)}</div>`:''}
     ${schedule.length?`<div class="fup-schedule-box"><div class="fup-box-title">Lịch hẹn tự động</div>${schedHtml}</div>`:''}
     ${log.length?`<div style="margin:8px 0;"><div class="fup-box-title" style="margin-bottom:6px;">Lịch sử theo dõi (${log.length})</div>${logHtml}</div>`:''}
     <div class="fup-form-box">
@@ -6945,20 +6945,20 @@ function _renderFollowUpSection(id, c) {
       <div style="background:#f8fafc;border-radius:6px;padding:8px;margin-bottom:8px;">
         <div class="fup-box-title" style="margin-bottom:6px;">Đánh giá 5 chỉ số</div>
         ${CHI_SO.map(cs=>`<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">
-          <span style="min-width:128px;font-size:11.5px;color:var(--t2);">${cs.label}</span>
+          <span style="min-width:128px;font-size:14px;color:var(--t2);">${cs.label}</span>
           <div style="display:flex;gap:4px;flex-wrap:wrap;">${cs.opts.map(o=>optBtn(cs.key,o)).join('')}</div>
         </div>`).join('')}
       </div>
-      <textarea id="fup-note-${id}" rows="2" placeholder="Ghi chú: quan sát, thông tin từ gia đình/nhà trường..." style="width:100%;padding:7px 9px;border:1px solid var(--bd);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;background:var(--bg);color:var(--t1);box-sizing:border-box;margin-bottom:8px;"></textarea>
+      <textarea id="fup-note-${id}" rows="2" placeholder="Ghi chú: quan sát, thông tin từ gia đình/nhà trường..." style="width:100%;padding:7px 9px;border:1px solid var(--bd);border-radius:6px;font-size:15px;font-family:inherit;resize:vertical;background:var(--bg);color:var(--t1);box-sizing:border-box;margin-bottom:8px;"></textarea>
       <div style="margin-bottom:10px;">
         <div class="fup-box-title" style="margin-bottom:6px;">Kết luận</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">${KET_LUAN.map(klBtn).join('')}</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <button id="fup-ai-btn-${id}" onclick="analyzeFollowUp('${id}')" style="height:34px;padding:0 16px;background:linear-gradient(135deg,#6d28d9,#5b21b6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🤖 Phân tích AI</button>
-        <button onclick="saveFollowUp('${id}')" style="height:34px;padding:0 18px;background:var(--org);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">💾 Lưu theo dõi</button>
+        <button id="fup-ai-btn-${id}" onclick="analyzeFollowUp('${id}')" style="height:34px;padding:0 16px;background:linear-gradient(135deg,#6d28d9,#5b21b6);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">🤖 Phân tích AI</button>
+        <button onclick="saveFollowUp('${id}')" style="height:34px;padding:0 18px;background:var(--org);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">💾 Lưu theo dõi</button>
       </div>
-      <textarea id="fup-ai-result-${id}" rows="1" placeholder="Nhận xét AI sẽ hiện ở đây (có thể chỉnh sửa trước khi lưu)..." style="display:none;width:100%;margin-top:10px;padding:9px 11px;border:1.5px solid #7c3aed;border-radius:8px;font-size:12px;font-family:inherit;resize:vertical;background:#faf5ff;color:#4c1d95;box-sizing:border-box;line-height:1.6;"></textarea>
+      <textarea id="fup-ai-result-${id}" rows="1" placeholder="Nhận xét AI sẽ hiện ở đây (có thể chỉnh sửa trước khi lưu)..." style="display:none;width:100%;margin-top:10px;padding:9px 11px;border:1.5px solid #7c3aed;border-radius:8px;font-size:15px;font-family:inherit;resize:vertical;background:#faf5ff;color:#4c1d95;box-sizing:border-box;line-height:1.6;"></textarea>
     </div>
   </div>`;
 }
