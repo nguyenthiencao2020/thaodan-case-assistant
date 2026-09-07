@@ -218,8 +218,7 @@ async function logoutUser() {
   document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><svg class="ic chat-empty-ic"><use href="#i-chat"/></svg><div class="chat-empty-t">Chuyên gia CTXH sẵn sàng</div><div>Hỏi bất kỳ điều gì về CTXH hoặc nhập ghi chép để phân tích ca.</div></div>';
   const ci = document.getElementById('chat-input'); if (ci) ci.value = '';
   // Header
-  document.getElementById('hdr-case-name').textContent = '';
-  document.getElementById('hdr-case-date').textContent = '';
+  setHdrCase('', '');
   const dl = document.getElementById('dash-case-label'); if (dl) dl.textContent = '';
   // Form panel
   document.getElementById('btn-fill').disabled = true;
@@ -282,8 +281,7 @@ function _onLogin(user) {
     document.getElementById('btn-send').disabled = false;
     document.getElementById('chat-input').disabled = false;
     document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">💬</div><div style="font-weight:600;margin-bottom:4px;">Chào mừng trở lại!</div><div>Chọn ca từ tab <strong>Danh sách ca</strong> hoặc nhấn <strong>+ Ca mới</strong> để bắt đầu.</div></div>';
-    document.getElementById('hdr-case-name').textContent = '';
-    document.getElementById('hdr-case-date').textContent = '';
+    setHdrCase('', '');
     const dl = document.getElementById('dash-case-label'); if (dl) dl.textContent = '';
     const fp = document.getElementById('form-preview');
     if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">📋</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Chưa có dữ liệu</div><div style="font-size:12.5px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> để điền form</div></div></div>';
@@ -1334,8 +1332,7 @@ function completeStage() {
         document.getElementById('dash-cc').textContent = '0 ký tự';
         document.getElementById('btn-fill').disabled = true;
         document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
-        document.getElementById('hdr-case-name').textContent = '';
-        document.getElementById('hdr-case-date').textContent = '';
+        setHdrCase('', '');
         const dl = document.getElementById('dash-case-label'); if (dl) dl.textContent = '';
         document.getElementById('closed-banner')?.classList.remove('show');
         const fp = document.getElementById('form-preview');
@@ -2502,8 +2499,9 @@ function toggleChatExpand() {
 function _restoreChatView() {
   let mode = 'normal';
   try { mode = localStorage.getItem(_CHAT_VIEW_KEY) || 'normal'; } catch(e) {}
-  // Trên điện thoại hai cột đã xếp dọc nên "mở rộng" không còn nghĩa gì; luôn về mặc định.
-  if (window.innerWidth <= 900) mode = 'normal';
+  // Trên điện thoại hai cột xếp dọc, nên "mở rộng" = báo cáo chiếm cả màn hình và "thu gọn"
+  // = ô ghi chép chiếm cả màn hình. Đó chính là hai thứ NVXH cần nhất khi dùng bằng điện
+  // thoại, nên KHÔNG chặn như trước.
   setChatView(mode);
   // Bấm vào thanh dọc lúc đang thu gọn thì mở lại — không phải nhắm đúng nút nhỏ.
   const hd = document.querySelector('.chat-panel .chat-hd');
@@ -3804,11 +3802,51 @@ async function saveCaseNow() {
   }
 }
 
+// Mã ca hiện ở hai chỗ: .hdr-info trên desktop, và dải #case-strip trên điện thoại (header
+// phone ẩn .hdr-info để chỉ còn 1 hàng). Gom vào một hàm để không bao giờ lệch nhau.
+function setHdrCase(name, date) {
+  const n = document.getElementById('hdr-case-name');
+  const d = document.getElementById('hdr-case-date');
+  if (n) n.textContent = name || '';
+  if (d) d.textContent = date || '';
+  const strip = document.getElementById('case-strip');
+  if (strip) {
+    strip.textContent = (name || '') + (date || '');
+    strip.hidden = !name;
+  }
+}
+
+// ── Menu "⋯" trên điện thoại ──
+function toggleHdrMore() {
+  const m = document.getElementById('hdr-more');
+  if (!m) return;
+  if (!m.hidden) return closeHdrMore();
+  const em = document.getElementById('user-email');
+  const me = document.getElementById('hdr-more-email');
+  if (me) me.textContent = em ? em.textContent : '';
+  const b = document.getElementById('notif-badge');
+  const mb = document.getElementById('hdr-more-badge');
+  if (mb) { mb.textContent = b ? b.textContent : ''; mb.hidden = !(b && b.textContent); }
+  m.hidden = false;
+  setTimeout(() => document.addEventListener('click', _hdrMoreOutside), 0);
+}
+function closeHdrMore() {
+  const m = document.getElementById('hdr-more');
+  if (m) m.hidden = true;
+  document.removeEventListener('click', _hdrMoreOutside);
+}
+function _hdrMoreOutside(ev) {
+  if (ev.target.closest('#hdr-more') || ev.target.closest('#btn-hdr-more')) return;
+  closeHdrMore();
+}
+
 function updateHeader() {
   const c = curCaseId ? loadCases()[curCaseId] : null;
   const isDraft = curCaseId && curCaseId === _draftCaseId;
-  document.getElementById('hdr-case-name').textContent = c ? (c.caseCode ? `${c.caseCode} · ${c.name}` : c.name) : '';
-  document.getElementById('hdr-case-date').textContent = isDraft ? ' — ✏️ Chưa lưu' : (c ? ' — '+fmtVN(c.updatedAt) : '');
+  setHdrCase(
+    c ? (c.caseCode ? `${c.caseCode} · ${c.name}` : c.name) : '',
+    isDraft ? ' — ✏️ Chưa lưu' : (c ? ' — '+fmtVN(c.updatedAt) : '')
+  );
   const dl = document.getElementById('dash-case-label');
   if (dl) dl.textContent = c ? (isDraft ? '📋 '+c.name+' (chưa lưu)' : '📁 '+c.name) : '';
 }
@@ -3835,16 +3873,19 @@ function renderCasesStats() {
   const active = cases.filter(c => (c.status || 'open') === 'open');
   const overdue = active.filter(c => Math.floor((now - new Date(c.updatedAt)) / 86400000) > 30);
   const done = cases.filter(c => c.status === 'closed');
-  const card = (icon, label, count, color) => `
-    <div style="flex:1;background:#fff;border:1px solid #e5e7eb;border-left:3px solid ${color};border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
-      <div style="font-size:20px;">${icon}</div>
-      <div><div style="font-size:18px;font-weight:800;color:${color};line-height:1.1;">${count}</div>
-      <div style="font-size:10px;color:var(--t3);font-weight:600;">${label}</div></div>
+  // Nhãn có bản ngắn cho điện thoại: "Quá hạn (>30 ngày)" trên màn 390px xuống 4 dòng, đẩy
+  // cả hàng thẻ cao gấp đôi.
+  const card = (icon, label, short, count, color) => `
+    <div class="cstat" style="flex:1;min-width:0;background:#fff;border:1px solid #e2e8f0;border-left:3px solid ${color};border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:9px;">
+      <svg class="ic" style="width:18px;height:18px;color:${color}"><use href="#i-${icon}"/></svg>
+      <div style="min-width:0"><div style="font-size:18px;font-weight:800;color:${color};line-height:1.1;">${count}</div>
+      <div class="cstat-l" style="font-size:10px;color:var(--t3);font-weight:600;line-height:1.35;">
+        <span class="cstat-long">${label}</span><span class="cstat-short">${short}</span></div></div>
     </div>`;
   el.innerHTML =
-    card('📂', 'Đang xử lý', active.length, '#2563eb') +
-    card('⏰', 'Quá hạn (>30 ngày)', overdue.length, '#dc2626') +
-    card('✅', 'Hoàn thành', done.length, '#16a34a');
+    card('home',  'Đang xử lý', 'Đang xử lý', active.length, '#0f2d6b') +
+    card('clock', 'Quá hạn (>30 ngày)', 'Quá hạn', overdue.length, '#dc2626') +
+    card('check', 'Hoàn thành', 'Hoàn thành', done.length, '#166534');
 }
 
 function renderCaseList() {
@@ -4068,8 +4109,7 @@ function _closeCaseFromList(id) {
         document.getElementById('dash-cc').textContent = '0 ký tự';
         document.getElementById('btn-fill').disabled = true;
         document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:28px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
-        document.getElementById('hdr-case-name').textContent = '';
-        document.getElementById('hdr-case-date').textContent = '';
+        setHdrCase('', '');
         document.getElementById('closed-banner')?.classList.remove('show');
         const fp = document.getElementById('form-preview');
         if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:48px;margin-bottom:14px;opacity:.3;">✅</div><div style="font-weight:800;font-size:15px;margin-bottom:6px;color:var(--t2)">Ca đã đóng</div><div style="font-size:12.5px;">Chọn ca khác từ <strong>Danh sách ca</strong></div></div></div>';
