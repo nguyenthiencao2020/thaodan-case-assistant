@@ -2378,6 +2378,274 @@ function _vgFileSuffix(fi) {
   return '_lan' + _vgLan(v, _vgPick) + d;
 }
 
+// ════════════════════════════════════════════════════════════
+// VIỆC CẦN LÀM — quản ca, không chỉ điền biểu mẫu
+// ════════════════════════════════════════════════════════════
+// Đây là lỗ hổng lớn nhất trước bản này: kế hoạch đã ghi rõ "liên hệ cô Hà trước 30/09",
+// "xem xét kế hoạch 22/12", "theo dõi 1/3/6 tháng sau đóng ca" — app CÓ SẴN hết ngày tháng đó
+// nhưng không chỗ nào trả lời được câu "hôm nay tôi phải làm gì". NVXH giữ 10–30 ca thì không
+// thể nhớ, nên việc trôi cho tới khi ca thành "14 ngày chưa cập nhật" — tức báo khi đã muộn.
+// Nguyên tắc: KHÔNG bắt NVXH nhập thêm dữ liệu gì mới. Mọi việc trong danh sách đều suy ra từ
+// hồ sơ đang có. Đánh dấu xong thì lưu vào chính hồ sơ ca (c.doneTasks).
+
+// Đổi giá trị ngày kiểu Việt Nam trong hồ sơ thành Date. Dùng lại fmtDate để nhận đủ các dạng
+// AI hay trả về (dd/mm/yyyy, yyyy-mm-dd, "tháng 9/2025"...). Không parse được thì bỏ qua việc
+// đó — thà thiếu một việc còn hơn hiện một hạn sai làm NVXH đi sai ngày.
+function _toDate(v) {
+  const t = fmtDate(String(v || '').trim());
+  const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const d = new Date(+m[3], +m[2] - 1, +m[1]);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function _dayStart(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+function _taskKey(t) { return [t.caseId, t.src, t.what, t.dueISO].join('|'); }
+
+function _isTaskDone(c, t) {
+  return Array.isArray(c && c.doneTasks) && c.doneTasks.indexOf(_taskKey(t)) !== -1;
+}
+
+function toggleTask(key) {
+  const cases = loadCases();
+  const caseId = String(key).split('|')[0];
+  const c = cases[caseId];
+  if (!c) return;
+  c.doneTasks = Array.isArray(c.doneTasks) ? c.doneTasks : [];
+  const i = c.doneTasks.indexOf(key);
+  if (i === -1) c.doneTasks.push(key); else c.doneTasks.splice(i, 1);
+  c.updatedAt = new Date().toISOString();
+  _cases = cases;
+  saveCases(cases);
+  renderTodo();
+}
+
+function _collectTasks() {
+  const out = [];
+  const cases = loadCases();
+  Object.values(cases).forEach(c => {
+    const D0 = c.lastAnalysis || {};
+    const nameCa = c.name || 'Ca chưa đặt tên';
+    const push = (src, what, dueRaw, note) => {
+      const d = _toDate(dueRaw);
+      if (!d) return;
+      out.push({ caseId: c.id, caseName: nameCa, src, what, note: note || '',
+                 due: d, dueISO: d.toISOString().slice(0, 10) });
+    };
+
+    if ((c.status || 'open') !== 'closed') {
+      // Hoạt động trong kế hoạch can thiệp — đúng những việc NVXH cam kết với gia đình.
+      ((D0.ke_hoach && D0.ke_hoach.hoat_dong) || []).forEach(h => {
+        if (!h || !cf(h.noi_dung)) return;
+        push('hoat_dong', cf(h.noi_dung), h.thoi_gian,
+             cf(h.nguoi_phu_trach) ? 'Người thực hiện: ' + cf(h.nguoi_phu_trach) : '');
+      });
+      // Mốc xem xét / điều chỉnh kế hoạch (Mục V của Form 4).
+      ((D0.ke_hoach && D0.ke_hoach.xem_xet) || []).forEach(x => {
+        if (cf(x)) push('xem_xet', 'Xem xét và điều chỉnh kế hoạch can thiệp', x, '');
+      });
+    } else {
+      // Theo dõi sau đóng ca — 1/3/6 tháng, do hệ thống tự sinh lúc đóng ca.
+      (c.followUpSchedule || []).forEach(f => {
+        if (f && f.due) push('follow_up', 'Theo dõi sau đóng ca — mốc ' + (f.label || f.moc + ' tháng'),
+                             f.due, 'Ca đã đóng ' + fmtVN(c.closedAt));
+      });
+    }
+  });
+  // Bỏ việc đã đánh dấu xong, sắp theo hạn gần nhất trước.
+  return out.filter(t => !_isTaskDone(cases[t.caseId], t))
+            .sort((a, b) => a.due - b.due);
+}
+
+function renderTodo() {
+  const box = document.getElementById('todo-box');
+  if (!box) return;
+  const today = _dayStart(new Date());
+  const in7 = new Date(today); in7.setDate(in7.getDate() + 7);
+  const all = _collectTasks();
+  const qua = all.filter(t => _dayStart(t.due) < today);
+  const homNay = all.filter(t => +_dayStart(t.due) === +today);
+  const tuan = all.filter(t => _dayStart(t.due) > today && _dayStart(t.due) <= in7);
+  const sau = all.length - qua.length - homNay.length - tuan.length;
+
+  if (!qua.length && !homNay.length && !tuan.length) {
+    box.hidden = all.length === 0;
+    if (all.length) {
+      box.innerHTML = '<div class="todo-hd"><span class="todo-ttl">✅ Việc cần làm</span>'
+        + '<span class="todo-sub">Không có việc nào tới hạn trong 7 ngày · còn ' + sau + ' việc ở xa hơn</span></div>';
+    }
+    return;
+  }
+  box.hidden = false;
+
+  const row = (t, tone) => {
+    const key = escAttr(_taskKey(t));
+    const hanTxt = fmtVN(t.due.toISOString());
+    const treTxt = tone === 'qua'
+      ? ' · <strong>trễ ' + Math.round((today - _dayStart(t.due)) / 86400000) + ' ngày</strong>' : '';
+    return '<div class="todo-row todo-' + tone + '">'
+      + '<button class="todo-tick" title="Đánh dấu đã làm xong" onclick="toggleTask(\'' + key + '\')">✓</button>'
+      + '<div class="todo-main"><div class="todo-what">' + esc(t.what) + '</div>'
+      + '<div class="todo-meta">' + esc(t.caseName) + ' · hạn ' + hanTxt + treTxt
+      + (t.note ? ' · ' + esc(t.note) : '') + '</div></div>'
+      + '<button class="todo-open" onclick="showCaseDetail(\'' + escAttr(t.caseId) + '\')">Mở ca</button>'
+      + '</div>';
+  };
+
+  let h = '<div class="todo-hd"><span class="todo-ttl">📌 Việc cần làm</span>'
+    + '<span class="todo-sub">'
+    + (qua.length ? '<strong class="todo-c-qua">' + qua.length + ' trễ hạn</strong> · ' : '')
+    + homNay.length + ' hôm nay · ' + tuan.length + ' trong 7 ngày'
+    + (sau ? ' · ' + sau + ' ở xa hơn' : '') + '</span></div>';
+  if (qua.length) h += '<div class="todo-grp todo-grp-qua">Trễ hạn</div>' + qua.map(t => row(t, 'qua')).join('');
+  if (homNay.length) h += '<div class="todo-grp">Hôm nay</div>' + homNay.map(t => row(t, 'nay')).join('');
+  if (tuan.length) h += '<div class="todo-grp">7 ngày tới</div>' + tuan.map(t => row(t, 'tuan')).join('');
+  box.innerHTML = h;
+}
+
+// ════════════════════════════════════════════════════════════
+// DANH BẠ NGUỒN LỰC — tra tại chỗ khi đang điền form
+// ════════════════════════════════════════════════════════════
+// Lúc điền "Nguồn lực kết nối" thì NVXH cần ngay số của phường, Hội Phụ nữ, trạm y tế, chùa...
+// Trước đây phải tra sổ tay giấy: file docs/nguon-luc/danh-ba-nguon-luc.md ĐÃ CÓ nhưng app
+// không đọc được, nên nó nằm đó không ai dùng.
+// Cách làm: đọc thẳng file .md đó lúc chạy (Vercel phục vụ tĩnh cả repo) rồi dựng bảng tra cứu.
+// Nhờ vậy tổ chức chỉ phải sửa MỘT chỗ — đúng file họ đang có — không cần ai build lại app.
+// Lưu ý bảo mật đã ghi sẵn trong file: chỉ ghi đầu mối dịch vụ công khai, KHÔNG ghi thông tin
+// của trẻ hay gia đình, vì file này ai mở app cũng tải được.
+const _NL_URL = 'docs/nguon-luc/danh-ba-nguon-luc.md';
+let _nlCache = null;
+
+// Ô còn nguyên chữ mẫu của khung thì coi như CHƯA điền — thà nói thẳng là chưa có dữ liệu còn
+// hơn hiện một bảng đầy dấu "..." làm NVXH tưởng danh bạ trống rỗng thật.
+function _nlIsPlaceholder(cells) {
+  const joined = cells.join(' ').trim();
+  if (!joined) return true;
+  if (/_\(VD/.test(joined)) return true;
+  // Ô nào còn dấu "..." ở cuối là ô chưa điền của khung mẫu ("Quận ...", "Trung tâm GDNN–GDTX
+  // ..."). Dòng nào còn một ô như vậy thì bỏ cả dòng: hiện ra chỉ làm NVXH gọi vào chỗ không có
+  // số. Nhắc trong file .md: khi điền thật thì ĐỪNG để dấu "..." trong ô.
+  if (cells.some(c => /\.{3,}\s*$/.test(String(c || '').trim()))) return true;
+  const real = cells.filter(c => c && String(c).trim() !== '');
+  return real.length < 2;
+}
+
+function _nlParse(md) {
+  const out = [];
+  let nhom = '';
+  let head = null;
+  String(md || '').split(/\r?\n/).forEach(line => {
+    const h = line.match(/^##\s+(.+?)\s*$/);
+    if (h) { nhom = h[1]; head = null; return; }
+    if (line.indexOf('|') !== 0 && !/^\s*\|/.test(line)) { return; }
+    const cells = line.split('|').slice(1, -1).map(x => x.trim());
+    if (!cells.length) return;
+    if (cells.every(c => /^:?-{2,}:?$/.test(c))) return;      // dòng gạch của bảng
+    if (!head) { head = cells; return; }                      // dòng đầu là tiêu đề cột
+    if (_nlIsPlaceholder(cells)) return;
+    const rec = {};
+    head.forEach((k, i) => { if (cells[i]) rec[k] = cells[i]; });
+    out.push({ nhom, head, cells, rec, _find: (nhom + ' ' + cells.join(' ')).toLowerCase() });
+  });
+  return out;
+}
+
+async function _nlLoad() {
+  if (_nlCache) return _nlCache;
+  const res = await fetch(_NL_URL, { cache: 'no-cache' });
+  if (!res.ok) throw new Error('Không đọc được danh bạ (' + res.status + ')');
+  _nlCache = _nlParse(await res.text());
+  return _nlCache;
+}
+
+async function openResourceDir() {
+  const ov = document.getElementById('nl-overlay');
+  const body = document.getElementById('nl-body');
+  ov.style.display = 'flex';
+  body.innerHTML = '<div class="nl-empty">Đang đọc danh bạ…</div>';
+  try {
+    const rows = await _nlLoad();
+    _nlPaint(rows, '');
+    setTimeout(() => document.getElementById('nl-search')?.focus(), 60);
+  } catch (e) {
+    body.innerHTML = '<div class="nl-empty">❌ ' + esc(e.message) + '</div>';
+  }
+}
+
+function closeResourceDir() {
+  const ov = document.getElementById('nl-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function _nlSearch(q) { _nlPaint(_nlCache || [], q); }
+
+function _nlPaint(rows, q) {
+  const body = document.getElementById('nl-body');
+  const key = String(q || '').toLowerCase().trim();
+  const hit = key ? rows.filter(r => r._find.indexOf(key) !== -1) : rows;
+  if (!rows.length) {
+    body.innerHTML = '<div class="nl-empty"><strong>Danh bạ chưa được điền.</strong><br>'
+      + 'Mở file <code>' + esc(_NL_URL) + '</code> trong repo, điền dữ liệu thật vào các bảng '
+      + '(đơn vị, địa bàn, người phụ trách, số điện thoại) rồi lưu lại — app tự đọc, không cần '
+      + 'build lại.<br><br>Khung mẫu đã có sẵn 7 nhóm: Giáo dục · Y tế &amp; Sức khỏe tâm thần · '
+      + 'Pháp lý &amp; Giấy tờ · Hỗ trợ kinh tế · Bảo vệ trẻ em khẩn cấp · Nơi chuyển gửi.</div>';
+    return;
+  }
+  if (!hit.length) { body.innerHTML = '<div class="nl-empty">Không có đầu mối nào khớp "' + esc(q) + '"</div>'; return; }
+  let html = '', cur = '';
+  hit.forEach(r => {
+    if (r.nhom !== cur) { cur = r.nhom; html += '<div class="nl-group">' + esc(cur) + '</div>'; }
+    const ten = r.cells[0] || '(không tên)';
+    const chi = r.head.map((k, i) => (i && r.cells[i]) ? '<span class="nl-k">' + esc(k) + ':</span> ' + esc(r.cells[i]) : '')
+      .filter(Boolean).join(' · ');
+    const copy = [ten].concat(r.head.map((k, i) => i && r.cells[i] ? r.cells[i] : '').filter(Boolean)).join(' — ');
+    html += '<div class="nl-row"><div class="nl-row-main"><div class="nl-ten">' + esc(ten) + '</div>'
+      + '<div class="nl-chi">' + chi + '</div></div>'
+      + '<button class="nl-copy" title="Chép dòng này để dán vào ô Nguồn lực kết nối" '
+      + 'onclick="_nlCopy(this,\'' + escAttr(copy).replace(/'/g, "&#39;") + '\')">Chép</button></div>';
+  });
+  body.innerHTML = html;
+}
+
+function _nlCopy(btn, txt) {
+  const t = String(txt || '');
+  const done = () => { const old = btn.textContent; btn.textContent = '✓ Đã chép';
+    setTimeout(() => { btn.textContent = old; }, 1600); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(done, () => showNotif('⚠️ Không chép được — hãy bôi đen và copy tay', 'warn'));
+  } else {
+    // Trình duyệt cũ / trang không phải https: vẫn phải chép được, đây là việc dùng hằng ngày.
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) { showNotif('⚠️ Không chép được', 'warn'); }
+    ta.remove();
+  }
+}
+
+// ── In PHIẾU TRẮNG để mang đi vãng gia ───────────────────────────────────────────────────
+// NVXH đi vãng gia KHÔNG mang laptop: cần phiếu trắng in ra giấy để viết tay tại nhà trẻ, về
+// mới nhập vào app. Trước đây muốn có phiếu trắng phải tạo một ca giả rồi tải form của ca đó —
+// vừa lằng nhằng vừa để lại ca rác trong danh sách.
+function _blankD() {
+  return { co_ban: {}, gia_dinh: { nguoi_cham_soc: {}, thanh_vien: [] }, tinh_trang: {
+      giay_khai_sinh: {}, thuong_tru: {}, cccd: {}, hoc_van: {}, suc_khoe: {}, tam_ly: {} },
+    danh_gia: {}, vang_gia: {}, vang_gia_ds: [], ke_hoach: { nhu_cau_ho_tro: [], hoat_dong: [], xem_xet: [] },
+    cap_nhat: [], tien_do: [], tien_trinh: {}, chuyen_gui: {}, ket_thuc: {},
+    nguon_luc_xa_hoi: {}, _report: null, _verified: null, _blank: true };
+}
+
+async function printBlankForm(fi) {
+  const keep = D, keepPick = _vgPick;
+  D = _blankD(); _vgPick = -1;
+  try {
+    await dlDocxBranded(fi != null ? fi : (curForm || 0));
+    showNotif('🖨 Đã tải phiếu trắng — in ra giấy để mang đi vãng gia, về nhập lại vào app', 'ok', 6000);
+  } catch (e) {
+    showNotif('❌ Không tải được phiếu trắng: ' + e.message, 'err', 6000);
+  } finally { D = keep; _vgPick = keepPick; }
+}
+
 // ── Chọn buổi vãng gia để xem / in riêng ─────────────────────────────────────────────────
 // Ca vãng gia 4 lần thì tải Form 2 ra một file 4 phiếu. Muốn in lại riêng lần 2 mà phải tự
 // đếm số trang trong Word thì rất dễ in sai buổi. Ô chọn này lọc cả bản trên màn hình lẫn
@@ -2944,6 +3212,8 @@ function applyFeatureFlags() {
   // để không có hai lối vào cùng một chỗ.
   const mnEval = document.getElementById('mnav-analysis');
   const meEval = document.getElementById('hdr-more-eval');
+  const meAdm = document.getElementById('hdr-more-admin');
+  if (meAdm) meAdm.hidden = !isAdmin();
   if (mnEval) mnEval.hidden = !F('evalTab');
   if (meEval) meEval.hidden = F('evalTab');
   // Hàng nút được thiết kế cho 1 nút chính + 3 ô vuông nhỏ. Khi tắt bớt tính năng, ô vuông 60px
@@ -2960,7 +3230,7 @@ function switchMain(tab) {
     document.getElementById('panel-'+t)?.classList.toggle('active', t===tab);
     document.getElementById('mnav-'+t)?.classList.toggle('active', t===tab);
   });
-  if (tab==='cases') renderCaseList();
+  if (tab==='cases') { renderCaseList(); renderTodo(); }
   if (tab==='analysis') renderAnalysisPanel();
   // Bấm thẳng vào tab "Biểu mẫu QLTH" trước đây không vẽ lại biểu mẫu — chỉ có nút "Điền form"
   // (fillForms) hoặc bấm từng form mới gọi showForm(). Hậu quả: ca đang mở đã có dữ liệu nhưng
@@ -3680,6 +3950,8 @@ function renderFormTab(idx) {
       <button class="btn-fv-save" onclick="saveCaseNow()">💾 Lưu ca</button>
       <button class="btn-dl-docx-brand" title="Bản in chính thức — có bìa logo Thảo Đàn và footer trên mỗi trang. Đây là bản để in ra giấy và lưu hồ sơ." onclick="dlDocxBranded(${idx})">📄 Tải bản in</button>
       <button class="btn-dl-docx btn-dl-alt" title="Bản Word thô, không bìa không footer — chỉ dùng khi cần cắt dán nội dung sang tài liệu khác" onclick="dlDocx(${idx})">Bản thô</button>
+      <button class="btn-dl-docx btn-dl-alt" title="Phiếu TRẮNG để in ra giấy mang đi vãng gia — viết tay tại nhà trẻ, về nhập lại vào app" onclick="printBlankForm(${idx})">Phiếu trắng</button>
+      <button class="btn-dl-docx btn-dl-alt" title="Danh bạ nguồn lực: phường, Hội Phụ nữ, trạm y tế, chùa, tổng đài 111..." onclick="openResourceDir()">📞 Danh bạ</button>
     </div>
   </div>`;
 
@@ -4664,9 +4936,10 @@ function showCaseDetail(id) {
   const statusBadge = isClosed
     ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:20px;padding:2px 10px;font-size:14px;font-weight:700;">✅ Đã đóng</span>`
     : `<span style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:20px;padding:2px 10px;font-size:14px;font-weight:700;">🔵 Đang mở</span>`;
-  const closeBtn = isClosed
+  const closeBtn = (isClosed
     ? `<button class="btn-secondary" style="color:#16a34a;border-color:#bbf7d0;" onclick="_reopenCaseFromList('${id}')">🔓 Mở lại ca</button>`
-    : `<button class="btn-secondary" style="color:#f07020;border-color:#fed7aa;" onclick="_closeCaseFromList('${id}')">✅ Đóng ca</button>`;
+    : `<button class="btn-secondary" style="color:#f07020;border-color:#fed7aa;" onclick="_closeCaseFromList('${id}')">✅ Đóng ca</button>`)
+    + `<button class="btn-secondary" title="Chuyển ca này cho NVXH khác — dùng khi nghỉ phép dài, nghỉ việc hoặc luân chuyển địa bàn" onclick="transferCase('${id}')">🤝 Bàn giao</button>`;
 
   // ── Tab contents ──
   const tabOverview = `
@@ -4840,19 +5113,117 @@ function _caseStatusLogHTML(c) {
   }
   const rows = (log.length ? log : old).slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
   if (!rows.length) return '';
-  return '<div class="cd-section"><div class="cd-section-title">Lịch sử đóng / mở lại ca</div>'
+  return '<div class="cd-section"><div class="cd-section-title">Lịch sử đóng / mở lại / bàn giao ca</div>'
     + '<div style="font-size:13px;color:var(--t3);margin:-2px 0 4px;">Theo thứ tự thời gian — cũ nhất ở trên.</div>'
     + '<div class="cs-log">' + rows.map(r => {
         const isClose = r.action === 'close';
+        const nhan = r.action === 'close' ? '✅ Đóng ca'
+                   : r.action === 'reopen' ? '🔓 Mở lại ca'
+                   : r.action === 'transfer' ? '🤝 Bàn giao ca' : esc(r.action || '');
         const meta = [fmtVN(r.at), r.stage ? 'GĐ ' + r.stage : '', r.by ? esc(r.by) : ''].filter(Boolean).join(' · ');
         const reason = cf(r.reason)
           ? esc(r.reason)
           : '<em style="color:var(--t3)">Không có lý do ghi lại (mốc cũ, trước khi hệ thống yêu cầu ghi lý do)</em>';
         return '<div class="cs-log-item ' + (isClose ? 'close' : 'reopen') + '">'
-          + '<div class="cs-log-hd">' + (isClose ? '✅ Đóng ca' : '🔓 Mở lại ca') + '</div>'
+          + '<div class="cs-log-hd">' + nhan + '</div>'
           + '<div class="cs-log-meta">' + meta + '</div>'
           + '<div>' + reason + '</div></div>';
       }).join('') + '</div></div>';
+}
+
+// ── Bàn giao ca cho NVXH khác ─────────────────────────────────────────────────────────────
+// Ca gắn cứng với người tạo (policy users_own_cases: auth.uid() = user_id), nên nhân sự nghỉ
+// việc, nghỉ phép dài hay luân chuyển địa bàn thì ca không chuyển được cho ai — trưởng nhóm chỉ
+// XEM được. Việc đổi chủ ca phải làm ở tầng DB bằng hàm SECURITY DEFINER (migration 0016), vì
+// chính người giao sắp không còn quyền ghi lên dòng đó nữa.
+// THỨ TỰ QUAN TRỌNG: ghi sổ vào hồ sơ ca và LƯU XONG trước, rồi mới gọi chuyển. Đảo lại thì lần
+// lưu sau khi chuyển sẽ bị RLS chặn và mất luôn dòng sổ.
+function transferCase(id) {
+  const cases = loadCases();
+  const c = cases[id];
+  if (!c) return;
+  if (!_currentUser) { showNotif('⚠️ Cần đăng nhập để bàn giao ca', 'warn'); return; }
+  if (c._ownerId && c._ownerId !== _currentUser.id && !isAdmin()) {
+    showNotif('⚠️ Chỉ chủ ca hiện tại hoặc quản trị mới bàn giao được ca này', 'warn', 6000);
+    return;
+  }
+  showConfirm({
+    icon: '🤝',
+    title: 'Bàn giao ca cho NVXH khác?',
+    body: '"' + (c.name || 'Ca này') + '" sẽ chuyển sang người nhận, kèm cả tệp đính kèm.\n\n'
+        + 'Sau khi bàn giao, bạn KHÔNG còn mở được ca này nữa (trừ quản trị). Lần bàn giao được '
+        + 'ghi vào sổ ở máy chủ, không sửa lại được.',
+    okText: 'Bàn giao',
+    okClass: 'cmb-ok-orange',
+    prompt2: { label: 'Email người nhận (bắt buộc)', type: 'email',
+               placeholder: 'nvxh@thaodancenter.org.vn' },
+    prompt: { label: 'Vì sao bàn giao? (bắt buộc)', minLen: 10,
+              placeholder: 'VD: NVXH phụ trách nghỉ phép dài từ 01/10/2026; chuyển cho NVXH cùng địa bàn quận 12.' },
+    async onConfirm(reason, email) {
+      try {
+        // 1) Ghi sổ vào hồ sơ ca rồi lưu — lúc này mình còn là chủ ca nên còn quyền ghi.
+        const cs = loadCases();
+        const cc = cs[id];
+        if (cc) {
+          _logCaseStatus(cc, 'transfer', reason + ' → ' + email, cc.currentStage);
+          cc.updatedAt = new Date().toISOString();
+          _cases = cs;
+          await saveCases(cs);
+        }
+        // 2) Đổi chủ ở tầng DB.
+        const { data, error } = await _supabase.rpc('transfer_case',
+          { p_case_id: id, p_to_email: email, p_reason: reason });
+        if (error) throw error;
+        showNotif('🤝 Đã bàn giao ca cho ' + ((data && data.to_email) || email)
+          + ' — ca này không còn trong danh sách của bạn', 'ok', 8000);
+        // 3) Bỏ ca khỏi danh sách tại máy (không phải xóa dữ liệu — nó đã sang người khác).
+        if (curCaseId === id) { D = null; curCaseId = null; currentStage = 1; updateStageUI(); }
+        const cs2 = loadCases(); delete cs2[id]; _cases = cs2;
+        renderCaseList(); renderTodo(); updateCasesCount();
+        document.getElementById('cases-main').innerHTML =
+          '<div class="case-detail-empty"><div><div style="font-size:38px;margin-bottom:12px;">🤝</div>'
+          + '<div style="font-size:17px;font-weight:600;">Đã bàn giao ca</div></div></div>';
+      } catch (e) {
+        // Nói nguyên văn lỗi của DB: các thông báo trong hàm 0016 đã viết cho người đọc
+        // (VD "Người nhận phải đăng nhập app ít nhất một lần trước khi nhận ca").
+        showNotif('❌ Không bàn giao được: ' + (e.message || e), 'err', 10000);
+      }
+    }
+  });
+}
+
+// ── Gán vai trò / nhóm (chỉ quản trị) ────────────────────────────────────────────────────
+function openAdminPanel() {
+  if (!isAdmin()) { showNotif('⚠️ Chỉ quản trị mới mở được mục này', 'warn'); return; }
+  document.getElementById('adm-msg').textContent = '';
+  document.getElementById('adm-overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('adm-email')?.focus(), 60);
+}
+
+function closeAdminPanel() {
+  const ov = document.getElementById('adm-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+async function submitUserRole() {
+  const msg = document.getElementById('adm-msg');
+  const email = (document.getElementById('adm-email').value || '').trim();
+  const role = document.getElementById('adm-role').value;
+  const team = (document.getElementById('adm-team').value || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    msg.textContent = '⚠️ Email chưa đúng dạng'; msg.className = 'adm-msg warn'; return;
+  }
+  msg.textContent = 'Đang gán…'; msg.className = 'adm-msg';
+  try {
+    const { data, error } = await _supabase.rpc('set_user_role',
+      { p_email: email, p_role: role, p_team_id: team });
+    if (error) throw error;
+    msg.textContent = '✅ Đã gán ' + role + (team ? ' · nhóm ' + team : ' · không thuộc nhóm nào')
+      + ' cho ' + email + '. Người đó tải lại trang là có hiệu lực.';
+    msg.className = 'adm-msg ok';
+  } catch (e) {
+    msg.textContent = '❌ ' + (e.message || e); msg.className = 'adm-msg warn';
+  }
 }
 
 // ── Sổ ghi đóng / mở lại ca ──────────────────────────────────────────────────────────────
@@ -4991,13 +5362,14 @@ function loadCaseIntoApp(id) {
 // ── CUSTOM CONFIRM MODAL ──
 let _confirmCb = null;
 let _confirmPrompt = null;   // { label, placeholder, minLen } khi hộp thoại có ô lý do
+let _confirmPrompt2 = null;  // { label, placeholder, type } khi có thêm ô nhập một dòng
 let _cancelCb = null;
 // prompt: { label, placeholder, minLen } → hiện ô lý do BẮT BUỘC, khóa nút xác nhận tới khi
 // đủ số ký tự, rồi truyền nguyên văn lý do vào onConfirm(reason).
 // Dùng cho quyết định phải giải trình được về sau: đóng ca và mở lại ca. Lý do bắt buộc chứ
 // không phải tùy chọn — hồ sơ bảo vệ trẻ mà có mốc đóng/mở không ai biết vì sao thì tới lúc
 // giám sát hoặc thanh tra hỏi lại là không trả lời được.
-function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', okClass='cmb-ok-red', onConfirm=null, onCancel=null, prompt=null}={}) {
+function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', okClass='cmb-ok-red', onConfirm=null, onCancel=null, prompt=null, prompt2=null}={}) {
   _confirmCb = onConfirm; _cancelCb = onCancel;
   document.getElementById('cmb-icon').textContent = icon;
   document.getElementById('cmb-title').textContent = title;
@@ -5010,7 +5382,23 @@ function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', ok
   const box = document.getElementById('cmb-prompt');
   const ta = document.getElementById('cmb-p-input');
   const hint = document.getElementById('cmb-p-hint');
+  // prompt2: ô nhập MỘT DÒNG hiện phía trên ô lý do (VD email người nhận khi bàn giao ca).
+  // Tách riêng thay vì nhồi vào prompt vì hai ô có kiểu kiểm khác nhau: một cái đếm ký tự, một
+  // cái phải đúng dạng email.
+  const box2 = document.getElementById('cmb-prompt2');
+  const one = document.getElementById('cmb-p2-input');
   _confirmPrompt = prompt || null;
+  _confirmPrompt2 = prompt2 || null;
+  if (prompt2) {
+    box2.hidden = false;
+    document.getElementById('cmb-p2-lb').textContent = prompt2.label || '';
+    one.placeholder = prompt2.placeholder || '';
+    one.type = prompt2.type || 'text';
+    one.value = prompt2.value || '';
+  } else {
+    box2.hidden = true;
+    one.oninput = null;
+  }
   if (prompt) {
     const minLen = prompt.minLen || 10;
     box.hidden = false;
@@ -5020,15 +5408,18 @@ function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', ok
     ok.disabled = true;
     const paint = () => {
       const n = ta.value.trim().length;
-      ok.disabled = n < minLen;
+      const okOne = !prompt2 || _confirmOneOk(one.value);
+      ok.disabled = n < minLen || !okOne;
       hint.textContent = n < minLen
         ? 'Cần thêm ' + (minLen - n) + ' ký tự nữa — lý do này được lưu vào hồ sơ ca.'
-        : 'Lý do được lưu vào hồ sơ ca kèm ngày và người thực hiện.';
-      hint.className = 'cmb-p-hint' + (n < minLen ? ' warn' : '');
+        : (okOne ? 'Lý do được lưu vào hồ sơ ca kèm ngày và người thực hiện.'
+                 : 'Còn thiếu ' + (prompt2.label || 'thông tin ở ô trên') + '.');
+      hint.className = 'cmb-p-hint' + ((n < minLen || !okOne) ? ' warn' : '');
     };
     ta.oninput = paint;
+    if (prompt2) one.oninput = paint;
     paint();
-    setTimeout(() => ta.focus(), 60);
+    setTimeout(() => (prompt2 ? one : ta).focus(), 60);
   } else {
     box.hidden = true;
     ta.oninput = null;
@@ -5036,19 +5427,31 @@ function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', ok
   }
   document.getElementById('confirm-overlay').classList.add('show');
 }
+// Ô một dòng coi là hợp lệ khi: có nội dung, và nếu là email thì phải đúng dạng.
+function _confirmOneOk(v) {
+  const t = String(v || '').trim();
+  if (!t) return false;
+  if (_confirmPrompt2 && _confirmPrompt2.type === 'email') return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(t);
+  return t.length >= (_confirmPrompt2 && _confirmPrompt2.minLen || 1);
+}
+
 function _doConfirm() {
   const reason = _confirmPrompt
     ? (document.getElementById('cmb-p-input').value || '').trim() : undefined;
+  const extra = _confirmPrompt2
+    ? (document.getElementById('cmb-p2-input').value || '').trim() : undefined;
   // Chặn cả ở đây, không chỉ dựa vào nút bị disabled — Enter hoặc gọi thẳng _doConfirm() vẫn
   // đi qua được nếu chỉ khóa ở giao diện.
   if (_confirmPrompt && reason.length < (_confirmPrompt.minLen || 10)) return;
+  if (_confirmPrompt2 && !_confirmOneOk(extra)) return;
   document.getElementById('confirm-overlay').classList.remove('show');
-  const cb = _confirmCb; _confirmCb = null; _cancelCb = null; _confirmPrompt = null;
-  if (cb) cb(reason);
+  const cb = _confirmCb; _confirmCb = null; _cancelCb = null;
+  _confirmPrompt = null; _confirmPrompt2 = null;
+  if (cb) cb(reason, extra);
 }
 function _cancelConfirm() {
   document.getElementById('confirm-overlay').classList.remove('show');
-  const cb = _cancelCb; _confirmCb = null; _cancelCb = null; _confirmPrompt = null;
+  const cb = _cancelCb; _confirmCb = null; _cancelCb = null; _confirmPrompt = null; _confirmPrompt2 = null;
   if (cb) cb();
 }
 

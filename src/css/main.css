@@ -1632,3 +1632,91 @@ body.hist-mode { padding-bottom:64px; }
   border:1px solid var(--bd2) !important;
 }
 .btn-dl-alt:hover { color:var(--t1) !important; border-color:var(--navy) !important; }
+
+/* ── Danh bạ nguồn lực ──────────────────────────────────────────────────────────────────── */
+.nl-modal { max-width:760px; width:min(760px,94vw); display:flex; flex-direction:column; max-height:88vh; }
+.nl-tools { padding:12px 16px 8px; }
+.nl-search {
+  width:100%; box-sizing:border-box; font-family:inherit; font-size:16px;
+  padding:10px 13px; min-height:44px; border:1px solid var(--bd2); border-radius:8px;
+  background:var(--white); color:var(--t1);
+}
+.nl-search:focus { outline:none; border-color:var(--navy); box-shadow:0 0 0 3px var(--navy-tint); }
+.nl-body { flex:1 1 auto; overflow-y:auto; padding:0 16px 8px; }
+.nl-empty { padding:22px 4px; font-size:15px; line-height:1.6; color:var(--t2); }
+.nl-group {
+  font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.8px;
+  color:var(--navy); background:var(--navy-tint); padding:6px 10px; border-radius:6px;
+  margin:12px 0 6px;
+}
+.nl-row {
+  display:flex; align-items:flex-start; gap:10px;
+  padding:9px 2px; border-bottom:1px solid var(--bd);
+}
+.nl-row-main { flex:1 1 auto; min-width:0; }
+.nl-ten { font-size:15px; font-weight:700; color:var(--t1); }
+.nl-chi { font-size:14px; line-height:1.5; color:var(--t2); margin-top:2px; }
+.nl-k { font-weight:700; color:var(--t3); }
+.nl-copy {
+  flex:0 0 auto; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer;
+  min-height:38px; padding:0 12px; border-radius:7px;
+  background:var(--bg2); color:var(--t1); border:1px solid var(--bd2);
+}
+.nl-copy:hover { background:var(--navy); color:#fff; border-color:var(--navy); }
+.nl-foot { padding:10px 16px 14px; font-size:13px; line-height:1.5; color:var(--t3); border-top:1px solid var(--bd); }
+
+/* ── Việc cần làm ───────────────────────────────────────────────────────────────────────── */
+.todo-box {
+  flex-shrink:0; margin:12px 16px 0; padding:10px 12px;
+  background:var(--white); border:1px solid var(--bd); border-radius:10px;
+  max-height:38vh; overflow-y:auto;
+}
+.todo-hd { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:4px; }
+.todo-ttl { font-size:16px; font-weight:800; color:var(--t1); }
+.todo-sub { font-size:14px; color:var(--t3); }
+.todo-c-qua { color:#b91c1c; }
+.todo-grp {
+  font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.8px;
+  color:var(--t3); margin:9px 0 3px;
+}
+.todo-grp-qua { color:#b91c1c; }
+.todo-row {
+  display:flex; align-items:center; gap:9px;
+  padding:7px 8px; border-radius:7px; border-left:4px solid var(--bd2);
+  background:var(--bg2); margin-bottom:5px;
+}
+.todo-qua  { border-left-color:#dc2626; background:#fef2f2; }
+.todo-nay  { border-left-color:#f07020; background:#fff7ed; }
+.todo-tuan { border-left-color:#2563eb; }
+.todo-main { flex:1 1 auto; min-width:0; }
+.todo-what { font-size:15px; font-weight:700; color:var(--t1); line-height:1.4; }
+.todo-meta { font-size:13.5px; color:var(--t2); line-height:1.45; margin-top:1px; }
+.todo-tick, .todo-open {
+  flex:0 0 auto; font-family:inherit; cursor:pointer; font-weight:800;
+  min-height:38px; border-radius:7px; border:1px solid var(--bd2);
+  background:var(--white); color:var(--t2);
+}
+.todo-tick { width:38px; font-size:17px; }
+.todo-open { font-size:13.5px; padding:0 11px; }
+.todo-tick:hover { background:#16a34a; color:#fff; border-color:#16a34a; }
+.todo-open:hover { background:var(--navy); color:#fff; border-color:var(--navy); }
+@media (max-width:640px) {
+  .todo-box { margin:10px 11px 0; max-height:44vh; }
+  .todo-row { flex-wrap:wrap; }
+  .todo-open { margin-left:47px; }
+}
+
+/* Ô nhập một dòng trong hộp thoại xác nhận (email người nhận khi bàn giao ca) */
+.cmb-p-one { min-height:44px !important; resize:none; }
+/* Màn gán vai trò / nhóm (chỉ quản trị) */
+.adm-body { padding:14px 16px 18px; }
+.adm-lb { display:block; font-size:14px; font-weight:800; color:var(--t1); margin:10px 0 5px; }
+.adm-note {
+  font-size:13.5px; line-height:1.55; color:var(--t2);
+  background:var(--bg2); border:1px solid var(--bd); border-radius:8px;
+  padding:9px 11px; margin:12px 0 4px;
+}
+.adm-go { width:100%; margin-top:10px; min-height:44px; }
+.adm-msg { font-size:14px; line-height:1.5; margin-top:9px; color:var(--t2); }
+.adm-msg.ok { color:#166534; font-weight:700; }
+.adm-msg.warn { color:#b45309; font-weight:700; }

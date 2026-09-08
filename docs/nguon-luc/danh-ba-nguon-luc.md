@@ -9,6 +9,11 @@
 > có tên người phụ trách và số điện thoại thì AI sẽ đề xuất được đúng đầu mối,
 > thay vì nói chung chung "kết nối với trường học địa phương".
 >
+> **App ĐỌC TRỰC TIẾP file này** — mở nút "📞 Danh bạ" trên thanh công cụ biểu mẫu là thấy,
+> không cần build lại gì. Vì vậy khi điền, **đừng để dấu `...` trong ô**: dòng nào còn ô kết
+> thúc bằng `...` sẽ bị coi là dòng mẫu chưa điền và app bỏ qua, để NVXH không gọi vào chỗ
+> không có số. Ô nào chưa có thông tin thì để **trống**.
+>
 > Sau khi điền, chạy: `node scripts/index-docs.js`
 >
 > **LƯU Ý BẢO MẬT:** file này sẽ được nạp lên Supabase và một phần nội dung

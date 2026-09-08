@@ -125,6 +125,7 @@ Chạy theo đúng thứ tự trong `supabase/migrations/`, dán từng file và
 | `0013_encrypt_full_case_data.sql` | Mã hóa **toàn bộ** khối JSONB `data` qua RPC `encrypt_case_data`/`decrypt_case_data`. Vẫn giữ cột `data` plaintext song song làm dự phòng — nếu giải mã lỗi, app tự dùng lại, không bao giờ mất quyền xem ca. Dùng chung secret Vault với `0012` |
 | `0014_fix_admin_email_policy_permission.sql` | **Sửa lỗi `permission denied for table users` khi lưu ca lần thứ hai.** Các policy admin từ `0003`→`0010` đọc trực tiếp `auth.users`, mà role `authenticated` không có quyền SELECT trên bảng đó; `INSERT … ON CONFLICT DO UPDATE` lại đòi cả policy SELECT nên câu lệnh lưu thất bại. Migration bọc phép so email vào `private.is_super_admin()` (SECURITY DEFINER) rồi dựng lại 5 policy. Không đổi dữ liệu, không đổi ai xem được ca nào |
 | `0015_fix_profiles_role_values.sql` | **Sửa lỗi của `0011`.** Đã chạy: `convalidated = true`, `role = 'officer'` cho cả 2 tài khoản. `alter table … add column if not exists role` bị Postgres bỏ qua vì cột `role` đã có sẵn (giá trị `'user'`) **và đã có ràng buộc `profiles_role_check` riêng của schema gốc, với bộ giá trị không chứa `'officer'`/`'team_leader'`**, nên cả `default 'officer'` lẫn ràng buộc `check` mới đều không được tạo — khiến `private.is_team_leader()` không bao giờ khớp và cơ chế trưởng nhóm coi như không tồn tại. Migration **bỏ ràng buộc cũ trước**, rồi chuẩn hóa `'user'` → `'officer'`, đặt lại DEFAULT/NOT NULL và tạo lại `check` bằng `add constraint` (đảo thứ tự là lỗi 23514). Chỉ cần chạy nếu định dùng vai trưởng nhóm |
+| `0016_transfer_case_and_set_role.sql` | **Bàn giao ca** cho NVXH khác (hàm `transfer_case`, sổ `case_transfers` ghi ở tầng DB nên không sửa lại được từ app) và **gán vai trò/nhóm** (`set_user_role`) — trước đó phải chạy SQL tay. Lý do bàn giao là **bắt buộc**, kiểm ngay trong hàm chứ không chỉ ở giao diện |
 
 ### Bước làm tay không nằm trong migration nào
 
@@ -254,7 +255,7 @@ phục nguyên văn vào hồ sơ sau khi AI trả kết quả. Ngoại lệ duy
 **Khác:** 5 giai đoạn quản lý ca · chat tư vấn CTXH có RAG · **tra cứu tiền lệ** (tìm ca cũ tương
 tự, chạy cục bộ, không gửi gì cho AI) · popup cảnh báo khi AI thấy rủi ro Cao · mã ca tự sinh
 `CA-YYYY-MM-STT` · xuất Word/PDF có chữ ký và số trang · **soạn công văn chuyển gửi** từ Form 7 ·
-theo dõi sau đóng ca · **đóng ca / mở lại ca bắt buộc ghi lý do** (lưu kèm ngày, người thực hiện
+**việc cần làm** (gộp mọi ca, dựng từ ngày tháng đã có trong kế hoạch) · **danh bạ nguồn lực** tra tại chỗ · **in phiếu trắng** mang đi vãng gia · **bàn giao ca** cho NVXH khác · theo dõi sau đóng ca · **đóng ca / mở lại ca bắt buộc ghi lý do** (lưu kèm ngày, người thực hiện
 và giai đoạn; xem lại trong trang chi tiết ca) · **xem lại và in lại bản lưu** của từng mốc lịch
 sử (buổi vãng gia, bản kế hoạch, lần cập nhật tiến trình) · audit log.
 
@@ -299,7 +300,7 @@ Không có test tự động trong repo (app là script không module, không c�
 Kiểm thử được viết dưới dạng script Playwright chạy ngoài, dựng máy chủ tĩnh trên `localhost:8899`
 và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồng mà không cần khóa thật.
 
-**Lần QA gần nhất: 08/09/2026 — 26 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
+**Lần QA gần nhất: 08/09/2026 — 29 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
 
 | Bộ | Kết quả | Phủ những gì |
 |---|---|---|
@@ -311,6 +312,9 @@ và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồn
 | `contrast` | tất cả đạt | Tương phản WCAG mọi phần tử có chữ, chặn dưới 2.5:1; soi file CSS tìm `var()` trỏ vào biến chưa khai báo mà không có giá trị dự phòng |
 | `hover` | 73/73 phần tử | Tương phản ở **cả** trạng thái nghỉ và trỏ chuột — bộ cũ chỉ kiểm lúc đứng yên nên bỏ sót chip gợi ý mất chữ khi hover |
 | `pii` | 20/20 đạt | Đường ghi chép → AI → biểu mẫu của SĐT/CCCD/email: che có đánh số, khôi phục nguyên văn, hai số khác nhau không lẫn người, không phá số thường ("bé 12 tuổi"), dung sai khi model sao lại nhãn sai kiểu (`[ sdt_1 ]`, `[SĐT_1]`); `deepMerge` với mảng giàu/nghèo hơn |
+| `todo` | 20/20 đạt | "Việc cần làm": dựng đúng việc từ hoạt động kế hoạch + mốc xem xét + lịch theo dõi sau đóng ca; chia trễ hạn/hôm nay/7 ngày; ca đã đóng chỉ lấy lịch theo dõi; hạn không phải ngày cụ thể ("hàng tháng", "2 tuần") thì bỏ qua chứ không bịa hạn; đánh dấu xong lưu vào hồ sơ ca |
+| `handover` | 26/26 đạt | Bàn giao ca: đòi cả email người nhận (đúng dạng) lẫn lý do ≥10 ký tự, ghi sổ TRƯỚC rồi mới gọi chuyển, RPC lỗi thì ca vẫn còn tại máy và hiện nguyên văn lỗi máy chủ, không phải chủ ca thì không mở được hộp thoại; màn gán vai trò chỉ quản trị mở được (gọi trực tiếp cũng chặn) |
+| `nl` | 18/18 đạt | Danh bạ nguồn lực đọc từ file .md: bỏ dòng mẫu chưa điền, tìm theo tên/nhóm/số điện thoại, nút Chép; phiếu trắng KHÔNG lẫn dữ liệu ca đang mở và trả dữ liệu ca về nguyên vẹn sau khi in |
 | `stbar` | 18/18 đạt | Dải 5 chấm tiến trình phải khớp giữa thẻ ca bên trái và trang chi tiết bên phải — quét đủ 10 tổ hợp (5 giai đoạn × mở/đóng), đọc màu thật đã tính ra chứ không đọc code. Ca đóng ở GĐ4 mà chưa từng tới GĐ5 → GĐ5 xám; ca **đã từng** tới GĐ5 rồi lùi lại (mở lại ca, lùi giai đoạn) → GĐ5 vẫn xanh, đọc bằng chứng từ sổ đóng/mở ca và các mốc ghi chép |
 | `vglan` | 14/14 đạt | Đánh số buổi vãng gia qua luồng thật (giả lập AI, gọi `runAnalysis`): buổi đầu ra ĐÚNG 1 phiếu, bấm Phân tích lại cùng nội dung thì cập nhật phiếu đó chứ không sinh phiếu trùng, đổi nội dung mới thành buổi 2, ghi chép nói "lần thứ 5" thì lấy số theo ghi chép, ô chọn buổi liệt kê đúng |
 | `ground2` | 14/14 đạt | Truy vết nguồn phải đối chiếu với ghi chép của CẢ ca: tái hiện báo động giả của cách cũ (4/4 ô Form 0 bị đánh dấu sau khi phân tích GĐ2), rồi kiểm cách mới cho lại "có căn cứ" mà vẫn bắt được 3 giá trị bịa; gom đủ 7 nguồn ghi chép, bỏ trùng; ca chưa có ghi chép thì không đánh dấu bừa; hồ sơ cũ dùng `entries` làm căn cứ |
@@ -350,7 +354,9 @@ trong code. Nơi nên đọc trước:
 
 | Chủ đề | Đọc ở đâu |
 |---|---|
-| Vì sao mỗi migration làm như vậy | comment đầu mỗi file trong `supabase/migrations/` — đặc biệt `0014` (lỗi phân quyền khi lưu ca) và `0015` (lỗi ràng buộc `role` mà `0011` bỏ sót) |
+| Vì sao mỗi migration làm như vậy | comment đầu mỗi file trong `supabase/migrations/` — đặc biệt `0014` (lỗi phân quyền khi lưu ca), `0015` (lỗi ràng buộc `role` mà `0011` bỏ sót) và `0016` (bàn giao ca + gán vai trò) |
+| Việc cần làm dựng từ đâu | `main.js` gần `_collectTasks`, `renderTodo` |
+| Bàn giao ca: vì sao ghi sổ trước khi chuyển | `main.js` gần `transferCase`; và `supabase/migrations/0016_*.sql` |
 | Che danh tính, khôi phục tên | `main.js` gần `pseudonymizeForAI`, `_maskPiiKeys`, `maskAddressInText`, `maskContactsInText`, `restoreIdentityText` |
 | Vì sao SĐT/email từng không điền được vào form | `main.js` ngay trên `maskContactsInText` — trước đây thay bằng `***` là mất hẳn giá trị |
 | Vì sao trần token là 8192 | `api/chat.js` ngay trên `MAX_TOKENS_CAP` — JSON trích xuất bị cắt cụt là biểu mẫu trống trơn |
