@@ -2,6 +2,12 @@
 
 Công cụ hỗ trợ Nhân viên Công tác Xã hội (NVXH) tại Thảo Đàn SSC quản lý ca bảo vệ trẻ em theo quy trình 5 giai đoạn (Tiếp cận → Vãng gia → Kế hoạch → Tiến trình → Kết thúc), có AI hỗ trợ trích xuất form và tư vấn chuyên môn.
 
+Hai trong năm giai đoạn **lặp nhiều lần** trong một ca: **GĐ2 Vãng gia** (mỗi buổi vãng gia là
+một phúc trình riêng, đánh số "Lần vãng gia thứ N", in ra mỗi buổi một phiếu) và **GĐ4 Tiến
+trình** (mỗi buổi theo dõi nối thêm bản ghi vào Form 5/6). Ba giai đoạn còn lại chạy một lần;
+chạy lại là sửa chứ không tạo bản mới. Ở cả hai giai đoạn lặp, **ở lại giai đoạn đó** và bấm
+phân tích lại cho mỗi buổi — chỉ bấm "Hoàn thành" khi thật sự chuyển bước.
+
 ## Kiến trúc
 
 Vanilla JS (không framework, không bundler cho `main.js`) + Vite (chỉ dùng cho dev server) + Vercel Serverless Functions + Supabase (Postgres + Auth + Storage).
@@ -284,7 +290,7 @@ Không có test tự động trong repo (app là script không module, không c�
 Kiểm thử được viết dưới dạng script Playwright chạy ngoài, dựng máy chủ tĩnh trên `localhost:8899`
 và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồng mà không cần khóa thật.
 
-**Lần QA gần nhất: 08/09/2026 — 16 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
+**Lần QA gần nhất: 08/09/2026 — 18 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
 
 | Bộ | Kết quả | Phủ những gì |
 |---|---|---|
@@ -296,6 +302,8 @@ và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồn
 | `contrast` | tất cả đạt | Tương phản WCAG mọi phần tử có chữ, chặn dưới 2.5:1; soi file CSS tìm `var()` trỏ vào biến chưa khai báo mà không có giá trị dự phòng |
 | `hover` | 73/73 phần tử | Tương phản ở **cả** trạng thái nghỉ và trỏ chuột — bộ cũ chỉ kiểm lúc đứng yên nên bỏ sót chip gợi ý mất chữ khi hover |
 | `pii` | 20/20 đạt | Đường ghi chép → AI → biểu mẫu của SĐT/CCCD/email: che có đánh số, khôi phục nguyên văn, hai số khác nhau không lẫn người, không phá số thường ("bé 12 tuổi"), dung sai khi model sao lại nhãn sai kiểu (`[ sdt_1 ]`, `[SĐT_1]`); `deepMerge` với mảng giàu/nghèo hơn |
+| `vg` | 18/18 đạt | Vãng gia nhiều buổi: 3 buổi ra 3 phúc trình có ngắt trang và số lần đúng, ca một buổi in y như cũ, hồ sơ cũ (chỉ có bản gộp) vẫn in được, màn hình hiện đủ 3 buổi, sửa buổi 3 không đổi buổi 1, ẩn danh phủ hết danh sách |
+| `plan` | 11/11 đạt | Chuẩn hóa kế hoạch: xếp 7 mục tiêu thật của ca mẫu vào đúng 1 trong 8 loại của Mục I Form 4; `loai` lạ thì không mất chữ mà đẩy xuống `muc_tieu`; `fmtDate` không được thay trắng cả câu bằng cái ngày trong câu (8 câu phải giữ nguyên, 9 giá trị phải đổi) |
 | `mapall` · `mapping` · `bridge` · `bridge5` · `perform` | tất cả đạt | 170 khóa schema × 11 biểu mẫu: không khóa nào mất, không ô nào chỉ có trên web hoặc chỉ có trong .docx; cầu nối báo cáo → biểu mẫu cho cả 5 giai đoạn (không ghi đè chữ NVXH đã ghi) |
 | `cb` · `cbdocx` | tất cả đạt | Chọn ô ☑ theo từ khóa (thay cách so 4 ký tự đầu): mỗi nhóm loại trừ chỉ tích tối đa 1 ô, trên cả web và .docx |
 | `clip` | 0 chỗ bị cắt | Chữ **không** tràn khỏi trang nhưng bị chính khung bao (`overflow:hidden`), chiều cao đặt cứng, hoặc `text-overflow:ellipsis` do cột quá hẹp (báo khi mất >25% bề rộng) cắt mất. Bộ dò phân biệt "tới được bằng cách cuộn" với "mất hẳn", bỏ qua thứ đang ẩn có chủ ý |
@@ -307,7 +315,7 @@ Bảng phủ của bộ quy trình + logic:
 
 | Nhóm | Phủ những gì |
 |---|---|
-| Quy trình 5 giai đoạn | Phân tích → đổ dữ liệu vào form → chuyển giai đoạn → đóng ca; `deepMerge` không ghi đè dữ liệu giai đoạn trước; GĐ4 nối thêm đúng |
+| Quy trình 5 giai đoạn | Phân tích → đổ dữ liệu vào form → chuyển giai đoạn → đóng ca; `deepMerge` không ghi đè dữ liệu giai đoạn trước; **hai giai đoạn lặp** — GĐ2 mỗi buổi vãng gia một phúc trình riêng, GĐ4 mỗi buổi theo dõi nối thêm bản ghi |
 | Nhánh phụ | Lùi giai đoạn, mở lại ca, backup/khôi phục (id độc bị vô hiệu), cảnh báo thiếu trường |
 | Truy vết nguồn | 10 ca thử, trong đó bắt đúng 3 giá trị bịa hoàn toàn và không báo động giả với giá trị chuẩn hóa |
 | Dấu BẢN NHÁP | Dấu trên cả 3 đường xuất; xác nhận rồi thì đổi dấu; phân tích lại thì thu hồi |
@@ -332,7 +340,10 @@ trong code. Nơi nên đọc trước:
 | Vì sao SĐT/email từng không điền được vào form | `main.js` ngay trên `maskContactsInText` — trước đây thay bằng `***` là mất hẳn giá trị |
 | Vì sao trần token là 8192 | `api/chat.js` ngay trên `MAX_TOKENS_CAP` — JSON trích xuất bị cắt cụt là biểu mẫu trống trơn |
 | Vớt JSON bị cắt cụt | `src/js/utils.js` gần `_salvageJSON` |
-| Vì sao mảng trong `deepMerge` so số lượng | `src/js/utils.js` trong `deepMerge`, nhánh `Array.isArray(sv)` |
+| Vì sao mảng gộp theo hợp, không so số lượng | `src/js/utils.js` gần `mergeArrays`, `_arrIdent` — có ghi cả hai cách làm sai trước đó |
+| Vì sao `fmtDate` có cổng chặn ở đầu | `src/js/utils.js` ngay trên `fmtDate` — trước đây một câu dài chứa ngày bị thay trắng |
+| Vì sao Mục I Form 4 từng trống | `main.js` gần `_normalizePlan`, `_NC_KW` |
+| Vãng gia nhiều buổi: bản gộp vs từng buổi | `main.js` gần `_ensureVgList`, `_vgList`, `_vgFromReport` |
 | Truy vết nguồn (chặn AI bịa) | `main.js` gần `F()`, `_checkGround`, `_GROUND_RATIO` |
 | Thu gọn / mở rộng khu chat | `main.js` gần `setChatView`, `_restoreChatView` |
 | Emoji → icon nét, 3 tông màu báo cáo | `main.js` gần `_SEC_ICON`, `_SEC_TONE`, `_secHead` |

@@ -1503,7 +1503,7 @@ async function runAnalysis() {
   if (!D) {
     D = {
       co_ban: {}, gia_dinh: {}, tinh_trang: {}, danh_gia: {},
-      vang_gia: {}, ke_hoach: { nhu_cau_ho_tro: [], hoat_dong: [] },
+      vang_gia: {}, vang_gia_ds: [], ke_hoach: { nhu_cau_ho_tro: [], hoat_dong: [] },
       cap_nhat: Array.isArray(D?.cap_nhat) ? D.cap_nhat : [], tien_trinh: {}, chuyen_gui: {}, ket_thuc: {},
       nguon_luc_xa_hoi: {}, _report: null, _notes: notes, _currentStage: currentStage
     };
@@ -1605,6 +1605,15 @@ async function runAnalysis() {
           ' — biểu mẫu sẽ được lấp tạm từ báo cáo. Bấm "Phân tích" lại để thử lần nữa.', 'warn', 8000);
       }
 
+      // Bản trích xuất RIÊNG của buổi này, chụp TRƯỚC deepMerge. Sau khi gộp thì D.vang_gia là
+      // tích luỹ của mọi buổi, không còn phân biệt được buổi nào nói gì — mà phúc trình vãng gia
+      // phải là biên bản của ĐÚNG một buổi.
+      let _vgRaw = null;
+      if (currentStage === 2 && formData && formData.vang_gia) {
+        _vgRaw = JSON.parse(JSON.stringify(formData.vang_gia));
+        restoreRealNamesDeep(_vgRaw);
+      }
+
       // ★ DEEP MERGE — không bao giờ ghi đè D
       D = deepMerge(D, formData);
       restoreRealNamesDeep(D); // khôi phục tên thật vừa ẩn khi gửi AI (nếu có khai ở ô "Tên thật")
@@ -1613,6 +1622,43 @@ async function runAnalysis() {
       D._report = report;
       // Lấp chỗ trống của biểu mẫu bằng nội dung báo cáo — xem ghi chú ở _fillFormFromReport
       D = _fillFormFromReport(D, report);
+      D = _normalizePlan(D);
+
+      // ── GĐ2: nối buổi vãng gia vừa ghi thành một phúc trình riêng ──
+      if (currentStage === 2) {
+        const _ds = _ensureVgList(D);
+        // Buổi này = phần AI trích được, bù các ô còn trống bằng nội dung báo cáo GĐ2.
+        const _rec = deepMergeFields(_vgFromReport(report), _vgRaw || {});
+        if (Object.keys(_rec).some(k => cf(_rec[k]))) {
+          _rec._ngay_ghi = new Date().toISOString();
+          _rec._ghi_chep = notes;                       // nguyên văn ghi chép buổi đó
+          if (!cf(_rec.ngay_vang_gia)) _rec.ngay_vang_gia = fmtVN(_rec._ngay_ghi);
+          // Hồ sơ cũ đã có bản gộp: _ensureVgList vừa dựng nó thành "buổi 1". Nếu buổi vừa ghi
+          // trùng khít buổi 1 đó (phân tích lại cùng ghi chép) thì THAY, không nối thêm phiếu.
+          const _same = _ds.length && (_ds[_ds.length - 1]._ghi_chep || '').trim() === notes.trim();
+          if (_same) _ds[_ds.length - 1] = Object.assign({}, _ds[_ds.length - 1], _rec);
+          else _ds.push(_rec);
+          if (!cf(_rec.lan_vang_gia)) _rec.lan_vang_gia = String(_ds.length);
+          // Nói rõ cả việc phải làm cho buổi sau: nếu NVXH dán tiếp ghi chép buổi mới XUỐNG
+          // DƯỚI ghi chép buổi cũ thì AI đọc lẫn hai buổi và phúc trình sẽ trộn nội dung.
+          if (!_same) showNotif('🏠 Đã ghi phúc trình vãng gia lần thứ ' + _ds.length
+            + ' — buổi trước vẫn còn nguyên, in ra mỗi buổi một phiếu. Buổi sau: XÓA ô ghi chép '
+            + 'rồi dán ghi chép buổi mới vào.', 'ok', 9000);
+        }
+      }
+      // Mục I Form 4 (và cả Form 6) chỉ có nội dung khi nhu_cau_ho_tro có mục tiêu. Có hoạt
+      // động mà không có mục tiêu là bản in thiếu hẳn một mục — nói ra thay vì để NVXH tự phát
+      // hiện lúc mở file Word.
+      if (currentStage === 3) {
+        const _kh = D.ke_hoach || {};
+        const _nMT = (_kh.nhu_cau_ho_tro || []).filter(n => n && cf(n.muc_tieu)).length;
+        const _nHD = (_kh.hoat_dong || []).filter(h => h && cf(h.noi_dung)).length;
+        if (_nHD > 0 && _nMT === 0) {
+          showNotif('⚠️ Đã trích được ' + _nHD + ' hoạt động nhưng KHÔNG có mục tiêu nào — '
+            + 'Mục I của Form 4 sẽ trống. Ghi rõ "Mục tiêu 1: ..." trong ghi chép rồi bấm '
+            + 'Phân tích lại.', 'warn', 9000);
+        }
+      }
       // Có nội dung AI mới → xác nhận trước đó không còn giá trị, bản in về lại BẢN NHÁP.
       D._verified = null;
       D._notes = notes;
@@ -3511,25 +3557,38 @@ function renderFormTab(idx) {
     h+=Sec("C. Tình trạng hiện tại","s1c",F("Công việc",tt.cong_viec,'-','tinh_trang.cong_viec')+F("Sức khỏe",sk.tinh_trang,'-','tinh_trang.suc_khoe.tinh_trang')+F("Tinh thần",tl.mo_ta,'-','tinh_trang.tam_ly.mo_ta')+F("Nguy cơ",dg.nguy_co,'-','danh_gia.nguy_co')+F("Mong muốn",dg.yeu_cau_tre,'-','danh_gia.yeu_cau_tre'));
     h+=Sec("D. Người tiếp cận","s1d",F("Họ tên",cb.nguoi_tiep_can,'-','co_ban.nguoi_tiep_can')+F("Ngày",cb.ngay_tiep_can,'-','co_ban.ngay_tiep_can')+F("Nơi",cb.noi_tiep_can,'-','co_ban.noi_tiep_can'));
   } else if (idx===2) {
-    h+=Sec("Thông tin vãng gia","s2a",F("Ngày vãng gia",vg.ngay_vang_gia,'-','vang_gia.ngay_vang_gia')+F("Người tiếp xúc",vg.nguoi_tiep_xuc,'-','vang_gia.nguoi_tiep_xuc')+F("Lần thứ",vg.lan_vang_gia,'-','vang_gia.lan_vang_gia')+F("Gặp TC",vg.co_gap_tc,'-','vang_gia.co_gap_tc')+F("Mục đích",vg.muc_dich,'-','vang_gia.muc_dich'));
-    h+=Sec("Quan sát gia đình","s2b",F("Môi trường sống",vg.quan_sat_mt,'-','vang_gia.quan_sat_mt')+F("Loại hình GĐ",vg.loai_hinh_gd||gd.loai_hinh,'-','vang_gia.loai_hinh_gd')+F("Bầu khí",vg.bau_khi_gd||gd.bau_khi,'-','vang_gia.bau_khi_gd')+F("Hôn nhân cha mẹ",vg.tinh_trang_hn,'-','vang_gia.tinh_trang_hn')+F("Kinh tế",vg.van_de_kinh_te,'-','vang_gia.van_de_kinh_te')+F("Đánh giá chung",vg.danh_gia_chung,'-','vang_gia.danh_gia_chung'));
+    // Mỗi buổi vãng gia một phúc trình riêng — hiện đúng như bản in. Trước đây màn hình chỉ có
+    // MỘT bộ, nên buổi thứ hai ghi đè buổi đầu mà không ai thấy.
+    const _vgAll = _vgList(D);
+    const _multi = Array.isArray(D.vang_gia_ds) && D.vang_gia_ds.length > 0;
+    _vgAll.forEach((vgi, i) => {
+      // Có danh sách thật thì sửa vào đúng buổi đó; hồ sơ cũ chưa có thì vẫn sửa vào bản gộp.
+      const pr = _multi ? ('vang_gia_ds[' + i + '].') : 'vang_gia.';
+      const lan = _vgLan(vgi, i);
+      const dat = cf(vgi.ngay_vang_gia) ? fmtDate(vgi.ngay_vang_gia) : '';
+      const ttl = _vgAll.length > 1
+        ? ('Buổi vãng gia lần thứ ' + lan + (dat ? ' — ' + dat : ''))
+        : 'Thông tin vãng gia';
+      h+=Sec(ttl,"s2a-"+i,F("Ngày vãng gia",vgi.ngay_vang_gia,'-',pr+'ngay_vang_gia')+F("Người tiếp xúc",vgi.nguoi_tiep_xuc,'-',pr+'nguoi_tiep_xuc')+F("Lần thứ",lan,'-',pr+'lan_vang_gia')+F("Gặp TC",vgi.co_gap_tc,'-',pr+'co_gap_tc')+F("Mục đích",vgi.muc_dich,'-',pr+'muc_dich'),'🏠');
+      h+=Sec("Quan sát gia đình","s2b-"+i,F("Môi trường sống",vgi.quan_sat_mt,'-',pr+'quan_sat_mt')+F("Loại hình GĐ",vgi.loai_hinh_gd||gd.loai_hinh,'-',pr+'loai_hinh_gd')+F("Bầu khí",vgi.bau_khi_gd||gd.bau_khi,'-',pr+'bau_khi_gd')+F("Hôn nhân cha mẹ",vgi.tinh_trang_hn,'-',pr+'tinh_trang_hn')+F("Kinh tế",vgi.van_de_kinh_te,'-',pr+'van_de_kinh_te')+F("Đánh giá chung",vgi.danh_gia_chung,'-',pr+'danh_gia_chung'));
   // ── 29 trường dưới đây trước đây CHỈ có trong bản in / bản .docx, không hiện trên màn hình.
   //    Đó là lỗi thiết kế: cả cơ chế kiểm chứng (dấu BẢN NHÁP → nút "Tôi đã kiểm chứng") dựa
   //    trên việc NVXH ĐỌC ĐƯỢC những gì sẽ in ra. Trường in lên giấy mà không xem được trên
   //    màn hình thì không ai kiểm chứng nổi. Nhãn giữ đúng nhãn của bản in để đối chiếu.
-    h+=Sec("Người tiếp xúc","s2c",F("Quan hệ với trẻ",vg.quan_he_voi_tre,'-','vang_gia.quan_he_voi_tre')+F("Số điện thoại liên hệ",vg.sdt,'-','vang_gia.sdt'));
-    h+=Sec("Vấn đề ghi nhận trong buổi vãng gia","s2d",
-      F("Mối quan hệ giữa trẻ và người sống cùng",vg.quan_he_tre_gd,'-','vang_gia.quan_he_tre_gd')+
-      F("Cách tương tác giữa các thành viên",vg.cach_tuong_tac,'-','vang_gia.cach_tuong_tac')+
-      F("Vấn đề giáo dục",vg.van_de_giao_duc,'-','vang_gia.van_de_giao_duc')+
-      F("Vấn đề sức khỏe",vg.van_de_suc_khoe,'-','vang_gia.van_de_suc_khoe')+
-      F("Vấn đề hành chính",vg.van_de_hanh_chinh,'-','vang_gia.van_de_hanh_chinh')+
-      F("Quan hệ với cộng đồng xung quanh",vg.van_de_cong_dong,'-','vang_gia.van_de_cong_dong')+
-      F("Vấn đề gia đình / gia đình mở rộng",vg.van_de_tu_gd,'-','vang_gia.van_de_tu_gd')+
-      F("Vấn đề khác",vg.van_de_khac,'-','vang_gia.van_de_khac'));
-    h+=Sec("Quan sát và phát hiện thêm của NVXH","s2e",
-      F("Quan sát khác về gia đình",vg.quan_sat_khac,'-','vang_gia.quan_sat_khac')+
-      F("Phát hiện khác",vg.phat_hien_khac,'-','vang_gia.phat_hien_khac'));
+      h+=Sec("Người tiếp xúc","s2c-"+i,F("Quan hệ với trẻ",vgi.quan_he_voi_tre,'-',pr+'quan_he_voi_tre')+F("Số điện thoại liên hệ",vgi.sdt,'-',pr+'sdt'));
+      h+=Sec("Vấn đề ghi nhận trong buổi vãng gia","s2d-"+i,
+        F("Mối quan hệ giữa trẻ và người sống cùng",vgi.quan_he_tre_gd,'-',pr+'quan_he_tre_gd')+
+        F("Cách tương tác giữa các thành viên",vgi.cach_tuong_tac,'-',pr+'cach_tuong_tac')+
+        F("Vấn đề giáo dục",vgi.van_de_giao_duc,'-',pr+'van_de_giao_duc')+
+        F("Vấn đề sức khỏe",vgi.van_de_suc_khoe,'-',pr+'van_de_suc_khoe')+
+        F("Vấn đề hành chính",vgi.van_de_hanh_chinh,'-',pr+'van_de_hanh_chinh')+
+        F("Quan hệ với cộng đồng xung quanh",vgi.van_de_cong_dong,'-',pr+'van_de_cong_dong')+
+        F("Vấn đề gia đình / gia đình mở rộng",vgi.van_de_tu_gd,'-',pr+'van_de_tu_gd')+
+        F("Vấn đề khác",vgi.van_de_khac,'-',pr+'van_de_khac'));
+      h+=Sec("Quan sát và phát hiện thêm của NVXH","s2e-"+i,
+        F("Quan sát khác về gia đình",vgi.quan_sat_khac,'-',pr+'quan_sat_khac')+
+        F("Phát hiện khác",vgi.phat_hien_khac,'-',pr+'phat_hien_khac'));
+    });
   } else if (idx===3) {
     h+=Sec("Đánh giá khẩn cấp","s3a",F("Họ tên",cb.ho_ten,'-','co_ban.ho_ten')+F("Tuổi",cb.tuoi,'-','co_ban.tuoi')+F("Hoàn cảnh GĐ",gd.hoan_canh,'-','gia_dinh.hoan_canh')+F("Tổn thương",[cf(dg.van_de_the_chat),cf(dg.van_de_tam_ly)].filter(Boolean).join(' | '))+F("Nguy cơ",dg.nguy_co,'-','danh_gia.nguy_co')+F("Mức khẩn cấp",dg.muc_khan_cap,'-','danh_gia.muc_khan_cap')+F("Yếu tố bảo vệ",dg.yeu_to_bao_ve,'-','danh_gia.yeu_to_bao_ve')+F("Nhận xét",dg.nhan_xet_nvxh,'-','danh_gia.nhan_xet_nvxh'));
   } else if (idx===4) {
@@ -3645,7 +3704,9 @@ function _getFecContext(fi) {
   const FORM_DATA_MAP = {
     0: { root:'co_ban,gia_dinh,tinh_trang', data: () => ({...D.co_ban,...D.gia_dinh,...D.tinh_trang}) },
     1: { root:'co_ban', data: () => D.co_ban||{} },
-    2: { root:'vang_gia', data: () => D.vang_gia||{} },
+    // Danh sách buổi vãng gia, không chỉ bản gộp — nếu không, lệnh chat sửa form sẽ ghi vào
+    // bản gộp trong khi bản in lấy từ từng buổi, tức sửa mà không thấy đổi trên giấy.
+    2: { root:'vang_gia_ds', data: () => ({vang_gia_ds:_vgList(D)}) },
     3: { root:'danh_gia', data: () => ({muc_khan_cap:D.danh_gia?.muc_khan_cap,nguy_co:D.danh_gia?.nguy_co,yeu_to_bao_ve:D.danh_gia?.yeu_to_bao_ve}) },
     4: { root:'danh_gia', data: () => D.danh_gia||{} },
     5: { root:'ke_hoach', data: () => D.ke_hoach||{} },
@@ -4027,6 +4088,108 @@ function _cbPick(opts, sel) {
 // Hàm này lấp CHỖ TRỐNG của biểu mẫu bằng chính nội dung báo cáo — KHÔNG ghi đè giá trị đã có,
 // và không thêm suy diễn nào mới: mọi giá trị đều là chữ AI đã viết ra cho cùng ghi chép đó,
 // nên vẫn đi qua bộ truy vết nguồn (📎 / ❓) như mọi ô khác.
+// ── Vãng gia là việc LẶP: mỗi buổi một phúc trình riêng ──────────────────────────────────
+// Trước đây cả ca chỉ giữ MỘT bộ D.vang_gia, nên chạy GĐ2 lần thứ hai là các ô chữ của buổi
+// trước bị buổi mới ghi đè — về nghiệp vụ đó là mất phúc trình, vì mẫu chính thức đánh số
+// "Lần vãng gia thứ ..." tức bản thân mẫu đã tính tới nhiều buổi.
+// Nay: D.vang_gia_ds giữ TỪNG buổi (in ra mỗi buổi một phiếu), còn D.vang_gia vẫn là bản gộp
+// tích luỹ của cả ca — giữ nguyên để phần tóm tắt, ngữ cảnh chat, truy vết nguồn và các hồ sơ
+// cũ (chưa có danh sách) không phải sửa gì.
+function _ensureVgList(D) {
+  if (!D) return [];
+  if (!Array.isArray(D.vang_gia_ds)) D.vang_gia_ds = [];
+  // Hồ sơ cũ: đã có phúc trình gộp mà chưa có danh sách → coi đó là buổi thứ nhất.
+  if (!D.vang_gia_ds.length && D.vang_gia && Object.keys(D.vang_gia).some(k => cf(D.vang_gia[k]))) {
+    D.vang_gia_ds.push(Object.assign({}, D.vang_gia));
+  }
+  return D.vang_gia_ds;
+}
+
+// Danh sách để HIỂN THỊ/IN. Hồ sơ chưa từng chạy GĐ2 thì trả về đúng một phiếu trống, để bản
+// in vẫn ra mẫu trắng như trước.
+function _vgList(D) {
+  const ds = (D && Array.isArray(D.vang_gia_ds)) ? D.vang_gia_ds.filter(Boolean) : [];
+  if (ds.length) return ds;
+  return [(D && D.vang_gia) || {}];
+}
+
+// Ô "Lần vãng gia thứ" ưu tiên chữ AI trích được; không có thì dùng thứ tự trong danh sách.
+function _vgLan(vg, i) { return cf(vg && vg.lan_vang_gia) || String(i + 1); }
+
+// ── Chuẩn hóa kế hoạch sau khi trích xuất ────────────────────────────────────────────────
+// Mục I Form 4 in ra 8 loại nhu cầu CỐ ĐỊNH theo mẫu chính thức, ghép với kh.nhu_cau_ho_tro
+// theo trường "loai". Đo trên bản in thật: Mục II có đủ 5 hoạt động nhưng Mục I trống trơn cả
+// 8 dòng — tức AI trả hoat_dong mà bỏ trắng nhu_cau_ho_tro, hoặc ghi "loai" không thuộc 8 loại
+// (VD "Đi học lại") nên không dòng nào khớp. Kết quả: nội dung mục tiêu KHÔNG có mặt ở đâu
+// trên bản in, mà Form 6 (Tiến độ) cũng lấy từ đây nên trống theo.
+const _NC_CHUAN = ["Học bổng", "Học nghề, việc làm", "Chăm sóc sức khỏe, y tế",
+  "Nâng cao năng lực kỹ năng sống", "Mối quan hệ gia đình và xã hội", "Tâm lý",
+  "Hòa nhập cộng đồng", "Nhu cầu khác"];
+
+// Xếp loại theo từ khóa khi "loai" thiếu hoặc lạ. Thứ tự có ý nghĩa: học nghề xét trước học
+// bổng (đều chứa chữ "học"), tâm lý trước kỹ năng sống.
+const _NC_KW = [
+  ["Học nghề, việc làm",              /hoc nghe|day nghe|dao tao nghe|viec lam|tim viec|nghe nghiep|nau an|dau bep|thuc tap/],
+  ["Học bổng",                        /hoc bong|di hoc|hoc lai|nhap hoc|den truong|tro lai truong|hoc phi|mien giam|sach vo|dung cu hoc|lop \d|on tap|hoc tap/],
+  ["Chăm sóc sức khỏe, y tế",         /suc khoe|y te|kham|chua|benh|thuoc|bhyt|bao hiem y te|dinh duong|tiem|tram y te|benh vien/],
+  ["Tâm lý",                          /tam ly|tu ti|lo au|tram cam|cam xuc|tham van|tu tin|song chan|khung hoang/],
+  ["Hòa nhập cộng đồng",              /hoa nhap|cong dong|ban be|cau lac bo|nha van hoa|the thao|ve tranh|lop ve|sinh hoat|vui choi/],
+  ["Nâng cao năng lực kỹ năng sống",  /ky nang song|ky nang|nang luc|tu bao ve|phong tranh|an toan/],
+  ["Mối quan hệ gia đình và xã hội",  /gia dinh|quan he|nguoi cham soc|me |cha |ba ngoai|giam sat|thue nha|kinh te|ho tro tien|gao|sinh ke/],
+];
+
+function _ncNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/đ/g, 'd').replace(/\s+/g, ' ').trim();
+}
+
+function _ncClassify(text) {
+  const t = _ncNorm(text);
+  if (!t) return '';
+  for (const [loai, re] of _NC_KW) if (re.test(t)) return loai;
+  return 'Nhu cầu khác';
+}
+
+function _normalizePlan(D) {
+  const kh = D && D.ke_hoach;
+  if (!kh || !Array.isArray(kh.nhu_cau_ho_tro)) return D;
+  const chuanNorm = _NC_CHUAN.map(_ncNorm);
+  kh.nhu_cau_ho_tro.forEach(nc => {
+    if (!nc || typeof nc !== 'object') return;
+    if (chuanNorm.indexOf(_ncNorm(nc.loai)) !== -1) return;   // đã đúng 1 trong 8 loại
+    // "loai" lạ thì đừng bỏ đi — nó là thông tin NVXH ghi. Xếp vào loại gần nhất, và nếu
+    // muc_tieu còn trống thì đẩy nguyên văn loai cũ xuống làm mục tiêu để không mất chữ.
+    const cu = cf(nc.loai);
+    const loaiMoi = _ncClassify(nc.muc_tieu || cu);
+    if (cu && !cf(nc.muc_tieu)) nc.muc_tieu = cu;
+    if (loaiMoi) nc.loai = loaiMoi;
+  });
+  return D;
+}
+
+// Phần báo cáo GĐ2 đổ được vào phúc trình vãng gia. Tách riêng vì dùng ở HAI nơi: lấp chỗ
+// trống của bản gộp (D.vang_gia) và lấp chỗ trống của chính buổi vừa ghi (một phần tử trong
+// D.vang_gia_ds) — hai lượt AI chạy độc lập nên lượt trích xuất hay thiếu, phải bù từ báo cáo.
+function _vgFromReport(r) {
+  if (!r) return {};
+  const txt = (v) => Array.isArray(v) ? v.filter(Boolean).join('; ') : (v == null ? '' : String(v));
+  const he = r.home_environment || {}, fd = r.family_dynamics || {}, vs = r.vs_stage1 || {};
+  const o = {
+    quan_sat_mt:    he.key_observations,
+    quan_sat_khac:  he.concerns,
+    bau_khi_gd:     fd.relationship_quality,
+    quan_he_tre_gd: fd.relationship_quality,
+    danh_gia_chung: [r.risk_change_reason,
+      fd.caregiver_capacity ? 'Năng lực người chăm sóc: ' + fd.caregiver_capacity : '',
+      he.safety_level ? 'Mức an toàn môi trường: ' + he.safety_level : ''],
+    phat_hien_khac: vs.new_findings,
+    van_de_tu_gd:   vs.contradictions,
+  };
+  const out = {};
+  Object.keys(o).forEach(k => { const v = txt(o[k]).trim(); if (v) out[k] = v; });
+  return out;
+}
+
 function _fillFormFromReport(D, r) {
   if (!D || !r) return D;
   const txt = (v) => Array.isArray(v) ? v.filter(Boolean).join('; ') : (v == null ? '' : String(v));
@@ -4060,17 +4223,9 @@ function _fillFormFromReport(D, r) {
   // trơn, vì hai lượt AI độc lập và lượt trích xuất hay trả về rỗng.
   if (st === 2) {
     D.vang_gia = D.vang_gia || {};
-    const vg = D.vang_gia, he = r.home_environment || {}, fd = r.family_dynamics || {},
-          vs = r.vs_stage1 || {}, nu = r.needs_updated || {};
-    put(vg, 'quan_sat_mt',    he.key_observations);
-    put(vg, 'quan_sat_khac',  he.concerns);
-    put(vg, 'bau_khi_gd',     fd.relationship_quality);
-    put(vg, 'quan_he_tre_gd', fd.relationship_quality);
-    put(vg, 'danh_gia_chung', [r.risk_change_reason,
-      fd.caregiver_capacity ? 'Năng lực người chăm sóc: ' + fd.caregiver_capacity : '',
-      he.safety_level ? 'Mức an toàn môi trường: ' + he.safety_level : '']);
-    put(vg, 'phat_hien_khac', vs.new_findings);
-    put(vg, 'van_de_tu_gd',   vs.contradictions);
+    const vg = D.vang_gia, fd = r.family_dynamics || {}, nu = r.needs_updated || {};
+    const vgR = _vgFromReport(r);
+    Object.keys(vgR).forEach(k => put(vg, k, vgR[k]));
     put(gd, 'moi_quan_he_voi_tre', fd.relationship_quality);
     put(dg, 'yeu_to_bao_ve',  fd.protective_factors);
     put(dg, 'nguy_co',        fd.risk_factors);
@@ -5500,38 +5655,46 @@ async function buildDocx(fi,logoData,footerData,_collector){
   // FORM 2: PHÚC TRÌNH VÃNG GIA
   // ════════════════════════════════
   }else if(fi===2){
-    body.push(...TITLE("PHÚC TRÌNH VÃNG GIA"));
-    body.push(FLM(["Họ và tên trẻ",cb.ho_ten],["Giới tính",cb.gioi_tinh]));
-    body.push(FLM(["Phiếu tiếp cận số","......./......./.........."],["Năm sinh trẻ",cb.ngay_sinh]));
-    body.push(FL("Địa chỉ thường trú (theo sổ hộ khẩu)",cb.dia_chi_thuong_tru));
-    body.push(FL("Địa chỉ cư trú hiện tại",cb.dia_chi_hien_tai));
-    body.push(FL("Trước khi đến vãng gia, NVXH đã liên hệ với",vg.nguoi_tiep_xuc));
-    body.push(FLM(["Họ tên người tiếp xúc",vg.nguoi_tiep_xuc],["Quan hệ với trẻ",vg.quan_he_voi_tre]));
-    body.push(FLM(["Năm sinh",""]),FL("Nghề nghiệp",""),FL("Số điện thoại liên hệ",vg.sdt));
-    body.push(FLM(["Ngày đi vãng gia",vg.ngay_vang_gia],["Lần vãng gia thứ",vg.lan_vang_gia],["Có gặp TC",vg.co_gap_tc]));
-    body.push(FL("Mục đích buổi vãng gia",vg.muc_dich));
-    body.push(FL("Những phát hiện khác của NVXH",vg.phat_hien_khac));
-    body.push(P([R("Những quan sát của NVXH về hoàn cảnh gia đình trẻ:",{bold:true})]));
-    body.push(SUB("Điều kiện về môi trường sống của gia đình (nhà ở, điều kiện sinh hoạt, vật dụng, kinh tế, bối cảnh xung quanh)"));
-    body.push(P([V(vg.quan_sat_mt)]));body.push(...ML("",2));
-    body.push(SUB("Điều kiện liên quan đến gia đình trẻ"));
-    body.push(FL("Loại hình gia đình trẻ đang sinh sống (hạt nhân, mở rộng...)",vg.loai_hinh_gd||gd.loai_hinh));
-    body.push(FL("Bầu khí và mối quan hệ trong gia đình",vg.bau_khi_gd||gd.bau_khi));
-    body.push(FL("Tình trạng hôn nhân của cha mẹ",vg.tinh_trang_hn||gd.tinh_trang_hon_nhan));
-    body.push(FL("Mối quan hệ giữa trẻ và những người đang sống với trẻ",vg.quan_he_tre_gd||gd.moi_quan_he_voi_tre));
-    body.push(FL("Cách tương tác/giao tiếp của những thành viên gia đình với nhau",vg.cach_tuong_tac));
-    body.push(FL("Những vấn đề liên quan đến gia đình hoặc gia đình mở rộng (nếu có)",vg.van_de_khac));
-    body.push(FL("Mối quan hệ với cộng đồng xung quanh (nếu có)",vg.van_de_cong_dong||gd.cong_dong));
-    body.push(FL("Những vấn đề liên quan đến giáo dục (nếu có)",vg.van_de_giao_duc));
-    body.push(FL("Những vấn đề liên quan đến sức khỏe (nếu có)",vg.van_de_suc_khoe));
-    body.push(FL("Những vấn đề liên quan đến hành chính (nếu có)",vg.van_de_hanh_chinh));
-    body.push(FL("Những vấn đề liên quan đến kinh tế gia đình (nếu có)",vg.van_de_kinh_te));
-    body.push(FL("Những quan sát khác của NVXH đối với gia đình",vg.quan_sat_khac||""));
-    body.push(FL("Những vấn đề được nêu ra trong cuộc vãng gia từ gia đình (khác với lý do ban đầu — nếu có)",vg.van_de_tu_gd||""));
-    body.push(SUB("Đánh giá chung của NVXH để theo dõi/hỗ trợ"));
-    body.push(P([V(vg.danh_gia_chung)]));body.push(...ML("",2));
-    body.push(DATE_R());
-    body.push(SGN(["Giám sát","Nhân viên xã hội"]));
+    // Vãng gia lặp nhiều buổi → in MỖI BUỔI MỘT PHIẾU, ngắt trang giữa các phiếu. Mẫu chính
+    // thức có ô "Lần vãng gia thứ ..." nên nhiều phiếu là đúng mẫu, không phải sáng tạo thêm.
+    const _vgAll = _vgList(D);
+    _vgAll.forEach((vgi, _i) => {
+      if (_i > 0) body.push(new Paragraph({children:[new lib.PageBreak()],spacing:{before:0,after:0}}));
+      const _lan = _vgLan(vgi, _i);
+      body.push(...TITLE("PHÚC TRÌNH VÃNG GIA",
+        _vgAll.length > 1 ? ("Lần thứ " + _lan + (cf(vgi.ngay_vang_gia) ? " — ngày " + fmtDate(vgi.ngay_vang_gia) : "")) : ""));
+      body.push(FLM(["Họ và tên trẻ",cb.ho_ten],["Giới tính",cb.gioi_tinh]));
+      body.push(FLM(["Phiếu tiếp cận số","......./......./.........."],["Năm sinh trẻ",cb.ngay_sinh]));
+      body.push(FL("Địa chỉ thường trú (theo sổ hộ khẩu)",cb.dia_chi_thuong_tru));
+      body.push(FL("Địa chỉ cư trú hiện tại",cb.dia_chi_hien_tai));
+      body.push(FL("Trước khi đến vãng gia, NVXH đã liên hệ với",vgi.nguoi_tiep_xuc));
+      body.push(FLM(["Họ tên người tiếp xúc",vgi.nguoi_tiep_xuc],["Quan hệ với trẻ",vgi.quan_he_voi_tre]));
+      body.push(FLM(["Năm sinh",""]),FL("Nghề nghiệp",""),FL("Số điện thoại liên hệ",vgi.sdt));
+      body.push(FLM(["Ngày đi vãng gia",vgi.ngay_vang_gia],["Lần vãng gia thứ",_lan],["Có gặp TC",vgi.co_gap_tc]));
+      body.push(FL("Mục đích buổi vãng gia",vgi.muc_dich));
+      body.push(FL("Những phát hiện khác của NVXH",vgi.phat_hien_khac));
+      body.push(P([R("Những quan sát của NVXH về hoàn cảnh gia đình trẻ:",{bold:true})]));
+      body.push(SUB("Điều kiện về môi trường sống của gia đình (nhà ở, điều kiện sinh hoạt, vật dụng, kinh tế, bối cảnh xung quanh)"));
+      body.push(P([V(vgi.quan_sat_mt)]));body.push(...ML("",2));
+      body.push(SUB("Điều kiện liên quan đến gia đình trẻ"));
+      body.push(FL("Loại hình gia đình trẻ đang sinh sống (hạt nhân, mở rộng...)",vgi.loai_hinh_gd||gd.loai_hinh));
+      body.push(FL("Bầu khí và mối quan hệ trong gia đình",vgi.bau_khi_gd||gd.bau_khi));
+      body.push(FL("Tình trạng hôn nhân của cha mẹ",vgi.tinh_trang_hn||gd.tinh_trang_hon_nhan));
+      body.push(FL("Mối quan hệ giữa trẻ và những người đang sống với trẻ",vgi.quan_he_tre_gd||gd.moi_quan_he_voi_tre));
+      body.push(FL("Cách tương tác/giao tiếp của những thành viên gia đình với nhau",vgi.cach_tuong_tac));
+      body.push(FL("Những vấn đề liên quan đến gia đình hoặc gia đình mở rộng (nếu có)",vgi.van_de_khac));
+      body.push(FL("Mối quan hệ với cộng đồng xung quanh (nếu có)",vgi.van_de_cong_dong||gd.cong_dong));
+      body.push(FL("Những vấn đề liên quan đến giáo dục (nếu có)",vgi.van_de_giao_duc));
+      body.push(FL("Những vấn đề liên quan đến sức khỏe (nếu có)",vgi.van_de_suc_khoe));
+      body.push(FL("Những vấn đề liên quan đến hành chính (nếu có)",vgi.van_de_hanh_chinh));
+      body.push(FL("Những vấn đề liên quan đến kinh tế gia đình (nếu có)",vgi.van_de_kinh_te));
+      body.push(FL("Những quan sát khác của NVXH đối với gia đình",vgi.quan_sat_khac||""));
+      body.push(FL("Những vấn đề được nêu ra trong cuộc vãng gia từ gia đình (khác với lý do ban đầu — nếu có)",vgi.van_de_tu_gd||""));
+      body.push(SUB("Đánh giá chung của NVXH để theo dõi/hỗ trợ"));
+      body.push(P([V(vgi.danh_gia_chung)]));body.push(...ML("",2));
+      body.push(DATE_R());
+      body.push(SGN(["Giám sát","Nhân viên xã hội"]));
+    });
 
   // ══════════════════════════════════════════
   // FORM 3a: ĐÁNH GIÁ KHẨN CẤP (3 TRANG ĐẦY ĐỦ)
@@ -6585,6 +6748,7 @@ async function generateComprehensiveEval() {
       tinh_trang: pData.tinh_trang || {},
       danh_gia: pData.danh_gia || {},
       vang_gia: pData.vang_gia || {},
+      so_buoi_vang_gia: (D?.vang_gia_ds || []).length,
       ke_hoach: pData.ke_hoach || {},
       cap_nhat_tien_trinh: pData.cap_nhat || [],
       chuyen_gui: pData.chuyen_gui || {},

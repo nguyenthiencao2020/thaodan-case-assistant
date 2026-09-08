@@ -251,6 +251,10 @@ ${_EXTRACT_DISCIPLINE}
 Chỉ trích xuất thông tin cho Form 2 (Phúc trình vãng gia), Form 3a (Đánh giá khẩn cấp) và Form 3b (Đánh giá nhu cầu).
 Chỉ điền các field trong "vang_gia" và bổ sung thêm "danh_gia". KHÔNG điền co_ban, gia_dinh, ke_hoach, cap_nhat.
 
+★ Ghi chép này là MỘT buổi vãng gia. Chỉ trích xuất những gì diễn ra TRONG buổi đó — hệ thống
+lưu mỗi buổi thành một phúc trình riêng, đừng nhắc lại nội dung buổi trước. Nếu ghi chép có nói
+lần thứ mấy thì điền "lan_vang_gia"; không nói thì để trống, hệ thống tự đánh số theo thứ tự.
+
 ═══ SCHEMA (chỉ trả về 2 key này) ═══
 {
   "vang_gia": {
@@ -276,6 +280,22 @@ ${_EXTRACT_DISCIPLINE}
 ═══ NHIỆM VỤ ═══
 Chỉ trích xuất thông tin cho Form 4 (Kế hoạch can thiệp).
 Chỉ điền key "ke_hoach". Không điền bất kỳ key nào khác.
+
+★ BẮT BUỘC: MỖI mục tiêu trong ghi chép ("Mục tiêu 1: ...", "Mục tiêu 2: ...") PHẢI thành MỘT
+phần tử của "nhu_cau_ho_tro" — đây là Mục I của biểu mẫu chính thức, bỏ trống là bản in mất
+hẳn một mục. Trả về "hoat_dong" mà "nhu_cau_ho_tro" rỗng là SAI.
+  · "muc_tieu"  = nguyên văn mục tiêu trong ghi chép (đừng rút gọn).
+  · "loai"      = chọn loại GẦN NHẤT trong 8 loại, không được để trống, không tự đặt tên loại
+                  mới. Đối chiếu: đi học lại / học phí / học bổng → "Học bổng"; học nghề, nấu
+                  ăn, việc làm → "Học nghề, việc làm"; khám bệnh, BHYT, dinh dưỡng → "Chăm sóc
+                  sức khỏe, y tế"; tự tin, tham vấn, lo âu → "Tâm lý"; lớp vẽ, thể thao, bạn
+                  bè, nhà văn hóa → "Hòa nhập cộng đồng"; tiền thuê nhà, gạo, sinh kế, giám
+                  sát của cha mẹ → "Mối quan hệ gia đình và xã hội"; kỹ năng tự bảo vệ, an
+                  toàn → "Nâng cao năng lực kỹ năng sống"; không thuộc gì cả → "Nhu cầu khác".
+  · "hoat_dong[].muc_tieu_so" = SỐ THỨ TỰ của mục tiêu trong "nhu_cau_ho_tro" (1, 2, 3...).
+
+★ Ghi chép bổ sung ("giữ nguyên các mục tiêu cũ, thêm mục tiêu 3") thì CHỈ trả về phần MỚI —
+hệ thống tự nối vào danh sách cũ, không cần nhắc lại mục tiêu cũ.
 
 ═══ SCHEMA (chỉ trả về key này) ═══
 {
