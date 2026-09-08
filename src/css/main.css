@@ -1613,3 +1613,13 @@ body.hist-mode { padding-bottom:64px; }
 .cs-log-item.reopen { border-left-color:#2563eb; }
 .cs-log-hd { font-weight:800; color:var(--t1); }
 .cs-log-meta { font-size:13px; color:var(--t3); font-family:'JetBrains Mono',monospace; }
+
+/* Hàng nút trong "Lịch sử nhập — GĐ N" và trong tab Ghi chép của trang chi tiết ca.
+   Xuống dòng được: 3 nút trên phone 360px không đủ một hàng. */
+.shp-item-acts { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.shp-btn-view, .shp-btn-print { background:var(--bg2); color:var(--t1); border-color:var(--bd2); }
+.shp-btn-view:hover, .shp-btn-print:hover { background:var(--navy); color:#fff; border-color:var(--navy); }
+.ct-acts { display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; align-items:center; }
+@media (max-width:640px) {
+  .shp-item-acts { justify-content:flex-start; }
+}
