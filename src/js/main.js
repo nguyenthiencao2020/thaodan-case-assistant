@@ -2329,7 +2329,7 @@ function renderStageHistory() {
   const rows = [...list].reverse().map(h => {
     const src = h.source || 'save';
     const preview = (h.notes || '').replace(/\n+/g, ' ').substring(0, 120);
-    return `<div class="shp-item" onclick="_restoreStageHistory(${stage}, '${h.id}')">
+    return `<div class="shp-item" onclick="${h.D ? `viewStageHistory(${stage}, '${h.id}')` : `_restoreStageHistory(${stage}, '${h.id}')`}">
       <div class="shp-item-main">
         <div class="shp-item-top">
           <span class="shp-item-src src-${src}">${srcLabel[src] || src}</span>
@@ -2337,7 +2337,11 @@ function renderStageHistory() {
         </div>
         <div class="shp-item-preview">${esc(preview) || '<em>(không có ghi chép)</em>'}</div>
       </div>
-      <button class="shp-item-btn" onclick="event.stopPropagation();_restoreStageHistory(${stage}, '${h.id}')">⏪ Khôi phục</button>
+      <div class="shp-item-acts">
+        ${h.D ? `<button class="shp-item-btn shp-btn-view" title="Mở biểu mẫu đúng như đã lưu ở phiên bản này (chỉ đọc)" onclick="event.stopPropagation();viewStageHistory(${stage}, '${h.id}')">👁 Xem lại</button>
+        <button class="shp-item-btn shp-btn-print" title="Tải .docx đúng nội dung phiên bản này" onclick="event.stopPropagation();reprintStageHistory(${stage}, '${h.id}')">🖨 In lại</button>` : ''}
+        <button class="shp-item-btn" title="Đưa ghi chép của phiên bản này trở lại ô nhập" onclick="event.stopPropagation();_restoreStageHistory(${stage}, '${h.id}')">⏪ Khôi phục</button>
+      </div>
     </div>`;
   }).join('');
   panel.innerHTML = `<div class="shp-hd">
@@ -2414,16 +2418,70 @@ function _histEntry(idx) {
   return (e && e.analysis) ? e : null;
 }
 
-function viewEntrySnapshot(idx) {
-  const e = _histEntry(idx);
-  if (!e) { showNotif('⚠️ Mốc này chưa có bản chụp dữ liệu — chỉ có ghi chép gốc', 'warn', 5000); return; }
+// Lõi dùng chung cho mọi đường "Xem lại": nhận BẢN CHỤP đã có, không quan tâm nó tới từ
+// Lịch sử nhập của giai đoạn hay từ tab Ghi chép của trang chi tiết ca.
+function viewSnapshot(snap, info) {
+  if (!snap) { showNotif('⚠️ Mốc này chưa có bản chụp dữ liệu — chỉ có ghi chép gốc', 'warn', 5000); return; }
   if (!isHistMode()) _histD = D;                       // chỉ giữ D thật ở lần vào đầu tiên
-  D = JSON.parse(JSON.stringify(e.analysis));
-  _histInfo = { idx, date: e.date, stage: e.stage || 1 };
+  D = JSON.parse(JSON.stringify(snap));
+  _histInfo = Object.assign({ date: new Date().toISOString(), stage: currentStage }, info || {});
+  _histInfo.snap = D;
   switchMain('forms');
   showForm(_STAGE_MAIN_FORM[_histInfo.stage] || 0);
   _paintHistBanner();
-  showNotif('👁 Đang xem bản lưu ' + fmtVN(e.date) + ' — chỉ đọc, không sửa và không lưu được', 'ok', 6000);
+  showNotif('👁 Đang xem bản lưu ' + fmtVN(_histInfo.date) + ' — chỉ đọc, không sửa và không lưu được', 'ok', 6000);
+}
+
+// In lại thẳng từ một bản chụp, không cần vào chế độ xem. Trả D về đúng trạng thái trước đó.
+async function reprintSnapshot(snap, stage, fi) {
+  if (!snap) { showNotif('⚠️ Mốc này chưa có bản chụp dữ liệu — không in lại được', 'warn', 5000); return; }
+  const wasHist = isHistMode();
+  const keep = wasHist ? _histInfo && _histInfo.snap : D;
+  D = JSON.parse(JSON.stringify(snap));
+  try {
+    await dlDocxBranded(fi != null ? fi : (_STAGE_MAIN_FORM[stage || currentStage] || 0));
+  } catch (err) {
+    showNotif('❌ Không in được: ' + err.message, 'err', 6000);
+  } finally {
+    if (keep) D = keep;
+  }
+}
+
+// Xem lại một phiên bản trong "Lịch sử nhập" của giai đoạn (panel trên Dashboard).
+function viewStageHistory(stage, histId) {
+  const c = curCaseId ? loadCases()[curCaseId] : null;
+  const item = c && c.stageHistory && (c.stageHistory[stage] || []).find(h => h.id === histId);
+  if (!item) return;
+  viewSnapshot(item.D, { date: item.ts, stage: stage });
+}
+
+async function reprintStageHistory(stage, histId) {
+  const c = curCaseId ? loadCases()[curCaseId] : null;
+  const item = c && c.stageHistory && (c.stageHistory[stage] || []).find(h => h.id === histId);
+  if (!item) return;
+  await reprintSnapshot(item.D, stage);
+}
+
+// Xem lại một mốc trong tab "Ghi chép" của trang chi tiết ca.
+function viewCaseEntry(caseId, idx) {
+  const c = loadCases()[caseId];
+  const e = c && c.entries && c.entries[idx];
+  if (!e) return;
+  if (curCaseId !== caseId) { showNotif('ℹ️ Hãy mở ca này ở tab Dashboard trước khi xem lại bản lưu', 'warn', 6000); return; }
+  viewSnapshot(e.analysis, { date: e.date, stage: e.stage || 1 });
+}
+
+async function reprintCaseEntry(caseId, idx) {
+  const c = loadCases()[caseId];
+  const e = c && c.entries && c.entries[idx];
+  if (!e) return;
+  await reprintSnapshot(e.analysis, e.stage || 1);
+}
+
+function viewEntrySnapshot(idx) {
+  const e = _histEntry(idx);
+  if (!e) { showNotif('⚠️ Mốc này chưa có bản chụp dữ liệu — chỉ có ghi chép gốc', 'warn', 5000); return; }
+  viewSnapshot(e.analysis, { idx, date: e.date, stage: e.stage || 1 });
 }
 
 function exitHistMode() {
@@ -2438,18 +2496,7 @@ function exitHistMode() {
 async function reprintEntrySnapshot(idx, fi) {
   const e = _histEntry(idx);
   if (!e) { showNotif('⚠️ Mốc này chưa có bản chụp dữ liệu — không in lại được', 'warn', 5000); return; }
-  const keep = isHistMode() ? null : D;
-  const wasHist = isHistMode();
-  D = JSON.parse(JSON.stringify(e.analysis));
-  try {
-    await dlDocxBranded(fi != null ? fi : (_STAGE_MAIN_FORM[e.stage || 1] || 0));
-  } catch (err) {
-    showNotif('❌ Không in được: ' + err.message, 'err', 6000);
-  } finally {
-    // Trả D về đúng trạng thái trước khi bấm — kể cả khi đang xem một bản lưu khác.
-    if (!wasHist) D = keep;
-    else if (_histInfo) { const cur = _histEntry(_histInfo.idx); if (cur) D = JSON.parse(JSON.stringify(cur.analysis)); }
-  }
+  await reprintSnapshot(e.analysis, e.stage || 1, fi);
 }
 
 function _paintHistBanner() {
@@ -4606,7 +4653,11 @@ function showCaseDetail(id) {
         return `<div class="ct-item">
           <div class="ct-date"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-calendar"/></svg> ${fmtVN(e.date)}</div>
           <div class="ct-notes" id="ctn-${i}" data-full="${escAttr(full)}" data-short="${escAttr(cut + (long ? '…' : ''))}">${esc(cut)}${long ? '…' : ''}</div>
-          ${long ? `<button class="btn-note-more" data-i="${i}" onclick="toggleNote(${i})">Xem đầy đủ (còn ${full.length - cut.length} chữ)</button>` : ''}
+          <div class="ct-acts">
+            ${long ? `<button class="btn-note-more" data-i="${i}" onclick="toggleNote(${i})">Xem đầy đủ (còn ${full.length - cut.length} chữ)</button>` : ''}
+            ${e.analysis ? `<button class="btn-entry-view" title="Mở biểu mẫu đúng như đã lưu ở mốc này (chỉ đọc)" onclick="viewCaseEntry('${id}', ${i})">👁 Xem lại</button>
+            <button class="btn-entry-print" title="Tải .docx đúng nội dung đã lưu ở mốc này" onclick="reprintCaseEntry('${id}', ${i})">🖨 In lại</button>` : ''}
+          </div>
         </div>`;
       }).join('')
     : '<div class="cd-empty">Chưa có ghi chép</div>';
