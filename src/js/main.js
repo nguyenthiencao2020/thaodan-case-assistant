@@ -310,7 +310,7 @@ async function _checkSession() {
 }
 
 // ════════════════════════════════════════════════════════════
-// STORAGE v22 — Supabase per-case rows + files + notifications
+// STORAGE — Supabase per-case rows + files + notifications
 // ════════════════════════════════════════════════════════════
 let _cases = {};
 let _tplOpen = false;
@@ -1667,7 +1667,7 @@ function _validateData(data) {
 }
 
 // ════════════════════════════════════════════════════════════
-// ★★★ REPORT RENDERER v22 — Stage-aware ★★★
+// ★★★ REPORT RENDERER — Stage-aware ★★★
 // ════════════════════════════════════════════════════════════
 function renderReport(report) {
   if (!report) return;
@@ -3399,7 +3399,6 @@ function renderFormTab(idx) {
       <div class="fv-ttl">${FORM_NAMES[idx]}</div>
       <div class="fv-meta">Mã: ${esc(_caseCodeNow())} &nbsp;|&nbsp; ${esc(_caseSeqNow())} &nbsp;|&nbsp; ${todayFmtH}</div>
       <div class="fv-badges">
-        <span class="fv-badge">✓ v16</span>
         <span class="fv-badge-stage">GĐ ${currentStage}</span>
       </div>
     </div>
@@ -3428,7 +3427,7 @@ function renderFormTab(idx) {
     h+=Sec("C. Tình trạng trẻ","s0c",
       Dv("Lao động")+F("Công việc",tt.cong_viec,'-','tinh_trang.cong_viec')+F("Thời gian (h/ngày)",tt.thoi_gian_lam_viec,'-','tinh_trang.thoi_gian_lam_viec')+F("Bắt đầu làm từ",tt.bat_dau_lam_tu,'-','tinh_trang.bat_dau_lam_tu')+
       Dv("Giấy tờ")+F("Khai sinh",[cf(gks.co),cf(gks.ly_do)].filter(Boolean).join(' — '))+F("Thường trú",[cf(tr.co),cf(tr.ly_do)].filter(Boolean).join(' — '))+F("CCCD",[cf(cc.co),cf(cc.ly_do)].filter(Boolean).join(' — '))+
-      Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Kết quả học tập",hv.ket_qua,'-','tinh_trang.hoc_van.ket_qua')+F("Bỏ học",cf(hv.bo_hoc)?'Lớp '+cf(hv.bo_hoc)+(cf(hv.nam_bo_hoc)?' ('+cf(hv.nam_bo_hoc)+')':''):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc,'-','tinh_trang.hoc_van.ly_do_bo_hoc')+F("Học nghề",cf(hv.hoc_nghe)?(cf(hv.nghe_da_hoc)||'Có'):'Không')+F("Sở thích",hv.so_thich,'-','tinh_trang.hoc_van.so_thich')+F("Ước mơ",hv.uoc_mo,'-','tinh_trang.hoc_van.uoc_mo')+
+      Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Kết quả học tập",hv.ket_qua,'-','tinh_trang.hoc_van.ket_qua')+F("Bỏ học",cf(hv.bo_hoc)?'Lớp '+cf(hv.bo_hoc)+(cf(hv.nam_bo_hoc)?' ('+cf(hv.nam_bo_hoc)+')':''):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc,'-','tinh_trang.hoc_van.ly_do_bo_hoc')+F("Học nghề",[cf(hv.hoc_nghe),cf(hv.nghe_da_hoc)].filter(Boolean).join(' — '),'-','tinh_trang.hoc_van.hoc_nghe')+F("Sở thích",hv.so_thich,'-','tinh_trang.hoc_van.so_thich')+F("Ước mơ",hv.uoc_mo,'-','tinh_trang.hoc_van.uoc_mo')+
       Dv("Sức khỏe")+F("Tình trạng",sk.tinh_trang,'-','tinh_trang.suc_khoe.tinh_trang')+F("Cân nặng (kg)",sk.can_nang,'-','tinh_trang.suc_khoe.can_nang')+F("Chiều cao (cm)",sk.chieu_cao,'-','tinh_trang.suc_khoe.chieu_cao')+F("Bệnh trong 6 tháng",sk.benh_trong_6t,'-','tinh_trang.suc_khoe.benh_trong_6t')+F("Được khám",sk.duoc_kham,'-','tinh_trang.suc_khoe.duoc_kham')+F("BHYT",sk.bhyt,'-','tinh_trang.suc_khoe.bhyt')+
       Dv("Tâm lý")+F("Tăng động",tl.tang_dong,'-','tinh_trang.tam_ly.tang_dong')+F("Bi quan",tl.bi_quan,'-','tinh_trang.tam_ly.bi_quan')+F("Tự tổn thương",tl.tu_ton_thuong,'-','tinh_trang.tam_ly.tu_ton_thuong')+F("Mô tả",tl.mo_ta,'-','tinh_trang.tam_ly.mo_ta')+
       (()=>{ const dass=(tt.dass||null); if(!dass) return ''; const dL=_getDASSSeverity('D',dass.D||0),aL=_getDASSSeverity('A',dass.A||0),sL=_getDASSSeverity('S',dass.S||0); return Dv('DASS-'+dass.version+' ('+dass.date+')')+`<div class="dass-form-result"><span class="dass-fb" style="color:${dL.c};border-color:${dL.c};background:${dL.c}15">😔 TC: ${dass.D} — ${dL.lv}</span><span class="dass-fb" style="color:${aL.c};border-color:${aL.c};background:${aL.c}15">😰 LA: ${dass.A} — ${aL.lv}</span><span class="dass-fb" style="color:${sL.c};border-color:${sL.c};background:${sL.c}15">😤 CT: ${dass.S} — ${sL.lv}</span></div>`; })());
@@ -3448,6 +3447,23 @@ function renderFormTab(idx) {
   } else if (idx===2) {
     h+=Sec("Thông tin vãng gia","s2a",F("Ngày vãng gia",vg.ngay_vang_gia,'-','vang_gia.ngay_vang_gia')+F("Người tiếp xúc",vg.nguoi_tiep_xuc,'-','vang_gia.nguoi_tiep_xuc')+F("Lần thứ",vg.lan_vang_gia,'-','vang_gia.lan_vang_gia')+F("Gặp TC",vg.co_gap_tc,'-','vang_gia.co_gap_tc')+F("Mục đích",vg.muc_dich,'-','vang_gia.muc_dich'));
     h+=Sec("Quan sát gia đình","s2b",F("Môi trường sống",vg.quan_sat_mt,'-','vang_gia.quan_sat_mt')+F("Loại hình GĐ",vg.loai_hinh_gd||gd.loai_hinh,'-','vang_gia.loai_hinh_gd')+F("Bầu khí",vg.bau_khi_gd||gd.bau_khi,'-','vang_gia.bau_khi_gd')+F("Hôn nhân cha mẹ",vg.tinh_trang_hn,'-','vang_gia.tinh_trang_hn')+F("Kinh tế",vg.van_de_kinh_te,'-','vang_gia.van_de_kinh_te')+F("Đánh giá chung",vg.danh_gia_chung,'-','vang_gia.danh_gia_chung'));
+  // ── 29 trường dưới đây trước đây CHỈ có trong bản in / bản .docx, không hiện trên màn hình.
+  //    Đó là lỗi thiết kế: cả cơ chế kiểm chứng (dấu BẢN NHÁP → nút "Tôi đã kiểm chứng") dựa
+  //    trên việc NVXH ĐỌC ĐƯỢC những gì sẽ in ra. Trường in lên giấy mà không xem được trên
+  //    màn hình thì không ai kiểm chứng nổi. Nhãn giữ đúng nhãn của bản in để đối chiếu.
+    h+=Sec("Người tiếp xúc","s2c",F("Quan hệ với trẻ",vg.quan_he_voi_tre,'-','vang_gia.quan_he_voi_tre')+F("Số điện thoại liên hệ",vg.sdt,'-','vang_gia.sdt'));
+    h+=Sec("Vấn đề ghi nhận trong buổi vãng gia","s2d",
+      F("Mối quan hệ giữa trẻ và người sống cùng",vg.quan_he_tre_gd,'-','vang_gia.quan_he_tre_gd')+
+      F("Cách tương tác giữa các thành viên",vg.cach_tuong_tac,'-','vang_gia.cach_tuong_tac')+
+      F("Vấn đề giáo dục",vg.van_de_giao_duc,'-','vang_gia.van_de_giao_duc')+
+      F("Vấn đề sức khỏe",vg.van_de_suc_khoe,'-','vang_gia.van_de_suc_khoe')+
+      F("Vấn đề hành chính",vg.van_de_hanh_chinh,'-','vang_gia.van_de_hanh_chinh')+
+      F("Quan hệ với cộng đồng xung quanh",vg.van_de_cong_dong,'-','vang_gia.van_de_cong_dong')+
+      F("Vấn đề gia đình / gia đình mở rộng",vg.van_de_tu_gd,'-','vang_gia.van_de_tu_gd')+
+      F("Vấn đề khác",vg.van_de_khac,'-','vang_gia.van_de_khac'));
+    h+=Sec("Quan sát và phát hiện thêm của NVXH","s2e",
+      F("Quan sát khác về gia đình",vg.quan_sat_khac,'-','vang_gia.quan_sat_khac')+
+      F("Phát hiện khác",vg.phat_hien_khac,'-','vang_gia.phat_hien_khac'));
   } else if (idx===3) {
     h+=Sec("Đánh giá khẩn cấp","s3a",F("Họ tên",cb.ho_ten,'-','co_ban.ho_ten')+F("Tuổi",cb.tuoi,'-','co_ban.tuoi')+F("Hoàn cảnh GĐ",gd.hoan_canh,'-','gia_dinh.hoan_canh')+F("Tổn thương",[cf(dg.van_de_the_chat),cf(dg.van_de_tam_ly)].filter(Boolean).join(' | '))+F("Nguy cơ",dg.nguy_co,'-','danh_gia.nguy_co')+F("Mức khẩn cấp",dg.muc_khan_cap,'-','danh_gia.muc_khan_cap')+F("Yếu tố bảo vệ",dg.yeu_to_bao_ve,'-','danh_gia.yeu_to_bao_ve')+F("Nhận xét",dg.nhan_xet_nvxh,'-','danh_gia.nhan_xet_nvxh'));
   } else if (idx===4) {
@@ -3460,6 +3476,11 @@ function renderFormTab(idx) {
     h+=Sec("Nhu cầu hỗ trợ","s5a",TBL(["TT","Nhu cầu","Ưu tiên","Mục tiêu"],ncR));
     h+=Sec("Hoạt động","s5b",TBL(["Mục tiêu","Hoạt động","Ưu tiên","Người phụ trách","Thời gian","Nguồn lực"],(kh.hoat_dong||[]).map(h=>[h.muc_tieu_so,h.noi_dung,h.uu_tien||'',h.nguoi_phu_trach||'',h.thoi_gian,h.nguon_luc])));
     h+=Sec("Nguồn lực","s5c",F("",kh.nguon_luc_ket_noi));
+  // ── 29 trường dưới đây trước đây CHỈ có trong bản in / bản .docx, không hiện trên màn hình.
+  //    Đó là lỗi thiết kế: cả cơ chế kiểm chứng (dấu BẢN NHÁP → nút "Tôi đã kiểm chứng") dựa
+  //    trên việc NVXH ĐỌC ĐƯỢC những gì sẽ in ra. Trường in lên giấy mà không xem được trên
+  //    màn hình thì không ai kiểm chứng nổi. Nhãn giữ đúng nhãn của bản in để đối chiếu.
+    h+=Sec("Mốc thời gian kế hoạch","s5f",F("Thời gian bắt đầu case",kh.bat_dau_case,'-','ke_hoach.bat_dau_case')+F("Thời gian thực hiện KH",kh.thoi_gian_kh,'-','ke_hoach.thoi_gian_kh'));
     if ((kh.xem_xet||[]).length) h+=Sec("Mốc xem xét lại kế hoạch","s5e",(kh.xem_xet||[]).filter(Boolean).map(x=>F("",x)).join(''),'🔁');
     if (kh.cam_ket_gia_dinh || kh.cam_ket_tre || kh.cam_ket_nvxh) {
       h+=Sec("Cam kết 2 phía","s5d",
@@ -3493,13 +3514,23 @@ function renderFormTab(idx) {
       <div style="font-size:14px;color:#3b82f6;margin-top:2px">Soạn sẵn bản Word theo thể thức hành chính từ dữ liệu phiếu này — chỉ cần sửa và ký.</div></div>
       <button class="btn-dl-docx-brand" onclick="dlReferralLetter()">📨 Soạn công văn</button></div>`;
     h+=Sec("Trẻ cần chuyển gửi","s8a",F("Họ tên",cb.ho_ten)+F("Năm sinh",cb.ngay_sinh)+F("Người chăm sóc",ncs.ho_ten));
-    h+=Sec("Người chuyển gửi","s8b",F("Họ tên",cg.nguoi_chuyen)+F("Đơn vị",cg.don_vi_chuyen));
-    h+=Sec("Nơi nhận","s8c",F("Đơn vị",cg.don_vi_nhan)+F("Người nhận",cg.nguoi_nhan));
+  // ── 29 trường dưới đây trước đây CHỈ có trong bản in / bản .docx, không hiện trên màn hình.
+  //    Đó là lỗi thiết kế: cả cơ chế kiểm chứng (dấu BẢN NHÁP → nút "Tôi đã kiểm chứng") dựa
+  //    trên việc NVXH ĐỌC ĐƯỢC những gì sẽ in ra. Trường in lên giấy mà không xem được trên
+  //    màn hình thì không ai kiểm chứng nổi. Nhãn giữ đúng nhãn của bản in để đối chiếu.
+    h+=Sec("Người chuyển gửi","s8b",F("Họ tên",cg.nguoi_chuyen,'-','chuyen_gui.nguoi_chuyen')+F("Chức danh / vai trò",cg.chuc_danh,'-','chuyen_gui.chuc_danh')+F("Đơn vị",cg.don_vi_chuyen,'-','chuyen_gui.don_vi_chuyen')+F("Số điện thoại",cg.sdt_chuyen,'-','chuyen_gui.sdt_chuyen')+F("Email",cg.email_chuyen,'-','chuyen_gui.email_chuyen'));
+    h+=Sec("Nơi nhận","s8c",F("Đơn vị",cg.don_vi_nhan,'-','chuyen_gui.don_vi_nhan')+F("Người nhận",cg.nguoi_nhan,'-','chuyen_gui.nguoi_nhan')+F("Địa chỉ",cg.dia_chi_nhan,'-','chuyen_gui.dia_chi_nhan')+F("Số điện thoại liên hệ",cg.sdt_nhan,'-','chuyen_gui.sdt_nhan')+F("Email",cg.email_nhan,'-','chuyen_gui.email_nhan'));
   } else if (idx===9) {
+  // ── 29 trường dưới đây trước đây CHỈ có trong bản in / bản .docx, không hiện trên màn hình.
+  //    Đó là lỗi thiết kế: cả cơ chế kiểm chứng (dấu BẢN NHÁP → nút "Tôi đã kiểm chứng") dựa
+  //    trên việc NVXH ĐỌC ĐƯỢC những gì sẽ in ra. Trường in lên giấy mà không xem được trên
+  //    màn hình thì không ai kiểm chứng nổi. Nhãn giữ đúng nhãn của bản in để đối chiếu.
+    h+=Sec("Người nuôi dưỡng trẻ","s9b",F("Họ tên",ktu.nguoi_nuoi_duong,'-','ket_thuc.nguoi_nuoi_duong')+F("Quan hệ với trẻ",ktu.quan_he,'-','ket_thuc.quan_he')+F("Năm sinh",ktu.nam_sinh_nd,'-','ket_thuc.nam_sinh_nd')+F("Nghề nghiệp",ktu.nghe_nghiep_nd,'-','ket_thuc.nghe_nghiep_nd')+F("Số điện thoại",ktu.sdt_nd,'-','ket_thuc.sdt_nd'));
+    h+=Sec("NVXH phụ trách","s9c",F("Họ và tên NVXH",ktu.nvxh_phu_trach,'-','ket_thuc.nvxh_phu_trach')+F("Số điện thoại liên hệ",ktu.sdt_nvxh,'-','ket_thuc.sdt_nvxh')+F("Thời gian bắt đầu case",ktu.bat_dau_case,'-','ket_thuc.bat_dau_case'));
     h+=Sec("Kết thúc ca","s9a",F("Kết quả đạt",ktu.ket_qua_dat)+F("Chưa đạt",ktu.ket_qua_chua_dat)+F("Lý do",ktu.ly_do)+F("KH theo dõi",ktu.ke_hoach_theo_doi));
   } else {
     h+=Sec("PHẦN I — Thông tin cơ bản","sbc1",F("Họ tên",cb.ho_ten)+F("Năm sinh",cb.ngay_sinh)+F("Yêu cầu",dg.yeu_cau_tre)+F("Nguy cơ",dg.nguy_co));
-    h+=Sec("PHẦN II — Tiến trình","sbc2",F("Bối cảnh GĐ",gd.hoan_canh)+F("Nhu cầu thể chất",dg.nhu_cau_the_chat)+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly)+F("Ưu thế trẻ",dg.uu_the_tre)+F("Đề xuất",D.de_xuat));
+    h+=Sec("PHẦN II — Tiến trình","sbc2",F("Bối cảnh GĐ",gd.hoan_canh)+F("Nhu cầu thể chất",dg.nhu_cau_the_chat)+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly)+F("Ưu thế trẻ",dg.uu_the_tre,'-','danh_gia.uu_the_tre')+F("Đề xuất",D.de_xuat,'-','de_xuat')+F("Sự kiện hiện tại (dòng thời gian)",D.timeline,'-','timeline'));
   }
   // Gắn phần Đánh giá chuyên môn tương ứng với từng form (SecDashboard tự bỏ qua form 5/6 vận hành).
   if (D && D._report) h += SecDashboard(idx);
@@ -3851,6 +3882,72 @@ function toggleNote(i) {
   btn.textContent = open
     ? 'Xem đầy đủ (còn ' + (el.dataset.full.length - el.dataset.short.length + 1) + ' chữ)'
     : 'Thu gọn';
+}
+
+// ════════════════════
+// KHỚP Ô VUÔNG TRONG BIỂU MẪU
+// ════════════════════
+// Trước đây hàm CB() khớp bằng 4 KÝ TỰ ĐẦU của lựa chọn:
+//     sel.toLowerCase().includes(opt.toLowerCase().substring(0,4))
+// Với 3 trong 4 nhóm ô vuông của biểu mẫu, các lựa chọn đều bắt đầu bằng "Trẻ " nên 4 ký tự đầu
+// TRÙNG NHAU — hậu quả là hễ giá trị có chữ "trẻ" thì TẤT CẢ ô trong nhóm cùng được tích, kể cả
+// hai lựa chọn loại trừ nhau ("Trẻ chưa từng học nghề" và "Trẻ đã từng tham gia học nghề").
+// Ngược lại, khi AI viết bằng từ khác ("Mẹ và em gái" cho ô "Cha mẹ") thì không ô nào được tích.
+//
+// Bộ khớp mới: bỏ dấu, đếm từ đặc trưng trùng nhau, chỉ tích ĐÚNG MỘT ô điểm cao nhất; hai ô
+// bằng điểm thì không tích ô nào (thà để trống cho NVXH điền hơn là tích sai).
+const _CB_STOP = new Set(['tre','co','va','cua','hoac','voi','cac','nguoi','vao','la','thuoc','nhom','o','va']);
+// Bản in chính thức dùng viết tắt ("Trẻ có HCĐB") còn AI thì viết đủ ("Trẻ có hoàn cảnh đặc
+// biệt"), nên phải quy về một dạng trước khi so, không thì ô viết tắt không bao giờ khớp và ô
+// dài hơn ("nguy cơ rơi vào...") bị tích oan.
+const _CB_ALIAS = [
+  [/\bhcdb\b/g, 'hoan canh dac biet'],
+  [/\bhcdd\b/g, 'hoan canh dac biet'],
+  [/\bnvxh\b/g, 'nhan vien xa hoi'],
+  [/\bbhyt\b/g, 'bao hiem y te'],
+];
+function _cbNorm(s) {
+  let t = String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+  for (const [re, to] of _CB_ALIAS) t = t.replace(re, to);
+  return t;
+}
+// Từ đặc trưng của một lựa chọn = phần TRƯỚC dấu phẩy / gạch chéo / ngoặc (mệnh đề chính),
+// bỏ từ chức năng. Lấy mệnh đề chính là để "Trẻ có hoàn cảnh đặc biệt, nhóm cộng đồng nghèo/
+// nhập cư" không bị phần sau dấu phẩy làm loãng.
+function _cbWords(opt) {
+  const head = _cbNorm(opt).split(/[,/(]/)[0];
+  return head.split(/[^a-z0-9]+/).filter(w => w.length >= 2 && !_CB_STOP.has(w));
+}
+function _cbPick(opts, sel) {
+  const v = _cbNorm(sel);
+  if (!v.trim()) return -1;
+  const vset = new Set(v.split(/[^a-z0-9]+/).filter(Boolean));   // so theo TỪ, không so chuỗi con,
+                                                                  // để "me" không khớp trong "them"
+  // Cặp phủ định / khẳng định ("chưa từng" vs "đã từng"): các từ còn lại gần như trùng hết nên
+  // phải xét dấu phủ định trước, không thể đếm từ.
+  if (opts.length === 2) {
+    const negIdx = opts.findIndex(o => /(^| )(chua|khong)( |$)/.test(_cbNorm(o)));
+    const posIdx = opts.findIndex((o, i) => i !== negIdx && /(^| )(da|co)( |$)/.test(_cbNorm(o)));
+    if (negIdx >= 0 && posIdx >= 0)
+      return /(^| )(chua|khong)( |$)/.test(v) ? negIdx : posIdx;
+  }
+  // Điểm chính = số từ đặc trưng khớp. Bằng điểm thì ưu tiên lựa chọn khớp ĐỦ từ của nó
+  // (tỷ lệ khớp cao hơn) — nhờ vậy "Trẻ có hoàn cảnh đặc biệt" chọn đúng ô ngắn, còn khi ghi
+  // chép có thêm "nguy cơ rơi vào" thì chọn ô dài hơn vì khớp nhiều từ hơn.
+  const cand = opts.map((o, i) => {
+    const w = _cbWords(o);
+    const hit = w.filter(x => vset.has(x)).length;
+    return { i, hit, ratio: w.length ? hit / w.length : 0 };
+  });
+  const best = Math.max(...cand.map(c => c.hit));
+  if (best === 0) return -1;
+  let top = cand.filter(c => c.hit === best);
+  if (top.length > 1) {
+    const r = Math.max(...top.map(c => c.ratio));
+    top = top.filter(c => c.ratio === r);
+  }
+  return top.length === 1 ? top[0].i : -1;   // vẫn bằng nhau → không tích ô nào
 }
 
 function updateHeader() {
@@ -4954,9 +5051,10 @@ async function buildDocx(fi,logoData,footerData,_collector){
   // CB: Checkbox
   function CB(opts,sel){
     const ch=[];
+    const pick=_cbPick(opts,sel);   // chỉ tích đúng một ô, xem ghi chú ở _cbPick
     opts.forEach((opt,i)=>{
       if(i>0) ch.push(R("     ",{size:T_BODY}));
-      const chk=sel&&sel.toLowerCase().includes(opt.toLowerCase().substring(0,4));
+      const chk=i===pick;
       ch.push(R(chk?"☑ ":"☐ ",{font:"Segoe UI Symbol",size:T_BODY,color:chk?"1E293B":"555555"}));
       ch.push(R(opt,{size:T_BODY,color:"333333"}));
     });
