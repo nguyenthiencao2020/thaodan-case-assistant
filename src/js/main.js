@@ -1551,6 +1551,8 @@ async function runAnalysis() {
       restoreRealNamesDeep(report);
       report._stage = currentStage;
       D._report = report;
+      // Lấp chỗ trống của biểu mẫu bằng nội dung báo cáo — xem ghi chú ở _fillFormFromReport
+      D = _fillFormFromReport(D, report);
       // Có nội dung AI mới → xác nhận trước đó không còn giá trị, bản in về lại BẢN NHÁP.
       D._verified = null;
       D._notes = notes;
@@ -3948,6 +3950,44 @@ function _cbPick(opts, sel) {
     top = top.filter(c => c.ratio === r);
   }
   return top.length === 1 ? top[0].i : -1;   // vẫn bằng nhau → không tích ô nào
+}
+
+// ════════════════════
+// NỐI BÁO CÁO → BIỂU MẪU
+// ════════════════════
+// Một lần phân tích gọi HAI lượt AI SONG SONG: một sinh báo cáo cho khung chat, một trích xuất
+// dữ liệu cho biểu mẫu. Trước đây hai lượt hoàn toàn độc lập, nên hay gặp cảnh báo cáo ghi rõ
+// "Rủi ro: Cao — vết bầm chưa rõ nguyên nhân" mà ô NGUY CƠ trong biểu mẫu vẫn để trống. NVXH
+// thấy hai kết quả lệch nhau cho cùng một ca, và phần việc AI đã làm bị mất.
+//
+// Hàm này lấp CHỖ TRỐNG của biểu mẫu bằng chính nội dung báo cáo — KHÔNG ghi đè giá trị đã có,
+// và không thêm suy diễn nào mới: mọi giá trị đều là chữ AI đã viết ra cho cùng ghi chép đó,
+// nên vẫn đi qua bộ truy vết nguồn (📎 / ❓) như mọi ô khác.
+function _fillFormFromReport(D, r) {
+  if (!D || !r) return D;
+  const txt = (v) => Array.isArray(v) ? v.filter(Boolean).join('; ') : (v == null ? '' : String(v));
+  const put = (obj, key, val) => {
+    const v = txt(val).trim();
+    if (!v) return;
+    if (!obj) return;
+    if (cf(obj[key])) return;         // đã có nội dung → giữ nguyên, không ghi đè
+    obj[key] = v;
+  };
+  D.danh_gia = D.danh_gia || {};
+  const dg = D.danh_gia, nw = r.needs_vs_wants || {};
+  put(dg, 'nguy_co',        r.red_flags && r.red_flags.length ? r.red_flags : r.risk_reason);
+  put(dg, 'muc_khan_cap',   r.risk || r.risk_level);
+  put(dg, 'yeu_to_bao_ve',  r.yeu_to_bao_ve);
+  put(dg, 'uu_the_tre',     r.strengths);
+  put(dg, 'nhan_xet_nvxh',  r.summary || r.progress_summary);
+  put(dg, 'yeu_cau_tre',    nw.wants);
+  // Nhu cầu khách quan: báo cáo chỉ cho một danh sách chung, không tách thể chất / tâm lý /
+  // nhận thức. Đặt vào ô "nhu cầu thể chất" là đoán, nên KHÔNG làm — để trống cho NVXH phân
+  // loại, đúng nguyên tắc thà thiếu hơn sai.
+  if (r.parentification && r.parentification.detected) {
+    put(dg, 'van_de_tam_ly', [r.parentification.type, r.parentification.description]);
+  }
+  return D;
 }
 
 function updateHeader() {
