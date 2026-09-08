@@ -1364,13 +1364,15 @@ function completeStage() {
       body: `"${cName}" sẽ chuyển sang trạng thái Đã đóng.\nBạn vẫn có thể xem lại nhưng không thể chỉnh sửa tiếp.`,
       okText: 'Đóng ca',
       okClass: 'cmb-ok-orange',
-      onConfirm() {
+      prompt: _CLOSE_PROMPT,
+      onConfirm(reason) {
         const cases = loadCases();
         if (cases[curCaseId]) {
           cases[curCaseId].status = 'closed';
           cases[curCaseId].closedAt = new Date().toISOString();
           cases[curCaseId].updatedAt = new Date().toISOString();
-          if (D) D._status = 'closed';
+          _logCaseStatus(cases[curCaseId], 'close', reason, currentStage);
+          if (D) { D._status = 'closed'; D._closeReason = String(reason || '').trim(); }
           if (!cases[curCaseId].followUpSchedule)
             cases[curCaseId].followUpSchedule = _genFollowUpSchedule(cases[curCaseId].closedAt);
           saveCases(cases);
@@ -4584,7 +4586,8 @@ function showCaseDetail(id) {
     <div class="cd-section">
       <div class="cd-section-title">Tiến trình</div>
       <div style="display:flex;align-items:center;gap:0;max-width:280px;">${stageDots}</div>
-    </div>`;
+    </div>
+    ${_caseStatusLogHTML(c)}`;
 
   // Trước đây cắt cứng ở 300 ký tự KHÔNG có dấu … nên ghi chép dài bị chặt giữa từ
   // ("Mẹ 38 tuổi, công nhân may, thu") và NVXH không hề biết là còn nữa. Nay cắt ở ranh giới
@@ -4684,12 +4687,14 @@ function _closeCaseFromList(id) {
     body: `"${c?.name||'Ca này'}" sẽ chuyển sang trạng thái Đã đóng.`,
     okText: 'Đóng ca',
     okClass: 'cmb-ok-orange',
-    onConfirm() {
+    prompt: _CLOSE_PROMPT,
+    onConfirm(reason) {
       const cases = loadCases();
       if (cases[id]) {
         cases[id].status = 'closed';
         cases[id].closedAt = new Date().toISOString();
         cases[id].updatedAt = new Date().toISOString();
+        _logCaseStatus(cases[id], 'close', reason, cases[id].currentStage);
         if (!cases[id].followUpSchedule)
           cases[id].followUpSchedule = _genFollowUpSchedule(cases[id].closedAt);
       }
@@ -4713,12 +4718,82 @@ function _closeCaseFromList(id) {
     }
   });
 }
+// Khối "Lịch sử đóng / mở lại ca" trong trang chi tiết ca — nơi giám sát ca đọc lý do.
+// Hồ sơ cũ (đóng/mở trước khi có sổ ghi) thì dựng dòng từ closedAt/reopenLog và nói thẳng là
+// không có lý do, thay vì im lặng để người đọc tưởng chưa từng đóng.
+function _caseStatusLogHTML(c) {
+  const log = (c && Array.isArray(c.statusLog)) ? c.statusLog.slice() : [];
+  const old = [];
+  if (!log.length) {
+    (c && Array.isArray(c.reopenLog) ? c.reopenLog : []).forEach(r => {
+      if (r.closedAt) old.push({ action: 'close', at: r.closedAt, reason: '', by: '', _old: true });
+      if (r.reopenedAt) old.push({ action: 'reopen', at: r.reopenedAt, reason: r.reason || '', by: '', _old: true });
+    });
+    if (c && c.closedAt && !old.some(x => x.action === 'close' && x.at === c.closedAt)) {
+      old.push({ action: 'close', at: c.closedAt, reason: '', by: '', _old: true });
+    }
+  }
+  const rows = (log.length ? log : old).slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  if (!rows.length) return '';
+  return '<div class="cd-section"><div class="cd-section-title">Lịch sử đóng / mở lại ca</div>'
+    + '<div class="cs-log">' + rows.map(r => {
+        const isClose = r.action === 'close';
+        const meta = [fmtVN(r.at), r.stage ? 'GĐ ' + r.stage : '', r.by ? esc(r.by) : ''].filter(Boolean).join(' · ');
+        const reason = cf(r.reason)
+          ? esc(r.reason)
+          : '<em style="color:var(--t3)">Không có lý do ghi lại (mốc cũ, trước khi hệ thống yêu cầu ghi lý do)</em>';
+        return '<div class="cs-log-item ' + (isClose ? 'close' : 'reopen') + '">'
+          + '<div class="cs-log-hd">' + (isClose ? '✅ Đóng ca' : '🔓 Mở lại ca') + '</div>'
+          + '<div class="cs-log-meta">' + meta + '</div>'
+          + '<div>' + reason + '</div></div>';
+      }).join('') + '</div></div>';
+}
+
+// ── Sổ ghi đóng / mở lại ca ──────────────────────────────────────────────────────────────
+// Đóng ca và mở lại ca là hai quyết định nghiệp vụ phải giải trình được: ca bảo vệ trẻ đóng
+// sớm hay mở lại đều là việc giám sát ca sẽ hỏi. Trước đây chỉ lưu closedAt/reopenedAt, tức
+// biết KHI NÀO mà không biết VÌ SAO và AI làm. Nay mỗi lần đổi trạng thái ghi một dòng vào
+// c.statusLog kèm lý do bắt buộc, ngày, người thực hiện và giai đoạn lúc đó.
+function _logCaseStatus(c, action, reason, stage) {
+  if (!c) return;
+  c.statusLog = Array.isArray(c.statusLog) ? c.statusLog : [];
+  c.statusLog.push({
+    action: action,                                  // 'close' | 'reopen'
+    at: new Date().toISOString(),
+    reason: String(reason || '').trim(),
+    by: (typeof _currentUser === 'object' && _currentUser && _currentUser.email) || '',
+    stage: stage != null ? stage : (c.currentStage || null),
+  });
+}
+
+// Lý do gần nhất của một hành động — dùng cho dải báo "ca đã đóng".
+function _lastStatusReason(c, action) {
+  const log = (c && Array.isArray(c.statusLog)) ? c.statusLog : [];
+  for (let i = log.length - 1; i >= 0; i--) if (log[i].action === action) return log[i];
+  return null;
+}
+
+const _CLOSE_PROMPT = {
+  label: 'Vì sao đóng ca? (bắt buộc)',
+  placeholder: 'VD: Đã đạt mục tiêu kế hoạch, trẻ trở lại trường và môi trường chăm sóc ổn định; '
+    + 'gia đình cam kết tiếp tục cho trẻ đi học. Chuyển hồ sơ theo dõi cho cán bộ LĐTBXH phường.',
+  minLen: 20,
+};
+const _REOPEN_PROMPT = {
+  label: 'Vì sao mở lại ca? (bắt buộc)',
+  placeholder: 'VD: Bà nội nhập viện ngày 12/05/2027, không còn người chăm sóc thay thế; '
+    + 'trẻ có nguy cơ bỏ học lại. Cần can thiệp tiếp.',
+  minLen: 20,
+};
+
 // Mở lại ca: trước đây xóa hẳn closedAt nên mất dấu ca đã từng đóng — không tra lại được
 // ca nào bị tái mở và cách lần đóng bao lâu. Nay ghi lại vào reopenLog trước khi xóa.
-function _recordReopen(c) {
+function _recordReopen(c, reason) {
   if (!c) return;
+  _logCaseStatus(c, 'reopen', reason, c.currentStage);
   c.reopenLog = Array.isArray(c.reopenLog) ? c.reopenLog : [];
-  c.reopenLog.push({ closedAt: c.closedAt || null, reopenedAt: new Date().toISOString() });
+  c.reopenLog.push({ closedAt: c.closedAt || null, reopenedAt: new Date().toISOString(),
+                     reason: String(reason || '').trim() });
   c.reopenedAt = c.reopenLog[c.reopenLog.length - 1].reopenedAt;
   delete c.closedAt;
 }
@@ -4731,9 +4806,10 @@ function _reopenCaseFromList(id) {
     body: `"${c?.name||'Ca này'}" sẽ được mở lại để tiếp tục chỉnh sửa.`,
     okText: 'Mở lại',
     okClass: 'cmb-ok-blue',
-    onConfirm() {
+    prompt: _REOPEN_PROMPT,
+    onConfirm(reason) {
       const cases = loadCases();
-      if (cases[id]) { cases[id].status = 'open'; _recordReopen(cases[id]); cases[id].updatedAt = new Date().toISOString(); }
+      if (cases[id]) { cases[id].status = 'open'; _recordReopen(cases[id], reason); cases[id].updatedAt = new Date().toISOString(); }
       saveCases(cases);
       if (curCaseId === id && D) { D._status = 'open'; applyClosedCaseUI(); }
       renderCaseList(); showCaseDetail(id);
@@ -4808,8 +4884,14 @@ function loadCaseIntoApp(id) {
 
 // ── CUSTOM CONFIRM MODAL ──
 let _confirmCb = null;
+let _confirmPrompt = null;   // { label, placeholder, minLen } khi hộp thoại có ô lý do
 let _cancelCb = null;
-function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', okClass='cmb-ok-red', onConfirm=null, onCancel=null}={}) {
+// prompt: { label, placeholder, minLen } → hiện ô lý do BẮT BUỘC, khóa nút xác nhận tới khi
+// đủ số ký tự, rồi truyền nguyên văn lý do vào onConfirm(reason).
+// Dùng cho quyết định phải giải trình được về sau: đóng ca và mở lại ca. Lý do bắt buộc chứ
+// không phải tùy chọn — hồ sơ bảo vệ trẻ mà có mốc đóng/mở không ai biết vì sao thì tới lúc
+// giám sát hoặc thanh tra hỏi lại là không trả lời được.
+function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', okClass='cmb-ok-red', onConfirm=null, onCancel=null, prompt=null}={}) {
   _confirmCb = onConfirm; _cancelCb = onCancel;
   document.getElementById('cmb-icon').textContent = icon;
   document.getElementById('cmb-title').textContent = title;
@@ -4818,16 +4900,49 @@ function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', ok
   ok.textContent = okText;
   ok.className = 'cmb-btn ' + okClass;
   ok.onclick = _doConfirm;
+
+  const box = document.getElementById('cmb-prompt');
+  const ta = document.getElementById('cmb-p-input');
+  const hint = document.getElementById('cmb-p-hint');
+  _confirmPrompt = prompt || null;
+  if (prompt) {
+    const minLen = prompt.minLen || 10;
+    box.hidden = false;
+    document.getElementById('cmb-p-lb').textContent = prompt.label || 'Lý do';
+    ta.placeholder = prompt.placeholder || '';
+    ta.value = '';
+    ok.disabled = true;
+    const paint = () => {
+      const n = ta.value.trim().length;
+      ok.disabled = n < minLen;
+      hint.textContent = n < minLen
+        ? 'Cần thêm ' + (minLen - n) + ' ký tự nữa — lý do này được lưu vào hồ sơ ca.'
+        : 'Lý do được lưu vào hồ sơ ca kèm ngày và người thực hiện.';
+      hint.className = 'cmb-p-hint' + (n < minLen ? ' warn' : '');
+    };
+    ta.oninput = paint;
+    paint();
+    setTimeout(() => ta.focus(), 60);
+  } else {
+    box.hidden = true;
+    ta.oninput = null;
+    ok.disabled = false;
+  }
   document.getElementById('confirm-overlay').classList.add('show');
 }
 function _doConfirm() {
+  const reason = _confirmPrompt
+    ? (document.getElementById('cmb-p-input').value || '').trim() : undefined;
+  // Chặn cả ở đây, không chỉ dựa vào nút bị disabled — Enter hoặc gọi thẳng _doConfirm() vẫn
+  // đi qua được nếu chỉ khóa ở giao diện.
+  if (_confirmPrompt && reason.length < (_confirmPrompt.minLen || 10)) return;
   document.getElementById('confirm-overlay').classList.remove('show');
-  const cb = _confirmCb; _confirmCb = null; _cancelCb = null;
-  if (cb) cb();
+  const cb = _confirmCb; _confirmCb = null; _cancelCb = null; _confirmPrompt = null;
+  if (cb) cb(reason);
 }
 function _cancelConfirm() {
   document.getElementById('confirm-overlay').classList.remove('show');
-  const cb = _cancelCb; _confirmCb = null; _cancelCb = null;
+  const cb = _cancelCb; _confirmCb = null; _cancelCb = null; _confirmPrompt = null;
   if (cb) cb();
 }
 
@@ -6596,7 +6711,10 @@ function applyClosedCaseUI() {
     // Hiện banner đã đóng
     banner?.classList.add('show');
     if (bannerDate && c.closedAt) {
-      bannerDate.textContent = 'Ngày đóng: ' + fmtVN(c.closedAt);
+      // Kèm luôn lý do: người mở lại ca cần biết vì sao ca được đóng trước khi quyết định.
+      const _lr = _lastStatusReason(c, 'close');
+      bannerDate.textContent = 'Ngày đóng: ' + fmtVN(c.closedAt)
+        + (_lr && cf(_lr.reason) ? ' — Lý do: ' + _lr.reason : '');
     }
     // Disable textarea
     if (textarea) {
@@ -6640,13 +6758,14 @@ function reopenCase() {
     body: `"${cName}" sẽ chuyển về trạng thái Đang mở ở GĐ 5.`,
     okText: 'Mở lại',
     okClass: 'cmb-ok-blue',
-    onConfirm() {
+    prompt: _REOPEN_PROMPT,
+    onConfirm(reason) {
       const cases = loadCases();
       if (cases[curCaseId]) {
         cases[curCaseId].status = 'open';
-        _recordReopen(cases[curCaseId]);
+        _recordReopen(cases[curCaseId], reason);
         cases[curCaseId].updatedAt = new Date().toISOString();
-        if (D) delete D._status;
+        if (D) { delete D._status; delete D._closeReason; }
         saveCases(cases);
       }
       updateHeader();

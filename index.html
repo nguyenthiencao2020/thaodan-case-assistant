@@ -334,6 +334,13 @@
 
 <div class="confirm-overlay" id="confirm-overlay" onclick="if(event.target===this)_cancelConfirm()">
   <div class="confirm-box"><div class="cmb-icon" id="cmb-icon">⚠️</div><div class="cmb-title" id="cmb-title"></div><div class="cmb-body" id="cmb-body"></div>
+    <!-- Ô lý do BẮT BUỘC cho các quyết định phải giải trình được sau này (đóng ca / mở lại ca).
+         Ẩn mặc định; showConfirm({prompt:{...}}) mới bật lên. -->
+    <div class="cmb-prompt" id="cmb-prompt" hidden>
+      <label class="cmb-p-lb" id="cmb-p-lb" for="cmb-p-input"></label>
+      <textarea class="cmb-p-input" id="cmb-p-input" rows="3"></textarea>
+      <div class="cmb-p-hint" id="cmb-p-hint"></div>
+    </div>
     <div class="cmb-btns"><button class="cmb-btn cmb-cancel" onclick="_cancelConfirm()">Hủy</button><button class="cmb-btn" id="cmb-ok">Xác nhận</button></div>
   </div>
 </div>
@@ -381,9 +388,9 @@
   </div>
 </div>
 
-<script src="/src/js/config.js?v=28"></script>
-<script src="/src/js/prompts.js?v=28"></script>
-<script src="/src/js/utils.js?v=28"></script>
-<script src="/src/js/main.js?v=28"></script>
+<script src="/src/js/config.js?v=29"></script>
+<script src="/src/js/prompts.js?v=29"></script>
+<script src="/src/js/utils.js?v=29"></script>
+<script src="/src/js/main.js?v=29"></script>
 </body>
 </html>

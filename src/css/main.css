@@ -1588,3 +1588,28 @@ body.hist-mode { padding-bottom:64px; }
   background:var(--bg2); color:var(--t1); border:1px solid var(--bd2);
 }
 .fv-vg-pick:hover { border-color:var(--navy); }
+
+/* ── Ô lý do bắt buộc trong hộp thoại xác nhận ───────────────────────────────────────────
+   Dùng cho quyết định phải giải trình được: đóng ca, mở lại ca. Nút xác nhận bị khóa tới khi
+   lý do đủ dài, nên phải thấy rõ vì sao đang bị khóa — đó là việc của .cmb-p-hint. */
+.cmb-prompt { text-align:left; margin:4px 0 14px; }
+.cmb-p-lb { display:block; font-size:14px; font-weight:800; color:var(--t1); margin-bottom:6px; }
+.cmb-p-input {
+  width:100%; box-sizing:border-box; resize:vertical; min-height:74px;
+  font-family:inherit; font-size:15px; line-height:1.5; color:var(--t1);
+  padding:9px 11px; border:1px solid var(--bd2); border-radius:8px; background:var(--white);
+}
+.cmb-p-input:focus { outline:none; border-color:var(--navy); box-shadow:0 0 0 3px var(--navy-tint); }
+.cmb-p-hint { font-size:13px; color:var(--t3); margin-top:5px; line-height:1.45; }
+.cmb-p-hint.warn { color:#b45309; font-weight:700; }
+.cmb-btn:disabled { opacity:.5; cursor:not-allowed; }
+/* Lịch sử đóng / mở lại ca trong trang chi tiết ca */
+.cs-log { margin-top:10px; display:flex; flex-direction:column; gap:7px; }
+.cs-log-item {
+  border-left:3px solid var(--bd2); padding:6px 0 6px 10px;
+  font-size:14px; line-height:1.5; color:var(--t2);
+}
+.cs-log-item.close { border-left-color:#f07020; }
+.cs-log-item.reopen { border-left-color:#2563eb; }
+.cs-log-hd { font-weight:800; color:var(--t1); }
+.cs-log-meta { font-size:13px; color:var(--t3); font-family:'JetBrains Mono',monospace; }
