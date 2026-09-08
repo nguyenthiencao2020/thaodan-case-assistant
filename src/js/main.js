@@ -1542,8 +1542,17 @@ async function runAnalysis() {
         showNotif('⚠️ AI trả về báo cáo không đầy đủ (thiếu ma trận rủi ro) — thử bấm "Phân tích" lại', 'warn', 6000);
       }
 
-      let formData = {};
-      try { formData = robustJSON(formRaw); } catch(e) { console.warn('Form JSON error:', e); formData = {}; }
+      // Lượt trích xuất biểu mẫu thất bại hoặc trả về rỗng thì TRƯỚC ĐÂY chỉ console.warn —
+      // NVXH thấy báo cáo đầy đủ ở khung chat, tưởng biểu mẫu cũng đã điền, tới lúc mở tab
+      // Biểu mẫu mới thấy trống trơn mà không hiểu vì sao. Nay báo ra mặt.
+      let formData = {}, formOk = true;
+      try { formData = robustJSON(formRaw); } catch(e) { console.warn('Form JSON error:', e); formData = {}; formOk = false; }
+      const _nFilled = (function count(o){ let n=0; for(const k in o){ const v=o[k];
+        if (v && typeof v==='object') n+=count(v); else if (cf(v)) n++; } return n; })(formData);
+      if (!formOk || _nFilled < 3) {
+        showNotif('⚠️ Lượt trích xuất biểu mẫu trả về ' + (formOk ? 'rất ít dữ liệu' : 'JSON lỗi') +
+          ' — biểu mẫu sẽ được lấp tạm từ báo cáo. Bấm "Phân tích" lại để thử lần nữa.', 'warn', 8000);
+      }
 
       // ★ DEEP MERGE — không bao giờ ghi đè D
       D = deepMerge(D, formData);
@@ -3968,25 +3977,91 @@ function _fillFormFromReport(D, r) {
   const txt = (v) => Array.isArray(v) ? v.filter(Boolean).join('; ') : (v == null ? '' : String(v));
   const put = (obj, key, val) => {
     const v = txt(val).trim();
-    if (!v) return;
-    if (!obj) return;
+    if (!v || !obj) return;
     if (cf(obj[key])) return;         // đã có nội dung → giữ nguyên, không ghi đè
     obj[key] = v;
   };
   D.danh_gia = D.danh_gia || {};
-  const dg = D.danh_gia, nw = r.needs_vs_wants || {};
-  put(dg, 'nguy_co',        r.red_flags && r.red_flags.length ? r.red_flags : r.risk_reason);
-  put(dg, 'muc_khan_cap',   r.risk || r.risk_level);
-  put(dg, 'yeu_to_bao_ve',  r.yeu_to_bao_ve);
-  put(dg, 'uu_the_tre',     r.strengths);
-  put(dg, 'nhan_xet_nvxh',  r.summary || r.progress_summary);
-  put(dg, 'yeu_cau_tre',    nw.wants);
-  // Nhu cầu khách quan: báo cáo chỉ cho một danh sách chung, không tách thể chất / tâm lý /
-  // nhận thức. Đặt vào ô "nhu cầu thể chất" là đoán, nên KHÔNG làm — để trống cho NVXH phân
-  // loại, đúng nguyên tắc thà thiếu hơn sai.
-  if (r.parentification && r.parentification.detected) {
-    put(dg, 'van_de_tam_ly', [r.parentification.type, r.parentification.description]);
+  D.gia_dinh = D.gia_dinh || {};
+  const dg = D.danh_gia, gd = D.gia_dinh;
+  const st = r._stage || D._currentStage || 1;
+
+  // ── GĐ 1 — TIẾP CẬN ──
+  if (st === 1) {
+    const nw = r.needs_vs_wants || {};
+    put(dg, 'nguy_co',       r.red_flags && r.red_flags.length ? r.red_flags : r.risk_reason);
+    put(dg, 'muc_khan_cap',  r.risk || r.risk_level);
+    put(dg, 'yeu_to_bao_ve', r.yeu_to_bao_ve);
+    put(dg, 'uu_the_tre',    r.strengths);
+    put(dg, 'nhan_xet_nvxh', r.summary);
+    put(dg, 'yeu_cau_tre',   nw.wants);
+    if (r.parentification && r.parentification.detected)
+      put(dg, 'van_de_tam_ly', [r.parentification.type, r.parentification.description]);
   }
+
+  // ── GĐ 2 — VÃNG GIA ──
+  // Đây là chỗ lệch nặng nhất: báo cáo GĐ2 rất giàu (quan sát môi trường, năng lực người chăm
+  // sóc, yếu tố bảo vệ / nguy cơ, so sánh với GĐ1) mà Form 2 "Phúc trình vãng gia" thì trống
+  // trơn, vì hai lượt AI độc lập và lượt trích xuất hay trả về rỗng.
+  if (st === 2) {
+    D.vang_gia = D.vang_gia || {};
+    const vg = D.vang_gia, he = r.home_environment || {}, fd = r.family_dynamics || {},
+          vs = r.vs_stage1 || {}, nu = r.needs_updated || {};
+    put(vg, 'quan_sat_mt',    he.key_observations);
+    put(vg, 'quan_sat_khac',  he.concerns);
+    put(vg, 'bau_khi_gd',     fd.relationship_quality);
+    put(vg, 'quan_he_tre_gd', fd.relationship_quality);
+    put(vg, 'danh_gia_chung', [r.risk_change_reason,
+      fd.caregiver_capacity ? 'Năng lực người chăm sóc: ' + fd.caregiver_capacity : '',
+      he.safety_level ? 'Mức an toàn môi trường: ' + he.safety_level : '']);
+    put(vg, 'phat_hien_khac', vs.new_findings);
+    put(vg, 'van_de_tu_gd',   vs.contradictions);
+    put(gd, 'moi_quan_he_voi_tre', fd.relationship_quality);
+    put(dg, 'yeu_to_bao_ve',  fd.protective_factors);
+    put(dg, 'nguy_co',        fd.risk_factors);
+    put(dg, 'muc_khan_cap',   r.risk_current);
+    put(dg, 'yeu_cau_tre',    nu.wants);
+    put(dg, 'nhan_xet_nvxh',  [r.risk_update ? 'Rủi ro ' + r.risk_update + ' so với GĐ1' : '',
+                               r.risk_change_reason]);
+  }
+
+  // ── GĐ 3 — KẾ HOẠCH ──
+  if (st === 3) {
+    D.ke_hoach = D.ke_hoach || {};
+    const kh = D.ke_hoach, pa = r.plan_assessment || {}, rr = r.resources_review || {};
+    put(kh, 'nguon_luc_ket_noi', [].concat(rr.available || [], rr.suggestions || []));
+    put(kh, 'thoi_gian_kh', r.timeline_assessment);
+    put(dg, 'nhan_xet_nvxh', [pa.feasibility ? 'Tính khả thi: ' + pa.feasibility : '',
+      (pa.gaps || []).join('; '), r.family_engagement ? 'Mức tham gia của gia đình: ' + r.family_engagement : '']);
+  }
+
+  // ── GĐ 4 — TIẾN TRÌNH ──
+  if (st === 4) {
+    D.tien_trinh = D.tien_trinh || {};
+    const tt = D.tien_trinh, ns = r.next_session || {}, pl = r.plan_adjustment || {};
+    put(tt, 'nhan_xet', [r.progress_summary, (r.positive_changes || []).join('; ')]);
+    put(tt, 'de_xuat_tiep_theo', [ns.focus, (ns.actions || []).join('; '),
+      pl.needed ? 'Cần điều chỉnh kế hoạch: ' + (pl.suggestions || []).join('; ') : '']);
+    put(dg, 'nguy_co', [].concat(r.concerns || [], r.barriers || []));
+  }
+
+  // ── GĐ 5 — KẾT THÚC ──
+  if (st === 5) {
+    D.ket_thuc = D.ket_thuc || {};
+    const kt = D.ket_thuc, oc = r.outcomes || {}, cs = r.child_status_final || {}, rc = r.recommendations || {};
+    put(kt, 'ket_qua_dat',       oc.achieved);
+    put(kt, 'ket_qua_chua_dat',  [].concat(oc.partial || [], oc.not_achieved || []));
+    put(kt, 'ly_do',             cs.family_situation);
+    put(kt, 'ke_hoach_theo_doi', r.follow_up_plan);
+    if (!cf(D.de_xuat)) {
+      const de = [].concat(rc.for_child || [], rc.for_family || [], rc.for_organization || []);
+      if (de.length) D.de_xuat = de.join('; ');
+    }
+    put(dg, 'nhan_xet_nvxh', r.case_summary);
+  }
+
+  // Nhu cầu khách quan (thể chất / tâm lý / nhận thức): báo cáo chỉ cho một danh sách chung,
+  // không tách theo 3 chiều đó. Đặt vào ô nào cũng là đoán → để trống cho NVXH phân loại.
   return D;
 }
 
