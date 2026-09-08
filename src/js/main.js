@@ -1557,9 +1557,13 @@ async function runAnalysis() {
         });
       }
 
-      _resetGrounding(notes);
       D._notes_stage4 = (D._notes_stage4 || []);
       D._notes_stage4.push({ date: new Date().toISOString(), notes });
+      D._notesByStage = D._notesByStage || {};
+      D._notesByStage[4] = [(D._notesByStage[4] || ''), notes].filter(Boolean).join('\n\n');
+      // Gom ghi chép SAU khi đã ghi ghi chép buổi này vào, không thì chính buổi vừa nhập lại
+      // bị coi là không có căn cứ.
+      _refreshGrounding();
 
       // ★ Thêm báo cáo AI cho GĐ 4
       try {
@@ -1667,8 +1671,11 @@ async function runAnalysis() {
       // Có nội dung AI mới → xác nhận trước đó không còn giá trị, bản in về lại BẢN NHÁP.
       D._verified = null;
       D._notes = notes;
+      // Giữ ghi chép theo TỪNG giai đoạn — lớp truy vết cần cả 5 giai đoạn, không chỉ lần cuối.
+      D._notesByStage = D._notesByStage || {};
+      D._notesByStage[currentStage] = notes;
       D._currentStage = currentStage;
-      _resetGrounding(notes);
+      _refreshGrounding();
       if (!D.co_ban) D.co_ban = {};
 
       _validateData(D);
@@ -3368,6 +3375,44 @@ let _groundCache = new Map();     // giá trị đã đối chiếu → kết qu
 let _groundNotesNorm = '';        // ghi chép gốc đã chuẩn hóa
 let _groundSentences = [];        // các câu gốc, để trích dẫn lại cho NVXH
 
+// Gom TOÀN BỘ ghi chép của ca để đối chiếu.
+// LỖI đã gặp thật: trước đây chỉ đối chiếu với ghi chép của lần phân tích GẦN NHẤT, mà biểu mẫu
+// thì hiển thị dữ liệu TÍCH LUỸ của cả 5 giai đoạn. Hậu quả: vừa phân tích GĐ2 (vãng gia) là
+// mọi ô của Form 0 và Form 1 — trích từ ghi chép GĐ1 — đồng loạt bị đóng dấu "chưa có căn cứ",
+// dù ghi chép GĐ1 nói rõ ràng. Báo động giả trên một cơ chế an toàn còn tệ hơn không có: NVXH
+// thấy sai vài lần là bỏ qua dấu đó luôn, tới lúc AI bịa thật thì không ai để ý.
+// Nguồn ghi chép, gộp hết và bỏ trùng:
+//   D._notesByStage  — ghi chép từng giai đoạn (nguồn chính, thêm từ bản này)
+//   D._notes         — hồ sơ cũ chỉ có ghi chép lần cuối
+//   D._notes_stage4  — mọi buổi theo dõi GĐ4
+//   D.vang_gia_ds    — nguyên văn ghi chép từng buổi vãng gia
+//   c.stageData      — ghi chép đang gõ ở từng giai đoạn
+//   c.entries        — mọi mốc ghi chép đã lưu
+function _allCaseNotes(D, c) {
+  const parts = [];
+  const add = (x) => { const t = String(x || '').trim(); if (t) parts.push(t); };
+  if (D) {
+    const bs = D._notesByStage;
+    if (bs && typeof bs === 'object') Object.keys(bs).forEach(k => add(bs[k]));
+    add(D._notes);
+    (Array.isArray(D._notes_stage4) ? D._notes_stage4 : []).forEach(x => add(x && x.notes));
+    (Array.isArray(D.vang_gia_ds) ? D.vang_gia_ds : []).forEach(v => add(v && v._ghi_chep));
+  }
+  if (c) {
+    const sd = c.stageData;
+    if (sd && typeof sd === 'object') Object.keys(sd).forEach(k => add(sd[k] && sd[k].notes));
+    (Array.isArray(c.entries) ? c.entries : []).forEach(e => add(e && e.notes));
+  }
+  const seen = new Set();
+  return parts.filter(t => { if (seen.has(t)) return false; seen.add(t); return true; }).join('\n\n');
+}
+
+// Dựng lại lớp truy vết từ toàn bộ ghi chép của ca đang mở.
+function _refreshGrounding() {
+  const c = curCaseId ? loadCases()[curCaseId] : null;
+  _resetGrounding(_allCaseNotes(D, c));
+}
+
 // Gọi lại mỗi khi ghi chép đổi (sau mỗi lần phân tích).
 function _resetGrounding(notes) {
   _groundCache = new Map();
@@ -4907,7 +4952,7 @@ function loadCaseIntoApp(id) {
     D = c.lastAnalysis;
     if (!Array.isArray(D.cap_nhat)) D.cap_nhat = [];
     // Dựng lại lớp truy vết từ ghi chép đã lưu, để mở lại ca cũ vẫn thấy ô nào chưa có căn cứ.
-    _resetGrounding(D._notes || (c.entries || []).map(e => e.notes || '').join('\n'));
+    _resetGrounding(_allCaseNotes(D, c));
     if (D.co_ban && Object.keys(D.co_ban).length) {
       document.getElementById('btn-fill').disabled = false;
       document.getElementById('chat-input').disabled = false;

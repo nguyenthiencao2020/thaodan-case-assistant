@@ -292,7 +292,7 @@ Không có test tự động trong repo (app là script không module, không c�
 Kiểm thử được viết dưới dạng script Playwright chạy ngoài, dựng máy chủ tĩnh trên `localhost:8899`
 và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồng mà không cần khóa thật.
 
-**Lần QA gần nhất: 08/09/2026 — 21 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
+**Lần QA gần nhất: 08/09/2026 — 22 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
 
 | Bộ | Kết quả | Phủ những gì |
 |---|---|---|
@@ -304,6 +304,7 @@ và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồn
 | `contrast` | tất cả đạt | Tương phản WCAG mọi phần tử có chữ, chặn dưới 2.5:1; soi file CSS tìm `var()` trỏ vào biến chưa khai báo mà không có giá trị dự phòng |
 | `hover` | 73/73 phần tử | Tương phản ở **cả** trạng thái nghỉ và trỏ chuột — bộ cũ chỉ kiểm lúc đứng yên nên bỏ sót chip gợi ý mất chữ khi hover |
 | `pii` | 20/20 đạt | Đường ghi chép → AI → biểu mẫu của SĐT/CCCD/email: che có đánh số, khôi phục nguyên văn, hai số khác nhau không lẫn người, không phá số thường ("bé 12 tuổi"), dung sai khi model sao lại nhãn sai kiểu (`[ sdt_1 ]`, `[SĐT_1]`); `deepMerge` với mảng giàu/nghèo hơn |
+| `ground2` | 14/14 đạt | Truy vết nguồn phải đối chiếu với ghi chép của CẢ ca: tái hiện báo động giả của cách cũ (4/4 ô Form 0 bị đánh dấu sau khi phân tích GĐ2), rồi kiểm cách mới cho lại "có căn cứ" mà vẫn bắt được 3 giá trị bịa; gom đủ 7 nguồn ghi chép, bỏ trùng; ca chưa có ghi chép thì không đánh dấu bừa; hồ sơ cũ dùng `entries` làm căn cứ |
 | `hist2` | 19/19 đạt | Nút "Xem lại / In lại" phải nằm ở đúng chỗ NGƯỜI DÙNG THẤY: panel "📚 Lịch sử nhập — GĐ N" trên Dashboard và tab Ghi chép trong trang chi tiết ca; bấm cả dòng thì xem lại chứ không lặng lẽ ghi đè ô ghi chép; nút Khôi phục vẫn còn và vẫn chạy; mốc không có bản chụp thì ẩn 2 nút mới |
 | `close` | 22/22 đạt | Đóng ca / mở lại ca bắt buộc ghi lý do: nút xác nhận khóa tới khi đủ 20 ký tự, chặn cả ở logic (gọi thẳng `_doConfirm` cũng không qua), sổ ghi lưu lý do + ngày + người + giai đoạn, trang chi tiết ca và dải "ca đã đóng" hiện lý do, hồ sơ cũ nói rõ là mốc không có lý do, lý do chứa mã độc bị vô hiệu |
 | `hist` | 23/23 đạt | Xem lại / in lại bản lưu: mốc lịch sử là bản chụp (sửa dữ liệu hiện tại không làm đổi bản cũ), bản lưu kế hoạch bản 1 vẫn chỉ có 2 mục tiêu, chế độ chỉ đọc chặn sửa/lưu/phân tích/chuyển giai đoạn, in ra đúng nội dung bản lưu, thoát về đúng dữ liệu hiện tại; ô chọn buổi vãng gia lọc cả màn hình lẫn file .docx và đặt tên file kèm số lần + ngày |
@@ -355,6 +356,7 @@ trong code. Nơi nên đọc trước:
 | Vì sao lịch sử từng bị mất dù vẫn thấy đủ mốc | `main.js` trong `saveCaseNow`, chỗ `const snap = _snapD()` |
 | Chọn in riêng một buổi vãng gia | `main.js` gần `_vgPick`, `_vgShown`, `_vgFileSuffix` |
 | Truy vết nguồn (chặn AI bịa) | `main.js` gần `F()`, `_checkGround`, `_GROUND_RATIO` |
+| Vì sao đối chiếu với ghi chép CẢ ca, không phải lần cuối | `main.js` ngay trên `_allCaseNotes` — có ghi lại đúng ca báo động giả đã gặp |
 | Thu gọn / mở rộng khu chat | `main.js` gần `setChatView`, `_restoreChatView` |
 | Emoji → icon nét, 3 tông màu báo cáo | `main.js` gần `_SEC_ICON`, `_SEC_TONE`, `_secHead` |
 | Vì sao có `escAttr` riêng | `src/js/utils.js` ngay dưới `esc` |
