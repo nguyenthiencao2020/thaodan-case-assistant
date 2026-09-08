@@ -102,13 +102,10 @@
   </div>
   <div class="hdr-btns">
     <div id="user-bar" class="user-bar" style="display:none;">
-      <button class="btn-hdr" onclick="showStats()" title="Thống kê">📊</button>
       <button class="btn-hdr" onclick="showNotifications()" title="Thông báo" style="position:relative;">🔔<span id="notif-badge" style="display:none;position:absolute;top:-2px;right:-2px;background:#dc2626;color:#fff;font-size:12px;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;"></span></button>
       <span class="user-email" id="user-email"></span>
       <button class="btn-logout" onclick="logoutUser()">Đăng xuất</button>
     </div>
-    <button class="btn-hdr btn-hdr-json" id="btn-export-json" onclick="exportCaseJSON()">⬇ JSON</button>
-    <button class="btn-hdr btn-hdr-json" id="btn-import-json" onclick="importCaseJSON()">⬆ JSON</button>
     <button class="btn-hdr btn-hdr-more" id="btn-hdr-more" onclick="toggleHdrMore()" title="Thêm" aria-label="Thêm thao tác">⋯</button>
     <button class="btn-hdr" onclick="newCase()">＋ Ca mới</button>
     <button class="btn-hdr btn-hdr-primary" onclick="saveCaseNow()">💾 Lưu</button>
@@ -119,7 +116,7 @@
   <div class="mnav active" id="mnav-dash" onclick="switchMain('dash')"><span class="mn-ico">🔬</span><span class="mn-long">Dashboard &amp; AI</span><span class="mn-short">Dashboard</span></div>
   <div class="mnav" id="mnav-forms" onclick="switchMain('forms')"><span class="mn-ico">📋</span><span class="mn-long">Biểu mẫu QLTH</span><span class="mn-short">Biểu mẫu</span></div>
   <div class="mnav" id="mnav-cases" onclick="switchMain('cases')"><span class="mn-ico">🗂</span><span class="mn-long">Danh sách ca</span><span class="mn-short">Ca</span> <span id="cases-count-badge" style="background:rgba(240,112,32,.3);color:#fff;font-size:12px;padding:1px 5px;border-radius:8px;margin-left:4px;"></span><span id="stale-count-badge" style="display:none;background:#dc2626;color:#fff;font-size:12px;padding:1px 5px;border-radius:8px;margin-left:3px;"></span></div>
-  <div class="mnav" id="mnav-analysis" onclick="switchMain('analysis')"><span class="mn-ico">📊</span><span class="mn-long">Phân tích &amp; Đánh giá</span><span class="mn-short">Phân tích</span></div>
+  <div class="mnav" id="mnav-analysis" hidden onclick="switchMain('analysis')"><span class="mn-ico">📊</span><span class="mn-long">Phân tích &amp; Đánh giá</span><span class="mn-short">Phân tích</span></div>
 </div>
 
 <div class="notif" id="notif"></div>
@@ -159,8 +156,6 @@
         <div class="input-footer">
           <span class="char-count" id="dash-cc">0 ký tự</span>
           <button id="btn-mic" class="btn-mic" onclick="toggleDictation()" title="Đọc ghi chép bằng giọng nói — chữ sẽ được thêm vào cuối ô ghi chép">🎤 <span id="mic-lbl">Đọc</span></button>
-          <button id="btn-ocr" class="btn-mic" onclick="pickNotebookPhoto()" title="Chụp hoặc chọn ảnh trang sổ tay — hệ thống đọc chữ và thêm vào ô ghi chép">📷 <span id="ocr-lbl">Ảnh sổ tay</span></button>
-          <input type="file" id="ocr-file" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none" onchange="onNotebookPhoto(event)">
           <span class="case-label" id="dash-case-label"></span>
         </div>
       </div>
@@ -259,6 +254,10 @@
 
 <div class="tab-panel" id="panel-cases" style="flex-direction:column;">
   <div id="cases-stats-row" style="display:flex;gap:10px;padding:12px 16px 0;flex-shrink:0;"></div>
+  <!-- ══ VIỆC CẦN LÀM ══
+       Dựng từ ngày tháng ĐÃ CÓ trong hồ sơ (hoạt động của kế hoạch, mốc xem xét kế hoạch, lịch
+       theo dõi sau đóng ca) — xem _collectTasks() trong main.js. -->
+  <div id="todo-box" class="todo-box" hidden></div>
   <div class="cases-tab" style="flex:1;min-height:0;">
     <div class="cases-sidebar">
       <div class="cases-search-row"><input type="text" id="cases-search" class="cases-search" placeholder="Tìm theo tên ca, tên trẻ..." oninput="renderCaseList()"><button class="btn-new-case" onclick="newCase()">＋ Mới</button></div>
@@ -336,6 +335,10 @@
   <div class="confirm-box"><div class="cmb-icon" id="cmb-icon">⚠️</div><div class="cmb-title" id="cmb-title"></div><div class="cmb-body" id="cmb-body"></div>
     <!-- Ô lý do BẮT BUỘC cho các quyết định phải giải trình được sau này (đóng ca / mở lại ca).
          Ẩn mặc định; showConfirm({prompt:{...}}) mới bật lên. -->
+    <div class="cmb-prompt" id="cmb-prompt2" hidden>
+      <label class="cmb-p-lb" id="cmb-p2-lb" for="cmb-p2-input"></label>
+      <input class="cmb-p-input cmb-p-one" id="cmb-p2-input" type="text" autocomplete="off">
+    </div>
     <div class="cmb-prompt" id="cmb-prompt" hidden>
       <label class="cmb-p-lb" id="cmb-p-lb" for="cmb-p-input"></label>
       <textarea class="cmb-p-input" id="cmb-p-input" rows="3"></textarea>
@@ -358,10 +361,61 @@
 <div id="hdr-more" class="hdr-more" hidden>
   <button onclick="showStats();closeHdrMore()">Thống kê ca</button>
   <button onclick="showNotifications();closeHdrMore()">Thông báo <span id="hdr-more-badge" class="hdr-more-badge" hidden></span></button>
-  <button onclick="exportCaseJSON();closeHdrMore()">Xuất hồ sơ JSON</button>
+  <button id="hdr-more-eval" onclick="switchMain('analysis');closeHdrMore()">Đánh giá tổng hợp (giám sát)</button>
+  <button id="hdr-more-admin" hidden onclick="openAdminPanel();closeHdrMore()">Gán vai trò &amp; nhóm (quản trị)</button>
+  <button onclick="exportCaseJSON();closeHdrMore()">Xuất hồ sơ JSON (sao lưu)</button>
   <button onclick="importCaseJSON();closeHdrMore()">Nhập hồ sơ JSON</button>
   <div class="hdr-more-email" id="hdr-more-email"></div>
   <button class="hdr-more-out" onclick="logoutUser()">Đăng xuất</button>
+</div>
+
+<!-- ══ GÁN VAI TRÒ / NHÓM (chỉ quản trị) ══
+     0011 dựng xong cơ chế trưởng nhóm ở tầng dữ liệu nhưng tới giờ vẫn phải update bằng SQL
+     Editor. Đây là màn hình gán, gọi hàm set_user_role của migration 0016. -->
+<div id="adm-overlay" class="dass-overlay" style="display:none" onclick="if(event.target===this)closeAdminPanel()">
+  <div class="dass-modal nl-modal" style="max-width:520px;width:min(520px,94vw)">
+    <div class="dass-modal-hd dass-modal-hd-navy">
+      <span class="dass-modal-title">🔑 Gán vai trò &amp; nhóm</span>
+      <button class="dass-close" onclick="closeAdminPanel()" aria-label="Đóng">✕</button>
+    </div>
+    <div class="adm-body">
+      <label class="adm-lb" for="adm-email">Email người dùng</label>
+      <input id="adm-email" class="nl-search" type="email" autocomplete="off"
+             placeholder="nvxh@thaodancenter.org.vn">
+      <label class="adm-lb" for="adm-role">Vai trò</label>
+      <select id="adm-role" class="nl-search">
+        <option value="officer">NVXH (officer) — chỉ ca của mình</option>
+        <option value="team_leader">Trưởng nhóm — xem thêm ca cùng nhóm</option>
+        <option value="admin">Quản trị (admin)</option>
+      </select>
+      <label class="adm-lb" for="adm-team">Nhóm (để trống nếu không thuộc nhóm nào)</label>
+      <input id="adm-team" class="nl-search" type="text" autocomplete="off" placeholder="nhom-1">
+      <div class="adm-note">Người được gán <strong>phải đăng nhập app ít nhất một lần</strong>
+        trước đó. Trưởng nhóm chỉ <strong>xem</strong> ca cùng nhóm, không sửa và không bàn giao
+        được ca của người khác — và chỉ có hiệu lực khi cả ca lẫn người đều đã được gán nhóm.</div>
+      <button class="btn-analyze adm-go" onclick="submitUserRole()">Gán vai trò</button>
+      <div id="adm-msg" class="adm-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DANH BẠ NGUỒN LỰC ══
+     Đọc thẳng docs/nguon-luc/danh-ba-nguon-luc.md lúc chạy, nên tổ chức chỉ sửa một file .md
+     là app cập nhật — không cần build lại. Xem openResourceDir() trong main.js. -->
+<div id="nl-overlay" class="dass-overlay" style="display:none" onclick="if(event.target===this)closeResourceDir()">
+  <div class="dass-modal nl-modal">
+    <div class="dass-modal-hd dass-modal-hd-navy">
+      <span class="dass-modal-title">📞 Danh bạ nguồn lực</span>
+      <button class="dass-close" onclick="closeResourceDir()" aria-label="Đóng">✕</button>
+    </div>
+    <div class="nl-tools">
+      <input id="nl-search" class="nl-search" type="search" oninput="_nlSearch(this.value)"
+             placeholder="Tìm: học bổng, khai sinh, tâm lý, quận 12, 111...">
+    </div>
+    <div id="nl-body" class="nl-body"></div>
+    <div class="nl-foot">Sửa nội dung tại <code>docs/nguon-luc/danh-ba-nguon-luc.md</code> — chỉ ghi
+      đầu mối dịch vụ công khai, <strong>không ghi thông tin của trẻ hay gia đình</strong>.</div>
+  </div>
 </div>
 
 <!-- ══ CĂN CỨ PHÁP LÝ & CHÍNH SÁCH BẢO MẬT ══ -->
@@ -388,9 +442,9 @@
   </div>
 </div>
 
-<script src="/src/js/config.js?v=34"></script>
-<script src="/src/js/prompts.js?v=34"></script>
-<script src="/src/js/utils.js?v=34"></script>
-<script src="/src/js/main.js?v=34"></script>
+<script src="/src/js/config.js?v=36"></script>
+<script src="/src/js/prompts.js?v=36"></script>
+<script src="/src/js/utils.js?v=36"></script>
+<script src="/src/js/main.js?v=36"></script>
 </body>
 </html>

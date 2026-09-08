@@ -22,7 +22,6 @@ src/js/main.js          # Toàn bộ logic app (~6900 dòng)
 src/css/main.css        # Design system — biến màu, thang chữ, vùng bấm tối thiểu
 api/chat.js             # Proxy gọi Groq — yêu cầu Supabase access token
 api/rag.js              # Proxy tìm tài liệu liên quan (pgvector) — yêu cầu token
-api/ocr.js              # Proxy đọc chữ trong ảnh (OpenAI vision) — đang tắt bằng cờ FEATURES
 api/_auth.js            # Helper xác thực token dùng chung cho các route trên
 supabase/migrations/    # Toàn bộ migration SQL, đánh số thứ tự — xem bên dưới
 docs/                   # Tài liệu nghiệp vụ CTXH cho AI học (RAG) — xem docs/README.md
@@ -63,10 +62,10 @@ Tổ chức chưa có khóa OpenAI, nên hai tính năng dùng nó đều đã �
 | Tính năng | Trạng thái khi không có khóa |
 |---|---|
 | Kho tri thức (RAG) | `api/rag.js` trả `{chunks:[]}` — app chạy bình thường, chỉ là AI trả lời bằng kiến thức chung. GitHub Action **tự bỏ qua và thoát 0** nên không đỏ; log in cảnh báo rõ |
-| Đọc ảnh trang sổ tay | **Đã TẮT** qua `FEATURES.ocr` — cũng là quyết định riêng về bảo mật, xem mục "đang tạm tắt" |
+| Đọc ảnh trang sổ tay | **ĐÃ XOÁ** (08/09/2026) — luồng duy nhất gửi tên thật/địa chỉ chưa che ra ngoài; cần dựng lại thì lấy trong git |
 
 **Không phải việc cần làm gấp.** Bật lại khi nào tổ chức có khóa: khai `OPENAI_API_KEY` ở Vercel và
-GitHub Secrets, đổi `FEATURES.ocr` nếu muốn dùng cả nút 📷. Chi tiết trong
+GitHub Secrets, rồi bật `FEATURES.rag`. Chi tiết trong
 [`docs/README.md`](docs/README.md).
 
 Nếu sau này bật RAG, **cách kiểm nó chạy thật** (vì nó không báo lỗi): phân tích một ca rồi hỏi
@@ -93,7 +92,7 @@ trị nhưng khai riêng ở mỗi nơi, không thay thế được cho nhau.
 | `GROQ_KEY_1`, `GROQ_KEY_2`, `GROQ_KEY_3` | `api/chat.js` | Round-robin giữa 3 key để giảm rate limit. Model hiện dùng: `openai/gpt-oss-120b`. |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` | `api/rag.js` | Service key — **không** để lộ ra client. |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | `api/_auth.js` | Xác thực token người dùng gửi lên từ client. Thiếu biến này thì `requireUser()` chặn mọi lời gọi API. |
-| `OPENAI_API_KEY` | `api/rag.js`, **`api/ocr.js`** | MỘT khóa cho HAI việc: tạo embedding truy xuất kho tri thức, và đọc chữ trong ảnh trang sổ tay. |
+| `OPENAI_API_KEY` | `api/rag.js` | Tạo embedding để truy xuất kho tri thức nội bộ. Chưa có khóa nên `FEATURES.rag` đang tắt — và khi tắt thì app KHÔNG gọi `/api/rag` nữa, xem ghi chú trong `config.js`. |
 
 Thêm/sửa biến xong **phải bấm Redeploy** — Vercel chỉ nạp biến lúc build, không áp cho bản đã build sẵn.
 
@@ -126,6 +125,7 @@ Chạy theo đúng thứ tự trong `supabase/migrations/`, dán từng file và
 | `0013_encrypt_full_case_data.sql` | Mã hóa **toàn bộ** khối JSONB `data` qua RPC `encrypt_case_data`/`decrypt_case_data`. Vẫn giữ cột `data` plaintext song song làm dự phòng — nếu giải mã lỗi, app tự dùng lại, không bao giờ mất quyền xem ca. Dùng chung secret Vault với `0012` |
 | `0014_fix_admin_email_policy_permission.sql` | **Sửa lỗi `permission denied for table users` khi lưu ca lần thứ hai.** Các policy admin từ `0003`→`0010` đọc trực tiếp `auth.users`, mà role `authenticated` không có quyền SELECT trên bảng đó; `INSERT … ON CONFLICT DO UPDATE` lại đòi cả policy SELECT nên câu lệnh lưu thất bại. Migration bọc phép so email vào `private.is_super_admin()` (SECURITY DEFINER) rồi dựng lại 5 policy. Không đổi dữ liệu, không đổi ai xem được ca nào |
 | `0015_fix_profiles_role_values.sql` | **Sửa lỗi của `0011`.** Đã chạy: `convalidated = true`, `role = 'officer'` cho cả 2 tài khoản. `alter table … add column if not exists role` bị Postgres bỏ qua vì cột `role` đã có sẵn (giá trị `'user'`) **và đã có ràng buộc `profiles_role_check` riêng của schema gốc, với bộ giá trị không chứa `'officer'`/`'team_leader'`**, nên cả `default 'officer'` lẫn ràng buộc `check` mới đều không được tạo — khiến `private.is_team_leader()` không bao giờ khớp và cơ chế trưởng nhóm coi như không tồn tại. Migration **bỏ ràng buộc cũ trước**, rồi chuẩn hóa `'user'` → `'officer'`, đặt lại DEFAULT/NOT NULL và tạo lại `check` bằng `add constraint` (đảo thứ tự là lỗi 23514). Chỉ cần chạy nếu định dùng vai trưởng nhóm |
+| `0016_transfer_case_and_set_role.sql` | **Bàn giao ca** cho NVXH khác (hàm `transfer_case`, sổ `case_transfers` ghi ở tầng DB nên không sửa lại được từ app) và **gán vai trò/nhóm** (`set_user_role`) — trước đó phải chạy SQL tay. Lý do bàn giao là **bắt buộc**, kiểm ngay trong hàm chứ không chỉ ở giao diện |
 
 ### Bước làm tay không nằm trong migration nào
 
@@ -236,8 +236,7 @@ và `100dvh` — cần Chrome ≥111 hoặc Safari ≥16.2 (từ 2023). Trình d
 ## Tính năng chính
 
 **Soạn hồ sơ** — giá trị cốt lõi: một lần viết ghi chép văn xuôi sinh ra **139 trường + 6 bảng**
-trên 10 biểu mẫu. Nhập bằng cách gõ, bằng **giọng nói** (Web Speech API, miễn phí), hoặc **chụp ảnh
-trang sổ tay** (`api/ocr.js`).
+trên 10 biểu mẫu. Nhập bằng cách gõ hoặc bằng **giọng nói** (Web Speech API, miễn phí).
 
 **Kiểm chứng — phân biệt "AI viết" với "người đã kiểm":**
 - **Truy vết nguồn**: mỗi ô AI trích xuất được đối chiếu ngược với ghi chép gốc; ô nào không tìm
@@ -256,7 +255,7 @@ phục nguyên văn vào hồ sơ sau khi AI trả kết quả. Ngoại lệ duy
 **Khác:** 5 giai đoạn quản lý ca · chat tư vấn CTXH có RAG · **tra cứu tiền lệ** (tìm ca cũ tương
 tự, chạy cục bộ, không gửi gì cho AI) · popup cảnh báo khi AI thấy rủi ro Cao · mã ca tự sinh
 `CA-YYYY-MM-STT` · xuất Word/PDF có chữ ký và số trang · **soạn công văn chuyển gửi** từ Form 7 ·
-theo dõi sau đóng ca · **đóng ca / mở lại ca bắt buộc ghi lý do** (lưu kèm ngày, người thực hiện
+**việc cần làm** (gộp mọi ca, dựng từ ngày tháng đã có trong kế hoạch) · **danh bạ nguồn lực** tra tại chỗ · **in phiếu trắng** mang đi vãng gia · **bàn giao ca** cho NVXH khác · theo dõi sau đóng ca · **đóng ca / mở lại ca bắt buộc ghi lý do** (lưu kèm ngày, người thực hiện
 và giai đoạn; xem lại trong trang chi tiết ca) · **xem lại và in lại bản lưu** của từng mốc lịch
 sử (buổi vãng gia, bản kế hoạch, lần cập nhật tiến trình) · audit log.
 
@@ -280,11 +279,20 @@ Code, modal, endpoint và dữ liệu đã lưu đều còn nguyên, không ph�
 |---|---|---|
 | `dass` | Thang đo DASS-21/42 | Chờ thiết kế lại — bộ câu hỏi là bản tự khai ngôi thứ nhất của người lớn, chỉ thẩm định cho ≥17 tuổi, mà màn hình không hỏi ai là người trả lời |
 | `genogram` | Sơ đồ phả hệ | Chờ thiết kế lại — thiếu đúng phần cốt lõi là đường quan hệ (thân thiết/xung đột/xa cách/cắt đứt) và không sửa được bằng tay |
-| `ocr` | Đọc chữ trong ảnh sổ tay | **Quyết định của tổ chức.** Đây là luồng DUY NHẤT gửi dữ liệu định danh chưa che ra ngoài — tên thật và địa chỉ nằm ngay trong nét chữ, không regex nào che được. Bật lại cần cả `OPENAI_API_KEY` và quyết định về NĐ 13/2023 |
+| `rag` | Tra cứu tài liệu nội bộ bằng vector | Chưa có `OPENAI_API_KEY` nên `/api/rag` luôn trả 500. Khi tắt thì app KHÔNG gọi nữa — trước đây vẫn gọi và **chờ xong** trước mỗi lần Phân tích và mỗi tin nhắn chat, tốn 1–3 giây khởi động lạnh cho một kết quả rỗng |
+| `precedents` | Tra cứu tiền lệ (ca cũ tương tự) | Dưới khoảng **50 ca đã đóng** thì kết quả là nhiễu; NVXH đọc thấy "ca tương tự" chẳng liên quan là mất niềm tin vào toàn bộ phần gợi ý. Bật lại khi đủ dữ liệu |
+| `evalTab` | Tab "Phân tích & Đánh giá tổng hợp" | Báo cáo dài do AI viết cho **giám sát viên**, không phải việc hằng ngày của NVXH, mà chiếm 1 trong 4 tab chính. Tắt cờ thì nó rời hàng tab, vẫn mở được từ menu ⋯ |
+
+**Đã xoá hẳn (không phải tắt cờ):** đọc chữ trong ảnh trang sổ tay (`FEATURES.ocr`, `api/ocr.js`,
+nút 📷). Đó là luồng **duy nhất** gửi tên thật và địa chỉ **chưa che** ra ngoài — chúng nằm ngay
+trong nét chữ của trang sổ, không regex nào che được. Tổ chức đã quyết tắt vĩnh viễn; để code lại
+thì mỗi lần QA vẫn phải kiểm một đường không ai dùng, và luôn còn nguy cơ có người bật cờ mà không
+biết hệ quả. Cần dựng lại thì lấy trong git (commit 08/09/2026) và **phải làm lại phần đồng thuận
+của thân chủ trước khi bật**.
 
 Nút 🎤 **nhập bằng giọng nói vẫn bật** — dùng Web Speech API sẵn trong Chrome/Edge, miễn phí, và
 văn bản đọc ra vẫn đi qua đúng bộ che tên/SĐT/địa chỉ trước khi tới Groq. Với NVXH vừa đi vãng gia
-về, kể lại bằng miệng còn nhanh hơn chụp ảnh trang sổ rồi sửa lỗi đọc.
+về, kể lại bằng miệng nhanh hơn gõ nhiều.
 
 ## Kiểm thử
 
@@ -292,7 +300,7 @@ Không có test tự động trong repo (app là script không module, không c�
 Kiểm thử được viết dưới dạng script Playwright chạy ngoài, dựng máy chủ tĩnh trên `localhost:8899`
 và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồng mà không cần khóa thật.
 
-**Lần QA gần nhất: 08/09/2026 — 26 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
+**Lần QA gần nhất: 08/09/2026 — 29 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
 
 | Bộ | Kết quả | Phủ những gì |
 |---|---|---|
@@ -304,6 +312,9 @@ và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồn
 | `contrast` | tất cả đạt | Tương phản WCAG mọi phần tử có chữ, chặn dưới 2.5:1; soi file CSS tìm `var()` trỏ vào biến chưa khai báo mà không có giá trị dự phòng |
 | `hover` | 73/73 phần tử | Tương phản ở **cả** trạng thái nghỉ và trỏ chuột — bộ cũ chỉ kiểm lúc đứng yên nên bỏ sót chip gợi ý mất chữ khi hover |
 | `pii` | 20/20 đạt | Đường ghi chép → AI → biểu mẫu của SĐT/CCCD/email: che có đánh số, khôi phục nguyên văn, hai số khác nhau không lẫn người, không phá số thường ("bé 12 tuổi"), dung sai khi model sao lại nhãn sai kiểu (`[ sdt_1 ]`, `[SĐT_1]`); `deepMerge` với mảng giàu/nghèo hơn |
+| `todo` | 20/20 đạt | "Việc cần làm": dựng đúng việc từ hoạt động kế hoạch + mốc xem xét + lịch theo dõi sau đóng ca; chia trễ hạn/hôm nay/7 ngày; ca đã đóng chỉ lấy lịch theo dõi; hạn không phải ngày cụ thể ("hàng tháng", "2 tuần") thì bỏ qua chứ không bịa hạn; đánh dấu xong lưu vào hồ sơ ca |
+| `handover` | 26/26 đạt | Bàn giao ca: đòi cả email người nhận (đúng dạng) lẫn lý do ≥10 ký tự, ghi sổ TRƯỚC rồi mới gọi chuyển, RPC lỗi thì ca vẫn còn tại máy và hiện nguyên văn lỗi máy chủ, không phải chủ ca thì không mở được hộp thoại; màn gán vai trò chỉ quản trị mở được (gọi trực tiếp cũng chặn) |
+| `nl` | 18/18 đạt | Danh bạ nguồn lực đọc từ file .md: bỏ dòng mẫu chưa điền, tìm theo tên/nhóm/số điện thoại, nút Chép; phiếu trắng KHÔNG lẫn dữ liệu ca đang mở và trả dữ liệu ca về nguyên vẹn sau khi in |
 | `stbar` | 18/18 đạt | Dải 5 chấm tiến trình phải khớp giữa thẻ ca bên trái và trang chi tiết bên phải — quét đủ 10 tổ hợp (5 giai đoạn × mở/đóng), đọc màu thật đã tính ra chứ không đọc code. Ca đóng ở GĐ4 mà chưa từng tới GĐ5 → GĐ5 xám; ca **đã từng** tới GĐ5 rồi lùi lại (mở lại ca, lùi giai đoạn) → GĐ5 vẫn xanh, đọc bằng chứng từ sổ đóng/mở ca và các mốc ghi chép |
 | `vglan` | 14/14 đạt | Đánh số buổi vãng gia qua luồng thật (giả lập AI, gọi `runAnalysis`): buổi đầu ra ĐÚNG 1 phiếu, bấm Phân tích lại cùng nội dung thì cập nhật phiếu đó chứ không sinh phiếu trùng, đổi nội dung mới thành buổi 2, ghi chép nói "lần thứ 5" thì lấy số theo ghi chép, ô chọn buổi liệt kê đúng |
 | `ground2` | 14/14 đạt | Truy vết nguồn phải đối chiếu với ghi chép của CẢ ca: tái hiện báo động giả của cách cũ (4/4 ô Form 0 bị đánh dấu sau khi phân tích GĐ2), rồi kiểm cách mới cho lại "có căn cứ" mà vẫn bắt được 3 giá trị bịa; gom đủ 7 nguồn ghi chép, bỏ trùng; ca chưa có ghi chép thì không đánh dấu bừa; hồ sơ cũ dùng `entries` làm căn cứ |
@@ -343,7 +354,9 @@ trong code. Nơi nên đọc trước:
 
 | Chủ đề | Đọc ở đâu |
 |---|---|
-| Vì sao mỗi migration làm như vậy | comment đầu mỗi file trong `supabase/migrations/` — đặc biệt `0014` (lỗi phân quyền khi lưu ca) và `0015` (lỗi ràng buộc `role` mà `0011` bỏ sót) |
+| Vì sao mỗi migration làm như vậy | comment đầu mỗi file trong `supabase/migrations/` — đặc biệt `0014` (lỗi phân quyền khi lưu ca), `0015` (lỗi ràng buộc `role` mà `0011` bỏ sót) và `0016` (bàn giao ca + gán vai trò) |
+| Việc cần làm dựng từ đâu | `main.js` gần `_collectTasks`, `renderTodo` |
+| Bàn giao ca: vì sao ghi sổ trước khi chuyển | `main.js` gần `transferCase`; và `supabase/migrations/0016_*.sql` |
 | Che danh tính, khôi phục tên | `main.js` gần `pseudonymizeForAI`, `_maskPiiKeys`, `maskAddressInText`, `maskContactsInText`, `restoreIdentityText` |
 | Vì sao SĐT/email từng không điền được vào form | `main.js` ngay trên `maskContactsInText` — trước đây thay bằng `***` là mất hẳn giá trị |
 | Vì sao trần token là 8192 | `api/chat.js` ngay trên `MAX_TOKENS_CAP` — JSON trích xuất bị cắt cụt là biểu mẫu trống trơn |
