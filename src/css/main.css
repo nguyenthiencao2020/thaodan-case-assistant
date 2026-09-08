@@ -1623,3 +1623,12 @@ body.hist-mode { padding-bottom:64px; }
 @media (max-width:640px) {
   .shp-item-acts { justify-content:flex-start; }
 }
+
+/* Nút "Bản thô" — bản Word kỹ thuật, để nhỏ và nhạt hơn nút "Tải bản in" để NVXH không bấm
+   nhầm rồi in ra giấy không có logo/footer. */
+.btn-dl-alt {
+  font-size:13px !important; font-weight:600 !important;
+  background:var(--bg2) !important; color:var(--t3) !important;
+  border:1px solid var(--bd2) !important;
+}
+.btn-dl-alt:hover { color:var(--t1) !important; border-color:var(--navy) !important; }

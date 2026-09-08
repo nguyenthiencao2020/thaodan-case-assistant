@@ -16,11 +16,22 @@ const FOOTER_URL = 'https://raw.githubusercontent.com/nguyenthiencao2020/asif-br
 const FEATURES = {
   dass: false,      // Thang đo trầm cảm - lo âu - stress (DASS-21/42)
   genogram: false,  // Sơ đồ phả hệ gia đình
-  // Đọc chữ trong ảnh trang sổ tay. TẮT theo quyết định của tổ chức: đây là luồng DUY NHẤT gửi
-  // dữ liệu định danh chưa che ra ngoài (tên thật và địa chỉ nằm ngay trong nét chữ, không regex
-  // nào che được), và tổ chức chưa có khóa OpenAI. Mọi luồng khác đều đã che trước khi gửi.
-  // Bật lại: đổi thành true VÀ khai OPENAI_API_KEY trên Vercel.
-  ocr: false,
+  // (Cờ "ocr" đã bỏ — luồng đọc ảnh sổ tay bị XOÁ hẳn ngày 08/09/2026 vì đó là đường duy nhất
+  //  gửi tên thật và địa chỉ chưa che ra ngoài. Xem ghi chú trong main.js chỗ "ĐÃ XOÁ".)
+  // Tra cứu tài liệu nội bộ bằng vector (RAG). TẮT vì /api/rag đòi OPENAI_API_KEY mà tổ chức
+  // chưa có, nên nó LUÔN trả 500. Nhưng nó được gọi và CHỜ XONG trước hai lượt AI của mỗi lần
+  // "Phân tích" và trước MỖI tin nhắn chat — tức mỗi lần NVXH bấm là tốn thêm một vòng gọi
+  // serverless vô ích (Vercel khởi động lạnh 1–3 giây). Đó là phần lớn cảm giác "tool chậm".
+  // Bật lại: đổi thành true SAU KHI đã khai OPENAI_API_KEY trên Vercel và nạp tài liệu vào
+  // bảng vector (xem api/rag.js).
+  rag: false,
+  // Tra cứu tiền lệ — tìm ca cũ có dấu hiệu tương tự. TẮT tới khi tổ chức có khoảng 50 ca đã
+  // đóng: dưới ngưỡng đó kết quả là nhiễu, NVXH đọc thấy "ca tương tự" chẳng liên quan thì mất
+  // luôn niềm tin vào phần gợi ý. Code và dữ liệu vẫn nguyên, bật lại là chạy.
+  precedents: false,
+  // Tab "Phân tích & Đánh giá tổng hợp" — báo cáo dài do AI viết cho GIÁM SÁT VIÊN đọc, không
+  // phải việc hằng ngày của NVXH. Tắt khỏi hàng tab chính (chỉ còn 3 tab), vẫn mở được từ menu ⋯.
+  evalTab: false,
 };
 
 const FORM_NAMES = [

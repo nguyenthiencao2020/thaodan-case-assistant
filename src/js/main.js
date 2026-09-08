@@ -946,7 +946,11 @@ async function callGroqChat(messages, temp=0.4) {
 }
 
 // ── RAG: lấy tài liệu liên quan từ Supabase pgvector ──
+// Thoát NGAY khi cờ tắt: đường này nằm trên đường nóng (trước hai lượt AI của mỗi lần phân tích
+// và trước mỗi tin nhắn chat), gọi vào một endpoint chắc chắn lỗi thì chỉ tốn thời gian chờ của
+// NVXH. Xem ghi chú FEATURES.rag trong config.js.
 async function fetchRagContext(query) {
+  if (!(typeof FEATURES === 'object' && FEATURES.rag)) return '';
   try {
     const authHeader = await _authHeader();
     const res = await fetch('/api/rag', {
@@ -2928,11 +2932,20 @@ async function sendChat() {
 // ════════════════════════════════════════════════════════════
 // Ẩn/hiện nút theo FEATURES. Gọi lúc khởi động; đổi cờ trong config.js là đủ để bật lại.
 function applyFeatureFlags() {
-  const map = { dass: 'btn-dass', genogram: 'btn-genogram', ocr: 'btn-ocr' };
+  const F = (k) => !!(typeof FEATURES === 'object' && FEATURES[k]);
+  const map = { dass: 'btn-dass', genogram: 'btn-genogram', precedents: 'btn-precedent' };
   Object.entries(map).forEach(([feat, id]) => {
     const el = document.getElementById(id);
-    if (el) el.hidden = !(typeof FEATURES === 'object' && FEATURES[feat]);
+    if (el) el.hidden = !F(feat);
   });
+  // Tab "Phân tích & Đánh giá" là việc của giám sát viên, không phải việc hằng ngày của NVXH,
+  // mà lại chiếm 1 trong 4 tab chính. Tắt cờ thì nó rời hàng tab và chỉ còn lối vào ở menu ⋯ —
+  // KHÔNG xoá, vì giám sát viên vẫn cần. Bật cờ là nó trở lại hàng tab, lúc đó ẩn mục trong menu
+  // để không có hai lối vào cùng một chỗ.
+  const mnEval = document.getElementById('mnav-analysis');
+  const meEval = document.getElementById('hdr-more-eval');
+  if (mnEval) mnEval.hidden = !F('evalTab');
+  if (meEval) meEval.hidden = F('evalTab');
   // Hàng nút được thiết kế cho 1 nút chính + 3 ô vuông nhỏ. Khi tắt bớt tính năng, ô vuông 60px
   // còn lại trông lạc lõng cạnh nút chính bị kéo dài hết cỡ — đổi sang dạng nút chữ cho cân.
   // Tự đo lại nên bật/tắt cờ trong config.js là giao diện tự chỉnh, không phải sửa CSS.
@@ -3105,98 +3118,14 @@ async function dlReferralLetter() {
 }
 
 
-// ════════════════════════════════════════════════════════════
-// ĐỌC ẢNH TRANG SỔ TAY — NVXH thực địa ghi sổ giấy
-// ════════════════════════════════════════════════════════════
-// Luồng: ảnh → /api/ocr (OpenAI đọc chữ, KHÔNG phân tích) → văn bản → đi qua đúng bộ che
-// tên/SĐT/địa chỉ của app → Groq phân tích như mọi ghi chép khác. Groq không hề nhận ảnh.
-//
-// Điểm phải nói thẳng với NVXH: ảnh KHÔNG che được thông tin định danh (tên thật và địa chỉ
-// nằm ngay trong nét chữ), nên bước này gửi dữ liệu định danh ra ngoài — khác với mọi bước
-// khác trong app. Vì vậy bắt xác nhận rõ ràng trước lần dùng đầu tiên, và ảnh không lưu ở đâu.
-const _OCR_CONSENT_KEY = 'thaodan_ocr_consent_v1';
-const OCR_MAX_EDGE = 1600;     // thu nhỏ trước khi gửi: đủ nét để đọc chữ, giảm dung lượng & chi phí
-
-function pickNotebookPhoto() {
-  const done = () => document.getElementById('ocr-file')?.click();
-  let agreed = false;
-  try { agreed = localStorage.getItem(_OCR_CONSENT_KEY) === 'yes'; } catch(e) {}
-  if (agreed) return done();
-  showConfirm({
-    icon: '📷',
-    title: 'Đọc ảnh trang sổ tay — đọc kỹ trước khi dùng',
-    body: 'Khác với ghi chép gõ tay, ẢNH KHÔNG THỂ ẩn danh trước khi gửi: tên thật, địa chỉ, số '
-        + 'điện thoại viết trong sổ sẽ được gửi nguyên trạng tới nhà cung cấp AI để đọc chữ.\n\n'
-        + 'Hệ thống chỉ dùng ảnh để chép lại chữ, KHÔNG lưu ảnh ở bất kỳ đâu. Văn bản chép ra sau '
-        + 'đó vẫn được che tên/SĐT/địa chỉ như bình thường trước khi phân tích.\n\n'
-        + 'Nếu trang sổ có thông tin nhận dạng trẻ mà tổ chức chưa cho phép gửi ra ngoài, hãy gõ '
-        + 'lại bằng tay thay vì chụp ảnh.',
-    okText: 'Tôi hiểu, tiếp tục',
-    okClass: 'cmb-ok-orange',
-    onConfirm() { try { localStorage.setItem(_OCR_CONSENT_KEY, 'yes'); } catch(e) {} done(); }
-  });
-}
-
-// Thu nhỏ + nén phía máy NVXH: ảnh điện thoại 4-8MB không gửi được (giới hạn body), mà cũng
-// không cần — 1600px là quá đủ để đọc chữ viết tay.
-function _shrinkImage(file) {
-  return new Promise((resolve, reject) => {
-    const fr = new FileReader();
-    fr.onerror = () => reject(new Error('Không đọc được tệp ảnh'));
-    fr.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('Tệp không phải ảnh hợp lệ'));
-      img.onload = () => {
-        const scale = Math.min(1, OCR_MAX_EDGE / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale), hh = Math.round(img.height * scale);
-        const cv = document.createElement('canvas');
-        cv.width = w; cv.height = hh;
-        cv.getContext('2d').drawImage(img, 0, 0, w, hh);
-        resolve(cv.toDataURL('image/jpeg', 0.85));
-      };
-      img.src = fr.result;
-    };
-    fr.readAsDataURL(file);
-  });
-}
-
-async function onNotebookPhoto(ev) {
-  const file = ev.target.files && ev.target.files[0];
-  ev.target.value = '';                       // cho phép chọn lại cùng một ảnh
-  if (!file) return;
-
-  const btn = document.getElementById('btn-ocr'), lbl = document.getElementById('ocr-lbl');
-  const restore = () => { if (btn) btn.disabled = false; if (lbl) lbl.textContent = 'Ảnh sổ tay'; };
-  if (btn) btn.disabled = true; if (lbl) lbl.textContent = 'Đang đọc chữ…';
-
-  try {
-    const dataUrl = await _shrinkImage(file);
-    const authHeader = await _authHeader();
-    const res = await fetch('/api/ocr', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader },
-      body: JSON.stringify({ image: dataUrl }),
-    });
-    const out = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(out.error || ('Lỗi máy chủ ' + res.status));
-    const text = (out.text || '').trim();
-    if (!text) { showNotif('⚠️ ' + (out.warning || 'Không đọc được chữ nào trong ảnh'), 'warn'); restore(); return; }
-
-    const ta = document.getElementById('dash-notes');
-    const sep = ta.value && !/\n$/.test(ta.value) ? '\n\n' : '';
-    ta.value = ta.value + sep + text;
-    document.getElementById('dash-cc').textContent = ta.value.length + ' ký tự';
-    _stageDataCache[currentStage] = { notes: ta.value };
-    _saveNotesDraft(); window._markUnsaved?.();
-
-    const unread = (text.match(/\[không đọc được\]/g) || []).length;
-    showNotif(`📷 Đã chép ${text.length} ký tự từ ảnh`
-      + (unread ? ` · ${unread} chỗ không đọc được — hãy sửa lại bằng tay` : '')
-      + ' — đọc lại và sửa trước khi phân tích', unread ? 'warn' : 'ok', 6000);
-  } catch (e) {
-    showNotif('❌ ' + e.message, 'err', 6000);
-  } finally { restore(); }
-}
+// ── ĐỌC ẢNH TRANG SỔ TAY (OCR) — ĐÃ XOÁ ─────────────────────────────────────────────────
+// Xoá hẳn ngày 08/09/2026, không phải chỉ tắt cờ. Lý do: đây là luồng DUY NHẤT gửi thông tin
+// định danh CHƯA CHE ra ngoài — tên thật và địa chỉ nằm ngay trong nét chữ của trang sổ, không
+// regex nào che được; mọi luồng khác đều đã che trước khi gửi. Tổ chức đã quyết tắt vĩnh viễn
+// và cũng chưa có OPENAI_API_KEY. Để code lại thì mỗi lần QA vẫn phải kiểm một đường không ai
+// dùng, và luôn còn nguy cơ ai đó bật cờ lên mà không biết hệ quả về dữ liệu trẻ.
+// Cần dựng lại: xem commit này trong git (hàm pickNotebookPhoto, onNotebookPhoto, api/ocr.js)
+// và phải làm lại phần đồng thuận của thân chủ trước khi bật.
 
 // ════════════════════════════════════════════════════════════
 // NHẬP BẰNG GIỌNG NÓI — Web Speech API có sẵn trong trình duyệt
@@ -3716,16 +3645,16 @@ function _verifyBanner() {
   }
   // Tổng kết truy vết: chỉ ra ĐÚNG những ô cần soi, thay vì bắt NVXH đọc lại toàn bộ ghi chép.
   const g = _groundNotesNorm ? _countUngrounded(D) : null;
-  const gLine = !g ? ''
+  const gShort = !g ? ''
     : g.no === 0
-      ? `<div style="font-size:14px;color:#166534;margin-top:3px">📎 Cả ${g.total} thông tin trích xuất đều tìm thấy căn cứ trong ghi chép.</div>`
-      : `<div style="font-size:14px;color:#b91c1c;margin-top:3px"><strong>❓ ${g.no}/${g.total} thông tin KHÔNG tìm thấy căn cứ</strong> trong ghi chép — chỉ cần soi những ô có dấu <em>❓ chưa có căn cứ</em>, không phải đọc lại tất cả.</div>`;
+      ? ` · <span style="color:#166534">📎 cả ${g.total} thông tin đều có căn cứ</span>`
+      : ` · <strong style="color:#b91c1c">❓ ${g.no}/${g.total} ô cần soi lại</strong>`;
   return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fffbeb;border:1.5px solid #fcd34d;border-left:5px solid #d97706;border-radius:0 8px 8px 0;padding:9px 13px;margin-bottom:14px">
     <div style="flex:1;min-width:200px;font-size:15px;color:#78350f">
-      <strong>⚠️ BẢN NHÁP — do AI trích xuất, chưa kiểm chứng</strong>
-      <div style="font-size:14px;color:#92400e;margin-top:2px">Đối chiếu các ô được đánh dấu bên dưới rồi bấm xác nhận.</div>
-      ${gLine}</div>
-    <button class="btn-analyze" style="flex:0 0 auto;height:34px;font-size:14px;padding:0 14px" onclick="toggleVerify()">✔ Tôi đã kiểm chứng</button>
+      <strong>⚠️ BẢN NHÁP — AI trích xuất, chưa kiểm chứng</strong>${gShort}</div>
+    <button class="btn-analyze" style="flex:0 0 auto;height:34px;font-size:14px;padding:0 14px"
+      title="Đối chiếu các ô có dấu ❓ chưa có căn cứ với ghi chép gốc, sửa nếu sai, rồi bấm nút này. Bản in sẽ bỏ dấu BẢN NHÁP."
+      onclick="toggleVerify()">✔ Tôi đã kiểm chứng</button>
   </div>`;
 }
 
@@ -3749,8 +3678,8 @@ function renderFormTab(idx) {
       ${idx===2 ? _vgPickerHTML() : ''}
       <button class="btn-fv-edit" id="btn-fv-edit-${idx}" onclick="toggleFvEditMode(${idx})">✏️ Chỉnh sửa</button>
       <button class="btn-fv-save" onclick="saveCaseNow()">💾 Lưu ca</button>
-      <button class="btn-dl-docx" title="Bản Word trích xuất nguyên cấu trúc form web — dùng để chỉnh sửa, nối tiếp" onclick="dlDocx(${idx})">📝 Bản form web</button>
-      <button class="btn-dl-docx-brand" title="Bản in chính thức — có bìa logo Thảo Đàn, footer trên mỗi trang" onclick="dlDocxBranded(${idx})">📄 Bản in Thảo Đàn</button>
+      <button class="btn-dl-docx-brand" title="Bản in chính thức — có bìa logo Thảo Đàn và footer trên mỗi trang. Đây là bản để in ra giấy và lưu hồ sơ." onclick="dlDocxBranded(${idx})">📄 Tải bản in</button>
+      <button class="btn-dl-docx btn-dl-alt" title="Bản Word thô, không bìa không footer — chỉ dùng khi cần cắt dán nội dung sang tài liệu khác" onclick="dlDocx(${idx})">Bản thô</button>
     </div>
   </div>`;
 
@@ -6600,6 +6529,22 @@ async function exportAllDocx() {
 // FEATURE 4.1 — Export ca ra file JSON (backup)
 // ════════════════════════════════════════════════════════════
 function exportCaseJSON() {
+  // File JSON xuất ra là hồ sơ trẻ KHÔNG mã hoá (tên thật, địa chỉ, số điện thoại), nằm lại
+  // trong thư mục Downloads — trên máy dùng chung thì ai mở máy cũng đọc được. Trong app thì dữ
+  // liệu đã mã hoá ở máy chủ (migration 0012/0013), nên đây là chỗ rò rỉ dễ nhất. Hỏi trước.
+  if (!window.__jsonWarned) {
+    showConfirm({
+      icon: '⚠️',
+      title: 'Xuất hồ sơ ra file JSON?',
+      body: 'File tải về là hồ sơ trẻ CHƯA MÃ HOÁ — có tên thật, địa chỉ, số điện thoại — và nằm '
+          + 'lại trong thư mục Downloads của máy này.\n\nChỉ dùng để sao lưu, và phải xoá file '
+          + 'sau khi dùng nếu đây là máy dùng chung.',
+      okText: 'Tôi hiểu, vẫn xuất',
+      okClass: 'cmb-ok-orange',
+      onConfirm() { window.__jsonWarned = true; exportCaseJSON(); }
+    });
+    return;
+  }
   if (!curCaseId) { showNotif('⚠️ Chưa chọn ca nào', 'warn'); return; }
   const cases = loadCases();
   const c = cases[curCaseId];
