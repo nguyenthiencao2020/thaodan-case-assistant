@@ -198,7 +198,11 @@ const _EXTRACT_DISCIPLINE = `
 2. ĐỂ TRỐNG = CHUỖI RỖNG "": KHÔNG được dùng "[Cần thu thập thêm]", "Không rõ", "//".
 3. NGÀY THÁNG: Định dạng dd/mm/yyyy. Nếu chỉ có năm → "năm XXXX". Không rõ → "".
 4. GIÁ TRỊ CHECKBOX: Dùng "Có"/"Không"/"".
-5. Trả về JSON hợp lệ DUY NHẤT, bắt đầu bằng {. KHÔNG dùng markdown hay backtick.`;
+5. Trả về JSON hợp lệ DUY NHẤT, bắt đầu bằng {. KHÔNG dùng markdown hay backtick.
+6. MÃ ẨN DANH: Ghi chép có thể chứa các mã [SDT_1], [EMAIL_2], [CCCD_1], [ĐỊA_CHỈ_1],
+   [TRẺ_ẨN_DANH], [TÊN_2]. Đó là thông tin thật đã được che trước khi gửi. Hãy SAO LẠI ĐÚNG
+   NGUYÊN MÃ (đủ dấu ngoặc, đúng số, không đổi chữ) vào field tương ứng — VD ghi chép "SĐT mẹ
+   [SDT_1]" thì "sdt_nguoi_than":"[SDT_1]". KHÔNG bỏ trống, KHÔNG viết "***", KHÔNG tự đặt số.`;
 
 // ─── PROMPT GIAI ĐOẠN 1: TIẾP CẬN ───
 // AI chỉ trích xuất Form 0 (co_ban, gia_dinh, tinh_trang) + Form 1 (tiep_can)

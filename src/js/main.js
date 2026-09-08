@@ -739,31 +739,80 @@ function maskAddressInText(text) {
   return out.join('');
 }
 
+// ── Che SĐT/CCCD/email trong ghi chép tự do — CÓ ĐÁNH SỐ để khôi phục ────────────────────
+// maskPhonesInText thay tất cả bằng '***', tức MẤT HẲN giá trị. Hậu quả trên đường ghi chép →
+// AI → biểu mẫu: AI chỉ thấy '***' nên mọi ô "Điện thoại liên hệ", "Email", "CCCD/CMND" trong
+// 11 biểu mẫu KHÔNG BAO GIỜ điền được, dù NVXH đã ghi số trong ghi chép. Cách sửa giống hệt
+// địa chỉ: placeholder có đánh số, Groq chỉ thấy [SĐT_1] còn app khôi phục nguyên văn ngay tại
+// máy NVXH sau khi AI trả kết quả (xem restoreIdentityText).
+// Đánh số theo TỪNG giá trị khác nhau, nên "SĐT mẹ [SDT_1], SĐT bà [SDT_2]" vẫn về đúng người.
+// Nhãn viết KHÔNG DẤU (SDT, không phải SĐT): model hay "sửa" dấu tiếng Việt khi sao lại chuỗi,
+// lệch một dấu là không khôi phục được. Địa chỉ có dấu là vì nó đã chạy ổn từ trước.
+const _contactToPlaceholder = new Map();   // nguyên văn → [SDT_n]
+const _contactFromPlaceholder = new Map(); // [SDT_n] → nguyên văn
+
+function _contactPh(kind, raw) {
+  const key = kind + '\u0000' + raw;
+  let ph = _contactToPlaceholder.get(key);
+  if (!ph) {
+    ph = '[' + kind + '_' + (_contactToPlaceholder.size + 1) + ']';
+    _contactToPlaceholder.set(key, ph);
+    _contactFromPlaceholder.set(ph, raw);
+  }
+  return ph;
+}
+
+function maskContactsInText(text) {
+  if (typeof text !== 'string' || !text) return text;
+  return text
+    // Email trước: phần trước @ có thể chứa dãy 9-12 số, nếu để CCCD chạy trước sẽ cắt đôi email.
+    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, m => _contactPh('EMAIL', m))
+    // Số điện thoại VN (đủ dạng liền, +84, và có dấu phân cách)
+    .replace(/(\b0\d{9}\b|\+84\d{9}\b|\b0\d{2}[\s.-]\d{3}[\s.-]\d{4}\b)/g, m => _contactPh('SDT', m))
+    // CCCD/CMND — 12 số trước 9 số, để không cắt cụt CCCD 12 số thành 9 số
+    .replace(/\b\d{12}\b|\b\d{9}\b/g, m => _contactPh('CCCD', m));
+}
+
+// Khôi phục MỌI placeholder (tên thật, địa chỉ, SĐT/CCCD/email) trong một chuỗi.
+function restoreIdentityText(str) {
+  if (typeof str !== 'string' || !str) return str;
+  let v = str;
+  _getRealNames().forEach((nm, i) => {
+    const ph = _namePlaceholder(i);
+    if (v.indexOf(ph) !== -1) v = v.split(ph).join(nm);
+  });
+  if (v.indexOf('[\u0110\u1ecaA_CH\u1ec8_') !== -1) {
+    _addrFromPlaceholder.forEach((orig, ph) => { if (v.indexOf(ph) !== -1) v = v.split(ph).join(orig); });
+  }
+  // Quét DUNG SAI cho SĐT/CCCD/email: model có thể sao lại thành "[ SDT_1 ]", "[sdt_1]" hay
+  // "[SĐT_1]" (tự thêm dấu). Khớp cứng theo chuỗi thì hụt, và giá trị bị bỏ trống vĩnh viễn vì
+  // D được LƯU sau khi khôi phục — sai một lần là mất hẳn. Nhận theo LOẠI + SỐ, bỏ qua dấu
+  // cách/hoa thường/dấu tiếng Việt.
+  if (/\[\s*(?:S[ĐD]T|CCCD|EMAIL)/i.test(v)) {
+    v = v.replace(/\[\s*(S[ĐD]T|CCCD|EMAIL)\s*_\s*(\d+)\s*\]/gi, (m, kind, n) => {
+      const k = kind.toUpperCase().replace('Đ', 'D');
+      const hit = _contactFromPlaceholder.get('[' + k + '_' + n + ']');
+      return hit === undefined ? m : hit;
+    });
+  }
+  return v;
+}
+
 // Ẩn danh toàn diện (số điện thoại/CCCD/email + tên thật + số nhà/tên đường) — dùng thay
 // maskPhonesInText ở mọi nơi gửi ghi chép/tin nhắn tự do cho AI.
 function maskIdentityText(text) {
-  return maskAddressInText(maskRealNamesInText(maskPhonesInText(text)));
+  return maskAddressInText(maskRealNamesInText(maskContactsInText(text)));
 }
 
 // Khôi phục tên thật vào dữ liệu AI vừa trích xuất — AI thấy [TRẺ_ẨN_DANH] trong ghi chép nên
 // sẽ trả về đúng chuỗi đó ở field ho_ten; thay lại tên thật để NVXH xem form thấy đúng thông
 // tin (tên thật vẫn được lưu — đã mã hóa ở DB từ migration 0012/0013 — chỉ không gửi AI).
 function restoreRealNamesDeep(obj) {
-  const names = _getRealNames();
-  if (!names.length && !_addrFromPlaceholder.size) return obj;
-  const unmask = (str) => {
-    // Khôi phục theo ĐÚNG chỉ số của từng tên — trước đây mọi placeholder đều thành names[0].
-    let v = str;
-    names.forEach((nm, i) => { const ph = _namePlaceholder(i);
-      if (v.indexOf(ph) !== -1) v = v.split(ph).join(nm); });
-    // Địa chỉ: trả lại nguyên văn số nhà + tên đường đã che khi gửi AI.
-    if (v.indexOf('[ĐỊA_CHỈ_') !== -1) {
-      _addrFromPlaceholder.forEach((orig, ph) => { if (v.indexOf(ph) !== -1) v = v.split(ph).join(orig); });
-    }
-    return v;
-  };
+  // Khôi phục theo ĐÚNG chỉ số của từng tên (trước đây mọi placeholder đều thành names[0]),
+  // cùng địa chỉ và SĐT/CCCD/email — xem restoreIdentityText.
+  if (!_getRealNames().length && !_addrFromPlaceholder.size && !_contactFromPlaceholder.size) return obj;
   const walk = (o) => {
-    if (typeof o === 'string') return unmask(o);
+    if (typeof o === 'string') return restoreIdentityText(o);
     if (Array.isArray(o)) return o.map(walk);
     if (o && typeof o === 'object') { for (const k of Object.keys(o)) o[k] = walk(o[k]); return o; }
     return o;
@@ -1473,7 +1522,9 @@ async function runAnalysis() {
     // Giai đoạn 4: chỉ cần extract (không cần parallel report)
     if (currentStage === 4) {
       prog.style.transition = 'width 2.5s'; prog.style.width = '70%';
-      const formRaw = await callAI(extractPrompt, 'Ghi chép NVXH (Cập nhật tiến trình):\n\n' + notesAI, 0, 3000);
+      // 3000 token là quá sát: gpt-oss-120b tiêu một phần ngân sách vào suy luận ẩn trước khi
+      // xuất JSON, cắt cụt là mất trắng cả lượt cập nhật tiến trình (xem MAX_TOKENS_CAP).
+      const formRaw = await callAI(extractPrompt, 'Ghi chép NVXH (Cập nhật tiến trình):\n\n' + notesAI, 0, 6000);
       let appendData = {};
       try { appendData = robustJSON(formRaw); } catch(e) { console.warn('Stage 4 JSON error:', e); }
       restoreRealNamesDeep(appendData); // khôi phục tên thật vừa ẩn khi gửi AI
@@ -1532,7 +1583,7 @@ async function runAnalysis() {
       const ragCtx = await fetchRagContext(notesAI);
       const [reportRaw, formRaw] = await Promise.all([
         callAI(reportPrompt + ragCtx, 'Ghi chép NVXH:\n\n' + notesAI, 0.3, 2500),
-        callAI(extractPrompt, 'Ghi chép NVXH:\n\n' + notesAI, 0, 4096)
+        callAI(extractPrompt, 'Ghi chép NVXH:\n\n' + notesAI, 0, 8000)   // xem MAX_TOKENS_CAP trong api/chat.js
       ]);
 
       let report = {};
@@ -2620,8 +2671,12 @@ async function sendChat() {
       {role:'system',content:SYS_CHAT+ctx+ragCtx},
       ...chatHistory.slice(-10)
     ]);
+    // Tin nhắn gửi đi đã được maskIdentityText che, nên AI trả lời có thể nhắc lại nguyên
+    // placeholder ([SDT_1], [ĐỊA_CHỈ_1]...). Khôi phục trước khi hiển thị, nếu không NVXH
+    // đọc thấy mã máy thay vì số/địa chỉ mình vừa nhập.
+    const shown = restoreIdentityText(reply);
     chatHistory.push({role:'assistant',content:reply});
-    document.getElementById(typId).innerHTML = formatMd(reply);
+    document.getElementById(typId).innerHTML = formatMd(shown);
   } catch(e) {
     document.getElementById(typId).innerHTML = '❌ '+esc(e.message);
   } finally {
