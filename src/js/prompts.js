@@ -251,6 +251,10 @@ ${_EXTRACT_DISCIPLINE}
 Chỉ trích xuất thông tin cho Form 2 (Phúc trình vãng gia), Form 3a (Đánh giá khẩn cấp) và Form 3b (Đánh giá nhu cầu).
 Chỉ điền các field trong "vang_gia" và bổ sung thêm "danh_gia". KHÔNG điền co_ban, gia_dinh, ke_hoach, cap_nhat.
 
+★ Ghi chép này là MỘT buổi vãng gia. Chỉ trích xuất những gì diễn ra TRONG buổi đó — hệ thống
+lưu mỗi buổi thành một phúc trình riêng, đừng nhắc lại nội dung buổi trước. Nếu ghi chép có nói
+lần thứ mấy thì điền "lan_vang_gia"; không nói thì để trống, hệ thống tự đánh số theo thứ tự.
+
 ═══ SCHEMA (chỉ trả về 2 key này) ═══
 {
   "vang_gia": {
