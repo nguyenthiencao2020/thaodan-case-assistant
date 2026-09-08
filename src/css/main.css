@@ -958,7 +958,7 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
   .psheet{box-shadow:none!important;padding:20px!important;max-width:100%!important;}
 }
 
-/* ══ FULL-WIDTH FIX v22.2 ══ */
+/* ══ FULL-WIDTH FIX ══ */
 .dash:not(.chat-collapsed) .dash-right {
   flex:1 !important; min-width:0 !important; overflow:hidden !important;
 }

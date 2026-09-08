@@ -310,7 +310,7 @@ async function _checkSession() {
 }
 
 // ════════════════════════════════════════════════════════════
-// STORAGE v22 — Supabase per-case rows + files + notifications
+// STORAGE — Supabase per-case rows + files + notifications
 // ════════════════════════════════════════════════════════════
 let _cases = {};
 let _tplOpen = false;
@@ -1667,7 +1667,7 @@ function _validateData(data) {
 }
 
 // ════════════════════════════════════════════════════════════
-// ★★★ REPORT RENDERER v22 — Stage-aware ★★★
+// ★★★ REPORT RENDERER — Stage-aware ★★★
 // ════════════════════════════════════════════════════════════
 function renderReport(report) {
   if (!report) return;
@@ -3399,7 +3399,6 @@ function renderFormTab(idx) {
       <div class="fv-ttl">${FORM_NAMES[idx]}</div>
       <div class="fv-meta">Mã: ${esc(_caseCodeNow())} &nbsp;|&nbsp; ${esc(_caseSeqNow())} &nbsp;|&nbsp; ${todayFmtH}</div>
       <div class="fv-badges">
-        <span class="fv-badge">✓ v16</span>
         <span class="fv-badge-stage">GĐ ${currentStage}</span>
       </div>
     </div>

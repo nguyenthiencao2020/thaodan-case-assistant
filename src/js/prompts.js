@@ -74,7 +74,7 @@ Trả về JSON hợp lệ DUY NHẤT, bắt đầu bằng {. KHÔNG dùng markd
   "urgent_reason": ""
 }`;
 // ════════════════════════════════════════════════════════════
-// ★★★ 5 REPORT PROMPTS RIÊNG TỪNG GIAI ĐOẠN v22 ★★★
+// ★★★ 5 REPORT PROMPTS RIÊNG TỪNG GIAI ĐOẠN ★★★
 // ════════════════════════════════════════════════════════════
 
 const SYS_REPORT_1 = `Bạn là GIÁM SÁT VIÊN CTXH cấp cao tại Thảo Đàn TP.HCM — 15+ năm kinh nghiệm bảo vệ trẻ em.
