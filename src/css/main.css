@@ -597,7 +597,15 @@ svg.ic-sm { width:13px; height:13px; }
 }
 .entry-card-date { font-size:13px; color:var(--t3); font-family:'JetBrains Mono',monospace; margin-bottom:4px; }
 .entry-card-preview { font-size:14px; color:var(--t2); line-height:1.5; }
-.entry-card-actions { display:flex; gap:5px; margin-top:7px; }
+.entry-card-actions { display:flex; gap:5px; margin-top:7px; flex-wrap:wrap; }
+/* Xem lại / In lại một mốc lịch sử — cùng cỡ chữ và cùng chiều cao vùng bấm với 2 nút kia,
+   để hàng nút không cao thấp lệch nhau khi xuống dòng trên điện thoại. */
+.btn-entry-view, .btn-entry-print {
+  font-size:13px; padding:3px 10px; border-radius:5px;
+  background:var(--bg2); color:var(--t1); border:1px solid var(--bd2);
+  cursor:pointer; font-weight:700; font-family:inherit; transition:all .12s;
+}
+.btn-entry-view:hover, .btn-entry-print:hover { background:var(--navy); color:#fff; border-color:var(--navy); }
 .btn-entry-load {
   font-size:13px; padding:3px 10px; border-radius:5px;
   background:var(--sc-bg); color:var(--sc); border:1px solid var(--sc-bd);
@@ -1546,3 +1554,62 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 }
 .shp-item-btn:hover { background:var(--org); }
 .shp-empty { text-align:center; padding:10px; color:var(--t3); font-size:14px; }
+
+
+/* ── Dải báo đang xem BẢN LƯU (chỉ đọc) ──────────────────────────────────────────────────
+   Dính đáy màn hình và nằm trên mọi thứ: người dùng phải luôn thấy mình không ở dữ liệu
+   hiện tại, nếu không sẽ ngồi sửa một bản cũ mà không hiểu vì sao không lưu được. */
+.hist-banner {
+  position:fixed; left:0; right:0; bottom:0; z-index:900;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:10px 14px; background:#78350f; color:#fff;
+  box-shadow:0 -3px 14px rgba(0,0,0,.28); font-size:15px;
+}
+.hist-b-ic { font-size:19px; line-height:1; }
+.hist-b-tx { flex:1 1 220px; line-height:1.45; }
+.hist-b-tx strong { color:#fde68a; }
+.hist-banner button {
+  font-size:14px; font-weight:800; font-family:inherit; cursor:pointer;
+  padding:8px 12px; border-radius:7px; min-height:40px; border:1px solid rgba(255,255,255,.45);
+  background:rgba(255,255,255,.14); color:#fff; transition:all .12s;
+}
+.hist-banner button:hover { background:#fff; color:#78350f; }
+/* Chừa chỗ cho dải báo, không để nó che nút cuối trang */
+body.hist-mode { padding-bottom:64px; }
+@media (max-width:640px) {
+  .hist-banner { font-size:14px; padding:9px 11px; }
+  body.hist-mode { padding-bottom:104px; }
+}
+
+/* Ô chọn buổi vãng gia trên thanh công cụ Form 2 — cùng chiều cao với các nút cạnh nó */
+.fv-vg-pick {
+  font-size:14px; font-weight:700; font-family:inherit; cursor:pointer;
+  padding:6px 10px; min-height:38px; border-radius:7px;
+  background:var(--bg2); color:var(--t1); border:1px solid var(--bd2);
+}
+.fv-vg-pick:hover { border-color:var(--navy); }
+
+/* ── Ô lý do bắt buộc trong hộp thoại xác nhận ───────────────────────────────────────────
+   Dùng cho quyết định phải giải trình được: đóng ca, mở lại ca. Nút xác nhận bị khóa tới khi
+   lý do đủ dài, nên phải thấy rõ vì sao đang bị khóa — đó là việc của .cmb-p-hint. */
+.cmb-prompt { text-align:left; margin:4px 0 14px; }
+.cmb-p-lb { display:block; font-size:14px; font-weight:800; color:var(--t1); margin-bottom:6px; }
+.cmb-p-input {
+  width:100%; box-sizing:border-box; resize:vertical; min-height:74px;
+  font-family:inherit; font-size:15px; line-height:1.5; color:var(--t1);
+  padding:9px 11px; border:1px solid var(--bd2); border-radius:8px; background:var(--white);
+}
+.cmb-p-input:focus { outline:none; border-color:var(--navy); box-shadow:0 0 0 3px var(--navy-tint); }
+.cmb-p-hint { font-size:13px; color:var(--t3); margin-top:5px; line-height:1.45; }
+.cmb-p-hint.warn { color:#b45309; font-weight:700; }
+.cmb-btn:disabled { opacity:.5; cursor:not-allowed; }
+/* Lịch sử đóng / mở lại ca trong trang chi tiết ca */
+.cs-log { margin-top:10px; display:flex; flex-direction:column; gap:7px; }
+.cs-log-item {
+  border-left:3px solid var(--bd2); padding:6px 0 6px 10px;
+  font-size:14px; line-height:1.5; color:var(--t2);
+}
+.cs-log-item.close { border-left-color:#f07020; }
+.cs-log-item.reopen { border-left-color:#2563eb; }
+.cs-log-hd { font-weight:800; color:var(--t1); }
+.cs-log-meta { font-size:13px; color:var(--t3); font-family:'JetBrains Mono',monospace; }

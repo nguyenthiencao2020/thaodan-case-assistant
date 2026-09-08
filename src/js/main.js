@@ -1351,6 +1351,7 @@ function _getMissingRequiredFields(stage) {
 }
 
 function completeStage() {
+  if (isHistMode()) { showNotif('👁 Đang xem bản lưu — thoát chế độ xem trước', 'warn', 5000); return; }
   if (!D) { showNotif('⚠️ Hãy phân tích ghi chép trước khi hoàn thành giai đoạn', 'warn'); return; }
 
   // ── GĐ 5: Đóng ca ──
@@ -1363,13 +1364,15 @@ function completeStage() {
       body: `"${cName}" sẽ chuyển sang trạng thái Đã đóng.\nBạn vẫn có thể xem lại nhưng không thể chỉnh sửa tiếp.`,
       okText: 'Đóng ca',
       okClass: 'cmb-ok-orange',
-      onConfirm() {
+      prompt: _CLOSE_PROMPT,
+      onConfirm(reason) {
         const cases = loadCases();
         if (cases[curCaseId]) {
           cases[curCaseId].status = 'closed';
           cases[curCaseId].closedAt = new Date().toISOString();
           cases[curCaseId].updatedAt = new Date().toISOString();
-          if (D) D._status = 'closed';
+          _logCaseStatus(cases[curCaseId], 'close', reason, currentStage);
+          if (D) { D._status = 'closed'; D._closeReason = String(reason || '').trim(); }
           if (!cases[curCaseId].followUpSchedule)
             cases[curCaseId].followUpSchedule = _genFollowUpSchedule(cases[curCaseId].closedAt);
           saveCases(cases);
@@ -1450,6 +1453,7 @@ function completeStage() {
 }
 
 function rollbackStage() {
+  if (isHistMode()) { showNotif('👁 Đang xem bản lưu — thoát chế độ xem trước', 'warn', 5000); return; }
   if (!D) { showNotif('⚠️ Chưa có dữ liệu', 'warn'); return; }
   if (currentStage <= 1) { showNotif('ℹ️ Đang ở giai đoạn đầu tiên', 'warn'); return; }
   if (!confirm(`Lùi về GĐ ${currentStage - 1}?\nCác form giai đoạn trước sẽ được mở khóa lại.`)) return;
@@ -1486,6 +1490,7 @@ function rollbackStage() {
 // Stage-aware, DeepMerge, Append for Stage 4
 // ════════════════════════════════════════════════════════════
 async function runAnalysis() {
+  if (isHistMode()) { showNotif('👁 Đang xem bản lưu — thoát chế độ xem rồi mới phân tích được', 'warn', 5000); return; }
   const notes = document.getElementById('dash-notes').value.trim();
   if (!notes) { showNotif('⚠️ Nhập ghi chép trước', 'warn'); return; }
   if (notes.length < 30) { showNotif('⚠️ Ghi chép quá ngắn — cần ít nhất 30 ký tự', 'warn'); return; }
@@ -2341,6 +2346,130 @@ function renderStageHistory() {
   </div>${rows}`;
 }
 
+// Đuôi tên file khi chỉ in RIÊNG một buổi vãng gia — để hồ sơ giấy không lẫn buổi nào với
+// buổi nào. In cả tập thì không thêm gì, giữ đúng tên file cũ.
+function _vgFileSuffix(fi) {
+  if (fi !== 2 || _vgPick < 0) return '';
+  const all = _vgList(D);
+  const v = all[_vgPick];
+  if (!v) return '';
+  const d = cf(v.ngay_vang_gia) ? '_' + fmtDate(v.ngay_vang_gia).replace(/\//g, '-') : '';
+  return '_lan' + _vgLan(v, _vgPick) + d;
+}
+
+// ── Chọn buổi vãng gia để xem / in riêng ─────────────────────────────────────────────────
+// Ca vãng gia 4 lần thì tải Form 2 ra một file 4 phiếu. Muốn in lại riêng lần 2 mà phải tự
+// đếm số trang trong Word thì rất dễ in sai buổi. Ô chọn này lọc cả bản trên màn hình lẫn
+// file .docx, và đặt tên file kèm số lần + ngày để lưu hồ sơ khỏi lẫn.
+// -1 = tất cả các buổi (mặc định, giữ đúng cách chạy cũ).
+let _vgPick = -1;
+
+function setVgPick(v) {
+  _vgPick = parseInt(v, 10);
+  if (isNaN(_vgPick)) _vgPick = -1;
+  showForm(2);
+}
+
+// Danh sách buổi ĐANG CHỌN — dùng cho cả bản web và bản in.
+function _vgShown(D) {
+  const all = _vgList(D);
+  if (_vgPick < 0 || _vgPick >= all.length) return all.map((v, i) => ({ v, i }));
+  return [{ v: all[_vgPick], i: _vgPick }];
+}
+
+function _vgPickerHTML() {
+  const all = _vgList(D);
+  if (all.length < 2) return '';           // một buổi thì không cần ô chọn
+  const opts = ['<option value="-1"' + (_vgPick < 0 ? ' selected' : '') + '>Tất cả ' + all.length + ' buổi</option>']
+    .concat(all.map((v, i) => {
+      const d = cf(v.ngay_vang_gia) ? ' — ' + fmtDate(v.ngay_vang_gia) : '';
+      return '<option value="' + i + '"' + (_vgPick === i ? ' selected' : '') + '>Lần ' + _vgLan(v, i) + escAttr(d) + '</option>';
+    })).join('');
+  return '<select class="fv-vg-pick" title="Chọn buổi vãng gia để xem và in riêng" '
+       + 'onchange="setVgPick(this.value)">' + opts + '</select>';
+}
+
+// ════════════════════════════════════════════════════════════
+// XEM LẠI / IN LẠI BẢN LƯU (chỉ đọc)
+// ════════════════════════════════════════════════════════════
+// Mỗi lần "Phân tích" hoặc "Lưu ca" đều đính một BẢN CHỤP toàn bộ dữ liệu ca vào mốc lịch sử.
+// Nhờ vậy xem lại và in lại đúng nội dung của một buổi vãng gia, một bản kế hoạch hay một lần
+// cập nhật tiến trình đã qua — không phải dựng lại từ ghi chép.
+// Cách làm: TẠM ĐỔI biến D sang bản chụp, mọi phần vẽ form và xuất .docx dùng lại y nguyên
+// không phải sửa. Trong lúc đó phải CHẶN mọi đường ghi, nếu không một lần tự lưu là bản cũ
+// đè lên dữ liệu hiện tại.
+let _histD = null;            // D thật, giữ lại trong lúc xem bản lưu
+let _histInfo = null;         // { idx, date, stage }
+
+function _snapD() { return D ? JSON.parse(JSON.stringify(D)) : null; }
+
+function isHistMode() { return _histD !== null; }
+
+// Form chính của từng giai đoạn — dùng khi bấm "In lại" từ mốc lịch sử.
+const _STAGE_MAIN_FORM = { 1: 1, 2: 2, 3: 5, 4: 7, 5: 9 };
+
+function _histEntry(idx) {
+  const c = curCaseId ? loadCases()[curCaseId] : null;
+  const e = c && c.entries && c.entries[idx];
+  return (e && e.analysis) ? e : null;
+}
+
+function viewEntrySnapshot(idx) {
+  const e = _histEntry(idx);
+  if (!e) { showNotif('⚠️ Mốc này chưa có bản chụp dữ liệu — chỉ có ghi chép gốc', 'warn', 5000); return; }
+  if (!isHistMode()) _histD = D;                       // chỉ giữ D thật ở lần vào đầu tiên
+  D = JSON.parse(JSON.stringify(e.analysis));
+  _histInfo = { idx, date: e.date, stage: e.stage || 1 };
+  switchMain('forms');
+  showForm(_STAGE_MAIN_FORM[_histInfo.stage] || 0);
+  _paintHistBanner();
+  showNotif('👁 Đang xem bản lưu ' + fmtVN(e.date) + ' — chỉ đọc, không sửa và không lưu được', 'ok', 6000);
+}
+
+function exitHistMode() {
+  if (!isHistMode()) return;
+  D = _histD; _histD = null; _histInfo = null;
+  _paintHistBanner();
+  showForm(curForm || 0);
+  renderEntriesPanel();
+  showNotif('↩ Đã trở lại dữ liệu hiện tại', 'ok', 3000);
+}
+
+async function reprintEntrySnapshot(idx, fi) {
+  const e = _histEntry(idx);
+  if (!e) { showNotif('⚠️ Mốc này chưa có bản chụp dữ liệu — không in lại được', 'warn', 5000); return; }
+  const keep = isHistMode() ? null : D;
+  const wasHist = isHistMode();
+  D = JSON.parse(JSON.stringify(e.analysis));
+  try {
+    await dlDocxBranded(fi != null ? fi : (_STAGE_MAIN_FORM[e.stage || 1] || 0));
+  } catch (err) {
+    showNotif('❌ Không in được: ' + err.message, 'err', 6000);
+  } finally {
+    // Trả D về đúng trạng thái trước khi bấm — kể cả khi đang xem một bản lưu khác.
+    if (!wasHist) D = keep;
+    else if (_histInfo) { const cur = _histEntry(_histInfo.idx); if (cur) D = JSON.parse(JSON.stringify(cur.analysis)); }
+  }
+}
+
+function _paintHistBanner() {
+  let el = document.getElementById('hist-banner');
+  if (!isHistMode()) { if (el) el.remove(); document.body.classList.remove('hist-mode'); return; }
+  document.body.classList.add('hist-mode');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'hist-banner';
+    el.className = 'hist-banner';
+    document.body.appendChild(el);
+  }
+  const st = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'][_histInfo.stage] || ('GĐ ' + _histInfo.stage);
+  el.innerHTML = '<span class="hist-b-ic">👁</span>'
+    + '<span class="hist-b-tx">Đang xem <strong>bản lưu ' + esc(fmtVN(_histInfo.date)) + '</strong>'
+    + ' — GĐ ' + _histInfo.stage + ' ' + esc(st) + ' · chỉ đọc</span>'
+    + '<button class="hist-b-print" onclick="dlDocxBranded(curForm)">🖨 In bản này</button>'
+    + '<button class="hist-b-exit" onclick="exitHistMode()">↩ Trở lại dữ liệu hiện tại</button>';
+}
+
 function renderEntriesPanel() {
   const panel = document.getElementById('entries-panel');
   if (!panel) return;
@@ -2383,6 +2512,8 @@ function renderEntriesPanel() {
         <div class="entry-card-preview">${esc(preview)}${(e.notes||'').length > 100 ? '…' : ''}</div>
         <div class="entry-card-actions">
           <button class="btn-entry-load" onclick="loadEntryToEditor(${realIdx})">✏️ Sửa / dùng lại</button>
+          ${e.analysis ? `<button class="btn-entry-view" onclick="viewEntrySnapshot(${realIdx})" title="Mở biểu mẫu đúng như đã lưu ở mốc này">👁 Xem lại</button>
+          <button class="btn-entry-print" onclick="reprintEntrySnapshot(${realIdx})" title="Tải .docx đúng nội dung đã lưu ở mốc này">🖨 In lại</button>` : ''}
           <button class="btn-entry-del" onclick="deleteEntry(${realIdx})">🗑</button>
         </div>
       </div>`;
@@ -2390,6 +2521,7 @@ function renderEntriesPanel() {
 }
 
 function loadEntryToEditor(idx) {
+  if (isHistMode()) exitHistMode();
   const cases = loadCases();
   const c = curCaseId ? cases[curCaseId] : null;
   if (!c?.entries?.[idx]) return;
@@ -3279,6 +3411,7 @@ function toggleFvEditMode(idx) {
 
 function inlineEdit(el, path) {
   if (!D || !path) return;
+  if (isHistMode()) { showNotif('👁 Bản lưu chỉ đọc — không sửa được. Bấm "Trở lại dữ liệu hiện tại" để sửa.', 'warn', 5000); return; }
   // Only allow editing when edit mode is active
   if (!document.getElementById('form-preview')?.classList.contains('fv-edit-mode')) return;
   if (el.querySelector('input,textarea')) return;
@@ -3515,6 +3648,7 @@ function renderFormTab(idx) {
       </div>
     </div>
     <div class="fv-acts">
+      ${idx===2 ? _vgPickerHTML() : ''}
       <button class="btn-fv-edit" id="btn-fv-edit-${idx}" onclick="toggleFvEditMode(${idx})">✏️ Chỉnh sửa</button>
       <button class="btn-fv-save" onclick="saveCaseNow()">💾 Lưu ca</button>
       <button class="btn-dl-docx" title="Bản Word trích xuất nguyên cấu trúc form web — dùng để chỉnh sửa, nối tiếp" onclick="dlDocx(${idx})">📝 Bản form web</button>
@@ -3561,7 +3695,8 @@ function renderFormTab(idx) {
     // MỘT bộ, nên buổi thứ hai ghi đè buổi đầu mà không ai thấy.
     const _vgAll = _vgList(D);
     const _multi = Array.isArray(D.vang_gia_ds) && D.vang_gia_ds.length > 0;
-    _vgAll.forEach((vgi, i) => {
+    // Chỉ vẽ buổi đang chọn ở ô chọn trên thanh công cụ (mặc định: tất cả).
+    _vgShown(D).forEach(({ v: vgi, i }) => {
       // Có danh sách thật thì sửa vào đúng buổi đó; hồ sơ cũ chưa có thì vẫn sửa vào bản gộp.
       const pr = _multi ? ('vang_gia_ds[' + i + '].') : 'vang_gia.';
       const lan = _vgLan(vgi, i);
@@ -3904,6 +4039,8 @@ function _logEdit(source, stage) {
 }
 
 async function saveCaseNow() {
+  // Đang xem bản lưu cũ: một lần lưu là bản cũ đè lên dữ liệu hiện tại.
+  if (isHistMode()) { showNotif('👁 Đang xem bản lưu — thoát chế độ xem rồi mới lưu được', 'warn', 5000); return; }
   if (!D && !document.getElementById('dash-notes').value.trim()) { showNotif('⚠️ Chưa có dữ liệu','warn'); return; }
   _commitDraft(); // lưu ca draft thành thật nếu chưa lưu
   const cases = loadCases();
@@ -3918,15 +4055,20 @@ async function saveCaseNow() {
     c.entries = c.entries || [];
     const nowIso = new Date().toISOString();
     const target = (_editingEntryIdx != null && c.entries[_editingEntryIdx]) ? c.entries[_editingEntryIdx] : null;
+    // BẢN CHỤP, không phải tham chiếu. Trước đây ghi "analysis: D" — cùng MỘT đối tượng D được
+    // mọi entry của phiên làm việc trỏ vào, nên tới lúc ghi ra máy chủ thì cả 5 mốc lịch sử đều
+    // serialize ra dữ liệu MỚI NHẤT: lịch sử coi như không còn, không xem lại hay in lại được
+    // bản cũ. _snapD() cắt hẳn liên hệ.
+    const snap = _snapD();
     if (target && (target.stage || 1) === currentStage) {
-      c.entries[_editingEntryIdx] = { ...target, notes, analysis: D || null, date: nowIso, stage: currentStage };
+      c.entries[_editingEntryIdx] = { ...target, notes, analysis: snap, date: nowIso, stage: currentStage };
     } else {
       const lastSameStageIdx = [...c.entries].map((e, i) => ({ e, i })).reverse().find(x => (x.e.stage || 1) === currentStage)?.i;
       const lastSameStage = lastSameStageIdx != null ? c.entries[lastSameStageIdx] : null;
       if (lastSameStage && (lastSameStage.notes || '').trim() === notes) {
-        c.entries[lastSameStageIdx] = { ...lastSameStage, analysis: D || null, date: nowIso, stage: currentStage };
+        c.entries[lastSameStageIdx] = { ...lastSameStage, analysis: snap, date: nowIso, stage: currentStage };
       } else {
-        c.entries.push({ id: 'en_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), date: nowIso, notes, analysis: D || null, stage: currentStage });
+        c.entries.push({ id: 'en_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), date: nowIso, notes, analysis: snap, stage: currentStage });
       }
     }
   }
@@ -4444,7 +4586,8 @@ function showCaseDetail(id) {
     <div class="cd-section">
       <div class="cd-section-title">Tiến trình</div>
       <div style="display:flex;align-items:center;gap:0;max-width:280px;">${stageDots}</div>
-    </div>`;
+    </div>
+    ${_caseStatusLogHTML(c)}`;
 
   // Trước đây cắt cứng ở 300 ký tự KHÔNG có dấu … nên ghi chép dài bị chặt giữa từ
   // ("Mẹ 38 tuổi, công nhân may, thu") và NVXH không hề biết là còn nữa. Nay cắt ở ranh giới
@@ -4544,12 +4687,14 @@ function _closeCaseFromList(id) {
     body: `"${c?.name||'Ca này'}" sẽ chuyển sang trạng thái Đã đóng.`,
     okText: 'Đóng ca',
     okClass: 'cmb-ok-orange',
-    onConfirm() {
+    prompt: _CLOSE_PROMPT,
+    onConfirm(reason) {
       const cases = loadCases();
       if (cases[id]) {
         cases[id].status = 'closed';
         cases[id].closedAt = new Date().toISOString();
         cases[id].updatedAt = new Date().toISOString();
+        _logCaseStatus(cases[id], 'close', reason, cases[id].currentStage);
         if (!cases[id].followUpSchedule)
           cases[id].followUpSchedule = _genFollowUpSchedule(cases[id].closedAt);
       }
@@ -4573,12 +4718,82 @@ function _closeCaseFromList(id) {
     }
   });
 }
+// Khối "Lịch sử đóng / mở lại ca" trong trang chi tiết ca — nơi giám sát ca đọc lý do.
+// Hồ sơ cũ (đóng/mở trước khi có sổ ghi) thì dựng dòng từ closedAt/reopenLog và nói thẳng là
+// không có lý do, thay vì im lặng để người đọc tưởng chưa từng đóng.
+function _caseStatusLogHTML(c) {
+  const log = (c && Array.isArray(c.statusLog)) ? c.statusLog.slice() : [];
+  const old = [];
+  if (!log.length) {
+    (c && Array.isArray(c.reopenLog) ? c.reopenLog : []).forEach(r => {
+      if (r.closedAt) old.push({ action: 'close', at: r.closedAt, reason: '', by: '', _old: true });
+      if (r.reopenedAt) old.push({ action: 'reopen', at: r.reopenedAt, reason: r.reason || '', by: '', _old: true });
+    });
+    if (c && c.closedAt && !old.some(x => x.action === 'close' && x.at === c.closedAt)) {
+      old.push({ action: 'close', at: c.closedAt, reason: '', by: '', _old: true });
+    }
+  }
+  const rows = (log.length ? log : old).slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  if (!rows.length) return '';
+  return '<div class="cd-section"><div class="cd-section-title">Lịch sử đóng / mở lại ca</div>'
+    + '<div class="cs-log">' + rows.map(r => {
+        const isClose = r.action === 'close';
+        const meta = [fmtVN(r.at), r.stage ? 'GĐ ' + r.stage : '', r.by ? esc(r.by) : ''].filter(Boolean).join(' · ');
+        const reason = cf(r.reason)
+          ? esc(r.reason)
+          : '<em style="color:var(--t3)">Không có lý do ghi lại (mốc cũ, trước khi hệ thống yêu cầu ghi lý do)</em>';
+        return '<div class="cs-log-item ' + (isClose ? 'close' : 'reopen') + '">'
+          + '<div class="cs-log-hd">' + (isClose ? '✅ Đóng ca' : '🔓 Mở lại ca') + '</div>'
+          + '<div class="cs-log-meta">' + meta + '</div>'
+          + '<div>' + reason + '</div></div>';
+      }).join('') + '</div></div>';
+}
+
+// ── Sổ ghi đóng / mở lại ca ──────────────────────────────────────────────────────────────
+// Đóng ca và mở lại ca là hai quyết định nghiệp vụ phải giải trình được: ca bảo vệ trẻ đóng
+// sớm hay mở lại đều là việc giám sát ca sẽ hỏi. Trước đây chỉ lưu closedAt/reopenedAt, tức
+// biết KHI NÀO mà không biết VÌ SAO và AI làm. Nay mỗi lần đổi trạng thái ghi một dòng vào
+// c.statusLog kèm lý do bắt buộc, ngày, người thực hiện và giai đoạn lúc đó.
+function _logCaseStatus(c, action, reason, stage) {
+  if (!c) return;
+  c.statusLog = Array.isArray(c.statusLog) ? c.statusLog : [];
+  c.statusLog.push({
+    action: action,                                  // 'close' | 'reopen'
+    at: new Date().toISOString(),
+    reason: String(reason || '').trim(),
+    by: (typeof _currentUser === 'object' && _currentUser && _currentUser.email) || '',
+    stage: stage != null ? stage : (c.currentStage || null),
+  });
+}
+
+// Lý do gần nhất của một hành động — dùng cho dải báo "ca đã đóng".
+function _lastStatusReason(c, action) {
+  const log = (c && Array.isArray(c.statusLog)) ? c.statusLog : [];
+  for (let i = log.length - 1; i >= 0; i--) if (log[i].action === action) return log[i];
+  return null;
+}
+
+const _CLOSE_PROMPT = {
+  label: 'Vì sao đóng ca? (bắt buộc)',
+  placeholder: 'VD: Đã đạt mục tiêu kế hoạch, trẻ trở lại trường và môi trường chăm sóc ổn định; '
+    + 'gia đình cam kết tiếp tục cho trẻ đi học. Chuyển hồ sơ theo dõi cho cán bộ LĐTBXH phường.',
+  minLen: 20,
+};
+const _REOPEN_PROMPT = {
+  label: 'Vì sao mở lại ca? (bắt buộc)',
+  placeholder: 'VD: Bà nội nhập viện ngày 12/05/2027, không còn người chăm sóc thay thế; '
+    + 'trẻ có nguy cơ bỏ học lại. Cần can thiệp tiếp.',
+  minLen: 20,
+};
+
 // Mở lại ca: trước đây xóa hẳn closedAt nên mất dấu ca đã từng đóng — không tra lại được
 // ca nào bị tái mở và cách lần đóng bao lâu. Nay ghi lại vào reopenLog trước khi xóa.
-function _recordReopen(c) {
+function _recordReopen(c, reason) {
   if (!c) return;
+  _logCaseStatus(c, 'reopen', reason, c.currentStage);
   c.reopenLog = Array.isArray(c.reopenLog) ? c.reopenLog : [];
-  c.reopenLog.push({ closedAt: c.closedAt || null, reopenedAt: new Date().toISOString() });
+  c.reopenLog.push({ closedAt: c.closedAt || null, reopenedAt: new Date().toISOString(),
+                     reason: String(reason || '').trim() });
   c.reopenedAt = c.reopenLog[c.reopenLog.length - 1].reopenedAt;
   delete c.closedAt;
 }
@@ -4591,9 +4806,10 @@ function _reopenCaseFromList(id) {
     body: `"${c?.name||'Ca này'}" sẽ được mở lại để tiếp tục chỉnh sửa.`,
     okText: 'Mở lại',
     okClass: 'cmb-ok-blue',
-    onConfirm() {
+    prompt: _REOPEN_PROMPT,
+    onConfirm(reason) {
       const cases = loadCases();
-      if (cases[id]) { cases[id].status = 'open'; _recordReopen(cases[id]); cases[id].updatedAt = new Date().toISOString(); }
+      if (cases[id]) { cases[id].status = 'open'; _recordReopen(cases[id], reason); cases[id].updatedAt = new Date().toISOString(); }
       saveCases(cases);
       if (curCaseId === id && D) { D._status = 'open'; applyClosedCaseUI(); }
       renderCaseList(); showCaseDetail(id);
@@ -4668,8 +4884,14 @@ function loadCaseIntoApp(id) {
 
 // ── CUSTOM CONFIRM MODAL ──
 let _confirmCb = null;
+let _confirmPrompt = null;   // { label, placeholder, minLen } khi hộp thoại có ô lý do
 let _cancelCb = null;
-function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', okClass='cmb-ok-red', onConfirm=null, onCancel=null}={}) {
+// prompt: { label, placeholder, minLen } → hiện ô lý do BẮT BUỘC, khóa nút xác nhận tới khi
+// đủ số ký tự, rồi truyền nguyên văn lý do vào onConfirm(reason).
+// Dùng cho quyết định phải giải trình được về sau: đóng ca và mở lại ca. Lý do bắt buộc chứ
+// không phải tùy chọn — hồ sơ bảo vệ trẻ mà có mốc đóng/mở không ai biết vì sao thì tới lúc
+// giám sát hoặc thanh tra hỏi lại là không trả lời được.
+function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', okClass='cmb-ok-red', onConfirm=null, onCancel=null, prompt=null}={}) {
   _confirmCb = onConfirm; _cancelCb = onCancel;
   document.getElementById('cmb-icon').textContent = icon;
   document.getElementById('cmb-title').textContent = title;
@@ -4678,16 +4900,49 @@ function showConfirm({icon='⚠️', title='', body='', okText='Xác nhận', ok
   ok.textContent = okText;
   ok.className = 'cmb-btn ' + okClass;
   ok.onclick = _doConfirm;
+
+  const box = document.getElementById('cmb-prompt');
+  const ta = document.getElementById('cmb-p-input');
+  const hint = document.getElementById('cmb-p-hint');
+  _confirmPrompt = prompt || null;
+  if (prompt) {
+    const minLen = prompt.minLen || 10;
+    box.hidden = false;
+    document.getElementById('cmb-p-lb').textContent = prompt.label || 'Lý do';
+    ta.placeholder = prompt.placeholder || '';
+    ta.value = '';
+    ok.disabled = true;
+    const paint = () => {
+      const n = ta.value.trim().length;
+      ok.disabled = n < minLen;
+      hint.textContent = n < minLen
+        ? 'Cần thêm ' + (minLen - n) + ' ký tự nữa — lý do này được lưu vào hồ sơ ca.'
+        : 'Lý do được lưu vào hồ sơ ca kèm ngày và người thực hiện.';
+      hint.className = 'cmb-p-hint' + (n < minLen ? ' warn' : '');
+    };
+    ta.oninput = paint;
+    paint();
+    setTimeout(() => ta.focus(), 60);
+  } else {
+    box.hidden = true;
+    ta.oninput = null;
+    ok.disabled = false;
+  }
   document.getElementById('confirm-overlay').classList.add('show');
 }
 function _doConfirm() {
+  const reason = _confirmPrompt
+    ? (document.getElementById('cmb-p-input').value || '').trim() : undefined;
+  // Chặn cả ở đây, không chỉ dựa vào nút bị disabled — Enter hoặc gọi thẳng _doConfirm() vẫn
+  // đi qua được nếu chỉ khóa ở giao diện.
+  if (_confirmPrompt && reason.length < (_confirmPrompt.minLen || 10)) return;
   document.getElementById('confirm-overlay').classList.remove('show');
-  const cb = _confirmCb; _confirmCb = null; _cancelCb = null;
-  if (cb) cb();
+  const cb = _confirmCb; _confirmCb = null; _cancelCb = null; _confirmPrompt = null;
+  if (cb) cb(reason);
 }
 function _cancelConfirm() {
   document.getElementById('confirm-overlay').classList.remove('show');
-  const cb = _cancelCb; _confirmCb = null; _cancelCb = null;
+  const cb = _cancelCb; _confirmCb = null; _cancelCb = null; _confirmPrompt = null;
   if (cb) cb();
 }
 
@@ -5117,7 +5372,7 @@ async function dlDocx(fi){
     const doc=await buildDocx(fi,imgs[0],imgs[1]);
     const blob=await lib.Packer.toBlob(doc);
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');a.href=url;a.download='ThaoDan_'+FF[fi]+'.docx';
+    const a=document.createElement('a');a.href=url;a.download='ThaoDan_'+FF[fi]+_vgFileSuffix(fi)+'.docx';
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
     showNotif('✅ Đã tải '+FORM_NAMES[fi]);
@@ -5194,7 +5449,7 @@ async function dlDocxBranded(fi){
     const blob = await lib.Packer.toBlob(doc);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'ThaoDan_BanIn_' + FF[fi] + '.docx';
+    a.href = url; a.download = 'ThaoDan_BanIn_' + FF[fi] + _vgFileSuffix(fi) + '.docx';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
     showNotif('✅ Đã tải Bản in Thảo Đàn — '+FORM_NAMES[fi]);
@@ -5658,8 +5913,9 @@ async function buildDocx(fi,logoData,footerData,_collector){
     // Vãng gia lặp nhiều buổi → in MỖI BUỔI MỘT PHIẾU, ngắt trang giữa các phiếu. Mẫu chính
     // thức có ô "Lần vãng gia thứ ..." nên nhiều phiếu là đúng mẫu, không phải sáng tạo thêm.
     const _vgAll = _vgList(D);
-    _vgAll.forEach((vgi, _i) => {
-      if (_i > 0) body.push(new Paragraph({children:[new lib.PageBreak()],spacing:{before:0,after:0}}));
+    const _vgSel = _vgShown(D);
+    _vgSel.forEach(({ v: vgi, i: _i }, _n) => {
+      if (_n > 0) body.push(new Paragraph({children:[new lib.PageBreak()],spacing:{before:0,after:0}}));
       const _lan = _vgLan(vgi, _i);
       body.push(...TITLE("PHÚC TRÌNH VÃNG GIA",
         _vgAll.length > 1 ? ("Lần thứ " + _lan + (cf(vgi.ngay_vang_gia) ? " — ngày " + fmtDate(vgi.ngay_vang_gia) : "")) : ""));
@@ -6455,7 +6711,10 @@ function applyClosedCaseUI() {
     // Hiện banner đã đóng
     banner?.classList.add('show');
     if (bannerDate && c.closedAt) {
-      bannerDate.textContent = 'Ngày đóng: ' + fmtVN(c.closedAt);
+      // Kèm luôn lý do: người mở lại ca cần biết vì sao ca được đóng trước khi quyết định.
+      const _lr = _lastStatusReason(c, 'close');
+      bannerDate.textContent = 'Ngày đóng: ' + fmtVN(c.closedAt)
+        + (_lr && cf(_lr.reason) ? ' — Lý do: ' + _lr.reason : '');
     }
     // Disable textarea
     if (textarea) {
@@ -6499,13 +6758,14 @@ function reopenCase() {
     body: `"${cName}" sẽ chuyển về trạng thái Đang mở ở GĐ 5.`,
     okText: 'Mở lại',
     okClass: 'cmb-ok-blue',
-    onConfirm() {
+    prompt: _REOPEN_PROMPT,
+    onConfirm(reason) {
       const cases = loadCases();
       if (cases[curCaseId]) {
         cases[curCaseId].status = 'open';
-        _recordReopen(cases[curCaseId]);
+        _recordReopen(cases[curCaseId], reason);
         cases[curCaseId].updatedAt = new Date().toISOString();
-        if (D) delete D._status;
+        if (D) { delete D._status; delete D._closeReason; }
         saveCases(cases);
       }
       updateHeader();
