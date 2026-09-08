@@ -300,7 +300,7 @@ Không có test tự động trong repo (app là script không module, không c�
 Kiểm thử được viết dưới dạng script Playwright chạy ngoài, dựng máy chủ tĩnh trên `localhost:8899`
 và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồng mà không cần khóa thật.
 
-**Lần QA gần nhất: 08/09/2026 — 29 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
+**Lần QA gần nhất: 08/09/2026 — 30 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
 
 | Bộ | Kết quả | Phủ những gì |
 |---|---|---|
@@ -312,6 +312,7 @@ và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồn
 | `contrast` | tất cả đạt | Tương phản WCAG mọi phần tử có chữ, chặn dưới 2.5:1; soi file CSS tìm `var()` trỏ vào biến chưa khai báo mà không có giá trị dự phòng |
 | `hover` | 73/73 phần tử | Tương phản ở **cả** trạng thái nghỉ và trỏ chuột — bộ cũ chỉ kiểm lúc đứng yên nên bỏ sót chip gợi ý mất chữ khi hover |
 | `pii` | 20/20 đạt | Đường ghi chép → AI → biểu mẫu của SĐT/CCCD/email: che có đánh số, khôi phục nguyên văn, hai số khác nhau không lẫn người, không phá số thường ("bé 12 tuổi"), dung sai khi model sao lại nhãn sai kiểu (`[ sdt_1 ]`, `[SĐT_1]`); `deepMerge` với mảng giàu/nghèo hơn |
+| `qanew` | 34/34 đạt | Bấm THẬT từng nút của các tính năng mới trong trạng thái đã đăng nhập: mở ca từ danh sách việc (cả ca đang mở và ca đã đóng), tick xong việc, 4 nút trên thanh công cụ form đều tạo được file, dải BẢN NHÁP còn 1 dòng, header/menu ⋯/3 tab, xuất JSON hỏi trước và chỉ hỏi một lần, bàn giao + màn quản trị, không còn vết tích OCR, RAG không gọi mạng. Kèm bắt lỗi JS trong suốt bài kiểm |
 | `todo` | 20/20 đạt | "Việc cần làm": dựng đúng việc từ hoạt động kế hoạch + mốc xem xét + lịch theo dõi sau đóng ca; chia trễ hạn/hôm nay/7 ngày; ca đã đóng chỉ lấy lịch theo dõi; hạn không phải ngày cụ thể ("hàng tháng", "2 tuần") thì bỏ qua chứ không bịa hạn; đánh dấu xong lưu vào hồ sơ ca |
 | `handover` | 26/26 đạt | Bàn giao ca: đòi cả email người nhận (đúng dạng) lẫn lý do ≥10 ký tự, ghi sổ TRƯỚC rồi mới gọi chuyển, RPC lỗi thì ca vẫn còn tại máy và hiện nguyên văn lỗi máy chủ, không phải chủ ca thì không mở được hộp thoại; màn gán vai trò chỉ quản trị mở được (gọi trực tiếp cũng chặn) |
 | `nl` | 18/18 đạt | Danh bạ nguồn lực đọc từ file .md: bỏ dòng mẫu chưa điền, tìm theo tên/nhóm/số điện thoại, nút Chép; phiếu trắng KHÔNG lẫn dữ liệu ca đang mở và trả dữ liệu ca về nguyên vẹn sau khi in |
@@ -357,6 +358,7 @@ trong code. Nơi nên đọc trước:
 | Vì sao mỗi migration làm như vậy | comment đầu mỗi file trong `supabase/migrations/` — đặc biệt `0014` (lỗi phân quyền khi lưu ca), `0015` (lỗi ràng buộc `role` mà `0011` bỏ sót) và `0016` (bàn giao ca + gán vai trò) |
 | Việc cần làm dựng từ đâu | `main.js` gần `_collectTasks`, `renderTodo` |
 | Bàn giao ca: vì sao ghi sổ trước khi chuyển | `main.js` gần `transferCase`; và `supabase/migrations/0016_*.sql` |
+| Vì sao `_logAudit` phải bọc try/catch | `main.js` ngay trên `_logAudit` — nó chạy ở dòng đầu `loadCaseIntoApp`, ném lỗi là không mở được ca |
 | Che danh tính, khôi phục tên | `main.js` gần `pseudonymizeForAI`, `_maskPiiKeys`, `maskAddressInText`, `maskContactsInText`, `restoreIdentityText` |
 | Vì sao SĐT/email từng không điền được vào form | `main.js` ngay trên `maskContactsInText` — trước đây thay bằng `***` là mất hẳn giá trị |
 | Vì sao trần token là 8192 | `api/chat.js` ngay trên `MAX_TOKENS_CAP` — JSON trích xuất bị cắt cụt là biểu mẫu trống trơn |
