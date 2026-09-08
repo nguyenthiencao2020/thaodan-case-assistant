@@ -41,8 +41,52 @@ function robustJSON(raw) {
       try { return JSON.parse(t.slice(s, i + 1)); } catch (e) { throw new Error('JSON parse error: ' + e.message); }
     }
   }
+  // JSON bị cắt cụt (model hết ngân sách token giữa lúc xuất). Trước đây ném lỗi ở đây và cả
+  // lượt trích xuất mất trắng — biểu mẫu trống trơn dù 90% dữ liệu đã về. Nay VỚT phần đã
+  // nhận: bỏ đoạn dở dang cuối cùng, đóng lại các ngoặc đang mở rồi parse.
+  const salvaged = _salvageJSON(t.slice(s));
+  if (salvaged) return salvaged;
   throw new Error('Incomplete JSON');
 }
+
+// Vớt lại phần đã nhận của một JSON bị cắt giữa dòng.
+// Cách làm: đi một lượt, mỗi khi MỘT GIÁ TRỊ kết thúc trọn vẹn thì ghi lại "điểm an toàn" kèm
+// ảnh chụp các ngoặc đang mở tại đúng thời điểm đó. Hết chuỗi mà còn ngoặc chưa đóng thì cắt về
+// điểm an toàn cuối cùng và đóng đủ ngoặc theo ảnh chụp đó.
+// Phân biệt dấu " đóng KHÓA với dấu " đóng GIÁ TRỊ bằng cách nhìn ký tự kế tiếp: nếu là ':'
+// thì vừa đóng một khóa (chưa có giá trị, không phải điểm an toàn).
+function _salvageJSON(t) {
+  const stack = [];
+  let inStr = false, esc = false, safeAt = -1, safeStack = null;
+  const mark = (i) => { safeAt = i; safeStack = stack.slice(); };
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (esc) { esc = false; continue; }
+    if (c === '\\' && inStr) { esc = true; continue; }
+    if (c === '"') {
+      if (inStr) {
+        inStr = false;
+        let j = i + 1; while (j < t.length && /\s/.test(t[j])) j++;
+        // Hết chuỗi mà chưa thấy ký tự kế tiếp thì KHÔNG kết luận: có thể là khóa vừa đóng mà
+        // giá trị chưa kịp tới (VD ...{"nguy_co" ). Coi là chưa an toàn, thà lùi về mốc trước.
+        if (j < t.length && t[j] !== ':') mark(i);   // đóng GIÁ TRỊ → điểm an toàn
+      } else inStr = true;
+      continue;
+    }
+    if (inStr) continue;
+    if (c === '{' || c === '[') stack.push(c === '{' ? '}' : ']');
+    else if (c === '}' || c === ']') { stack.pop(); mark(i); }
+    else if (c === ',') { if (safeAt < 0) mark(i - 1); }   // số/true/false/null vừa kết thúc
+  }
+  if (!stack.length || safeAt < 0 || !safeStack) return null;
+  let head = t.slice(0, safeAt + 1).replace(/,\s*$/, '');
+  for (let i = safeStack.length - 1; i >= 0; i--) head += safeStack[i];
+  try {
+    const o = JSON.parse(head);
+    return (o && typeof o === 'object' && Object.keys(o).length) ? o : null;
+  } catch (e) { return null; }
+}
+
 
 function fmtDate(v) {
   if (!v || typeof v !== 'string') return String(v || '');
@@ -126,7 +170,12 @@ function deepMerge(target, source) {
       if (typeof sv === 'object' && !Array.isArray(sv)) {
         result[key] = FIELD_MERGE_KEYS.has(key) ? deepMergeFields(tv || {}, sv) : deepMerge(tv || {}, sv);
       } else if (Array.isArray(sv)) {
-        result[key] = (Array.isArray(tv) && tv.length > 0) ? tv : sv;
+        // Mảng (mục tiêu, hoạt động, thành viên gia đình...): trước đây chỉ nhận mảng mới KHI
+        // mảng cũ rỗng, nên lần trích xuất đầu tiên là ĐÓNG BĂNG luôn — phân tích lại với ghi
+        // chép đầy đủ hơn không bao giờ thêm được mục tiêu/hoạt động nào nữa.
+        // Nay: mảng mới dài hơn thì nhận, ngắn hơn hoặc bằng thì giữ mảng cũ. Không bao giờ để
+        // một lượt trích xuất nghèo thông tin làm mất bớt dữ liệu đã có.
+        result[key] = (Array.isArray(tv) && tv.length >= sv.length) ? tv : sv;
       } else {
         result[key] = sv;
       }

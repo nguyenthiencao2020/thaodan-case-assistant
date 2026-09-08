@@ -1,7 +1,12 @@
 import { requireUser } from './_auth.js';
 
 const ALLOWED_MODELS = new Set(['openai/gpt-oss-120b']);
-const MAX_TOKENS_CAP = 4096;
+// Lệnh trích xuất biểu mẫu GĐ1 phải xuất JSON gồm ~80 khóa; cộng thêm phần "suy luận ẩn" của
+// openai/gpt-oss-120b thì 4096 token KHÔNG đủ — JSON bị cắt cụt giữa dòng, robustJSON ném lỗi
+// và cả lượt trích xuất mất trắng (biểu mẫu trống trơn trong khi báo cáo vẫn đầy đủ, vì báo cáo
+// ngắn hơn nên vừa ngân sách). Nâng lên 8192; Groq vẫn tính tiền theo token thực xuất nên
+// nâng trần không làm tăng chi phí cho các lệnh ngắn.
+const MAX_TOKENS_CAP = 8192;
 const MAX_MESSAGES = 20;
 const MAX_MSG_CHARS = 20000;
 
