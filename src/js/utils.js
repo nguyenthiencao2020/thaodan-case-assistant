@@ -88,33 +88,49 @@ function _salvageJSON(t) {
 }
 
 
+// Định dạng lại một giá trị NGÀY.
+// CẢNH BÁO đã từng thành lỗi thật: các mẫu ở cuối hàm này trước đây KHÔNG neo đầu/cuối chuỗi,
+// nên bất kỳ giá trị nào có chứa một cụm giống ngày đều bị THAY TRẮNG bằng đúng cụm đó:
+//   "Khoa đi học lại lớp 6 từ 01/10/2026 tại THCS Hòa Bình" → "01/10/2026"   (mất hết nội dung)
+//   "CA-2026-09-0001" (mã hồ sơ)                            → "26/09/0001"  (in sai trên form)
+// Bản in .docx chạy fmtDate cho MỌI ô label:value (xem FTBL), nên lỗi này âm thầm xóa nội dung
+// của các ô mô tả dài. Nay chỉ định dạng khi TOÀN BỘ giá trị là một ngày; còn lại giữ nguyên văn.
 function fmtDate(v) {
   if (!v || typeof v !== 'string') return String(v || '');
-  v = v.trim();
-  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) return v;
-  let m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  const raw = v.trim();
+  // Cho phép từ dẫn ở ĐẦU ("ngày 05/09/2026") và dấu câu ở cuối — không cho chữ ở giữa.
+  const core = raw
+    .replace(/^(?:ngày|vào|từ|kể từ|đến|trước|sau|bắt đầu|khoảng)\s+/i, '')
+    .replace(/[.,;:]+$/, '')
+    .trim();
+  // Cổng chặn: chỉ số, dấu phân cách, và tối đa một chữ "tháng" ở đầu.
+  if (!/^(?:[Tt]háng\s+)?\d{1,4}(?:\s*[.\/\-\s]\s*\d{1,4}){0,2}$/.test(core)) return raw;
+
+  const v2 = core;
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v2)) return v2;
+  let m = v2.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (m) return m[3].padStart(2, '0') + '/' + m[2].padStart(2, '0') + '/' + m[1];
-  m = v.match(/^(\d{1,2})[.\-](\d{1,2})[.\-](\d{4})$/);
+  m = v2.match(/^(\d{1,2})[.\-](\d{1,2})[.\-](\d{4})$/);
   if (m) return m[1].padStart(2, '0') + '/' + m[2].padStart(2, '0') + '/' + m[3];
-  m = v.match(/^(\d{1,2})\s+(\d{1,2})\s+(\d{4})$/);
+  m = v2.match(/^(\d{1,2})\s+(\d{1,2})\s+(\d{4})$/);
   if (m) return m[1].padStart(2, '0') + '/' + m[2].padStart(2, '0') + '/' + m[3];
-  m = v.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  m = v2.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
   if (m) return m[3].padStart(2, '0') + '/' + m[2].padStart(2, '0') + '/' + m[1];
-  m = v.match(/^(\d{1,2})\/(\d{4})$/);
+  m = v2.match(/^(\d{1,2})\/(\d{4})$/);
   if (m) return '01/' + m[1].padStart(2, '0') + '/' + m[2];
-  m = v.match(/[Tt]háng\s+(\d{1,2})[\/\-](\d{4})/);
+  m = v2.match(/^[Tt]háng\s+(\d{1,2})[\/\-](\d{4})$/);
   if (m) return '01/' + m[1].padStart(2, '0') + '/' + m[2];
-  m = v.match(/^(\d{4})-(\d{1,2})$/);
+  m = v2.match(/^(\d{4})-(\d{1,2})$/);
   if (m) return '01/' + m[2].padStart(2, '0') + '/' + m[1];
-  m = v.match(/^(\d{1,2})\s+(\d{4})$/);
+  m = v2.match(/^(\d{1,2})\s+(\d{4})$/);
   if (m) return '01/' + m[1].padStart(2, '0') + '/' + m[2];
-  m = v.match(/^(\d{1,2})-(\d{4})$/);
+  m = v2.match(/^(\d{1,2})-(\d{4})$/);
   if (m) return '01/' + m[1].padStart(2, '0') + '/' + m[2];
-  m = v.match(/[Tt]háng\s+(\d{1,2})\s+(\d{4})/);
+  m = v2.match(/^[Tt]háng\s+(\d{1,2})\s+(\d{4})$/);
   if (m) return '01/' + m[1].padStart(2, '0') + '/' + m[2];
-  m = v.match(/(\d{1,2})[\s\/\-](\d{1,2})[\s\/\-](\d{4})/);
+  m = v2.match(/^(\d{1,2})[\s\/\-](\d{1,2})[\s\/\-](\d{4})$/);
   if (m) return m[1].padStart(2, '0') + '/' + m[2].padStart(2, '0') + '/' + m[3];
-  return v;
+  return raw;
 }
 
 function fmtVN(iso) {
@@ -150,6 +166,44 @@ function deepMergeFields(target, source) {
   return result;
 }
 
+// ── Gộp mảng: HỢP hai bên, giữ thứ tự cũ rồi nối phần tử mới ────────────────────────────
+// Mảng ở đây là mục tiêu, hoạt động, thành viên gia đình, ngày xem xét — dữ liệu CỘNG DỒN.
+// Hai cách làm trước đều sai:
+//   v1: chỉ nhận mảng mới khi mảng cũ RỖNG → lần trích xuất đầu là đóng băng vĩnh viễn.
+//   v2: so số lượng → NVXH ghi "giữ nguyên 2 mục tiêu cũ, thêm mục tiêu 3 và 4" thì AI chỉ trả
+//       về 2 mục tiêu MỚI, 2 so 2 nên vẫn giữ mảng cũ — thêm gì cũng không vào.
+// Nay so DANH TÍNH từng phần tử: trùng thì bỏ qua, mới thì nối thêm. Không bao giờ làm ngắn đi.
+// Đánh đổi đã biết: nếu AI diễn đạt lại một mục tiêu cũ bằng câu khác thì sinh dòng trùng ý —
+// NVXH thấy và xóa được, còn mất mục tiêu mới thì không ai thấy.
+function _arrIdent(x) {
+  if (x === null || x === undefined) return '';
+  if (typeof x !== 'object') {
+    return String(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  // Lấy chuỗi có nội dung ĐẦU TIÊN làm danh tính (VD hoat_dong.noi_dung, thanh_vien.ho_ten)
+  for (const k of Object.keys(x)) {
+    const v = x[k];
+    if (typeof v === 'string' && v.trim()) return _arrIdent(v);
+  }
+  try { return JSON.stringify(x); } catch (e) { return ''; }
+}
+
+function mergeArrays(tv, sv) {
+  if (!Array.isArray(sv) || !sv.length) return Array.isArray(tv) ? tv : [];
+  if (!Array.isArray(tv) || !tv.length) return sv;
+  const seen = new Set(tv.map(_arrIdent).filter(Boolean));
+  const out = tv.slice();
+  for (const it of sv) {
+    const id = _arrIdent(it);
+    if (!id) continue;              // phần tử rỗng (VD xem_xet: [""]) — không nối rác
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(it);
+  }
+  return out;
+}
+
 function deepMerge(target, source) {
   if (source === null || source === undefined) return target;
   if (target === null || target === undefined) {
@@ -170,12 +224,7 @@ function deepMerge(target, source) {
       if (typeof sv === 'object' && !Array.isArray(sv)) {
         result[key] = FIELD_MERGE_KEYS.has(key) ? deepMergeFields(tv || {}, sv) : deepMerge(tv || {}, sv);
       } else if (Array.isArray(sv)) {
-        // Mảng (mục tiêu, hoạt động, thành viên gia đình...): trước đây chỉ nhận mảng mới KHI
-        // mảng cũ rỗng, nên lần trích xuất đầu tiên là ĐÓNG BĂNG luôn — phân tích lại với ghi
-        // chép đầy đủ hơn không bao giờ thêm được mục tiêu/hoạt động nào nữa.
-        // Nay: mảng mới dài hơn thì nhận, ngắn hơn hoặc bằng thì giữ mảng cũ. Không bao giờ để
-        // một lượt trích xuất nghèo thông tin làm mất bớt dữ liệu đã có.
-        result[key] = (Array.isArray(tv) && tv.length >= sv.length) ? tv : sv;
+        result[key] = mergeArrays(tv, sv);
       } else {
         result[key] = sv;
       }

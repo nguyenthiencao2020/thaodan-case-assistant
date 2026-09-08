@@ -1613,6 +1613,20 @@ async function runAnalysis() {
       D._report = report;
       // Lấp chỗ trống của biểu mẫu bằng nội dung báo cáo — xem ghi chú ở _fillFormFromReport
       D = _fillFormFromReport(D, report);
+      D = _normalizePlan(D);
+      // Mục I Form 4 (và cả Form 6) chỉ có nội dung khi nhu_cau_ho_tro có mục tiêu. Có hoạt
+      // động mà không có mục tiêu là bản in thiếu hẳn một mục — nói ra thay vì để NVXH tự phát
+      // hiện lúc mở file Word.
+      if (currentStage === 3) {
+        const _kh = D.ke_hoach || {};
+        const _nMT = (_kh.nhu_cau_ho_tro || []).filter(n => n && cf(n.muc_tieu)).length;
+        const _nHD = (_kh.hoat_dong || []).filter(h => h && cf(h.noi_dung)).length;
+        if (_nHD > 0 && _nMT === 0) {
+          showNotif('⚠️ Đã trích được ' + _nHD + ' hoạt động nhưng KHÔNG có mục tiêu nào — '
+            + 'Mục I của Form 4 sẽ trống. Ghi rõ "Mục tiêu 1: ..." trong ghi chép rồi bấm '
+            + 'Phân tích lại.', 'warn', 9000);
+        }
+      }
       // Có nội dung AI mới → xác nhận trước đó không còn giá trị, bản in về lại BẢN NHÁP.
       D._verified = null;
       D._notes = notes;
@@ -4027,6 +4041,57 @@ function _cbPick(opts, sel) {
 // Hàm này lấp CHỖ TRỐNG của biểu mẫu bằng chính nội dung báo cáo — KHÔNG ghi đè giá trị đã có,
 // và không thêm suy diễn nào mới: mọi giá trị đều là chữ AI đã viết ra cho cùng ghi chép đó,
 // nên vẫn đi qua bộ truy vết nguồn (📎 / ❓) như mọi ô khác.
+// ── Chuẩn hóa kế hoạch sau khi trích xuất ────────────────────────────────────────────────
+// Mục I Form 4 in ra 8 loại nhu cầu CỐ ĐỊNH theo mẫu chính thức, ghép với kh.nhu_cau_ho_tro
+// theo trường "loai". Đo trên bản in thật: Mục II có đủ 5 hoạt động nhưng Mục I trống trơn cả
+// 8 dòng — tức AI trả hoat_dong mà bỏ trắng nhu_cau_ho_tro, hoặc ghi "loai" không thuộc 8 loại
+// (VD "Đi học lại") nên không dòng nào khớp. Kết quả: nội dung mục tiêu KHÔNG có mặt ở đâu
+// trên bản in, mà Form 6 (Tiến độ) cũng lấy từ đây nên trống theo.
+const _NC_CHUAN = ["Học bổng", "Học nghề, việc làm", "Chăm sóc sức khỏe, y tế",
+  "Nâng cao năng lực kỹ năng sống", "Mối quan hệ gia đình và xã hội", "Tâm lý",
+  "Hòa nhập cộng đồng", "Nhu cầu khác"];
+
+// Xếp loại theo từ khóa khi "loai" thiếu hoặc lạ. Thứ tự có ý nghĩa: học nghề xét trước học
+// bổng (đều chứa chữ "học"), tâm lý trước kỹ năng sống.
+const _NC_KW = [
+  ["Học nghề, việc làm",              /hoc nghe|day nghe|dao tao nghe|viec lam|tim viec|nghe nghiep|nau an|dau bep|thuc tap/],
+  ["Học bổng",                        /hoc bong|di hoc|hoc lai|nhap hoc|den truong|tro lai truong|hoc phi|mien giam|sach vo|dung cu hoc|lop \d|on tap|hoc tap/],
+  ["Chăm sóc sức khỏe, y tế",         /suc khoe|y te|kham|chua|benh|thuoc|bhyt|bao hiem y te|dinh duong|tiem|tram y te|benh vien/],
+  ["Tâm lý",                          /tam ly|tu ti|lo au|tram cam|cam xuc|tham van|tu tin|song chan|khung hoang/],
+  ["Hòa nhập cộng đồng",              /hoa nhap|cong dong|ban be|cau lac bo|nha van hoa|the thao|ve tranh|lop ve|sinh hoat|vui choi/],
+  ["Nâng cao năng lực kỹ năng sống",  /ky nang song|ky nang|nang luc|tu bao ve|phong tranh|an toan/],
+  ["Mối quan hệ gia đình và xã hội",  /gia dinh|quan he|nguoi cham soc|me |cha |ba ngoai|giam sat|thue nha|kinh te|ho tro tien|gao|sinh ke/],
+];
+
+function _ncNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/đ/g, 'd').replace(/\s+/g, ' ').trim();
+}
+
+function _ncClassify(text) {
+  const t = _ncNorm(text);
+  if (!t) return '';
+  for (const [loai, re] of _NC_KW) if (re.test(t)) return loai;
+  return 'Nhu cầu khác';
+}
+
+function _normalizePlan(D) {
+  const kh = D && D.ke_hoach;
+  if (!kh || !Array.isArray(kh.nhu_cau_ho_tro)) return D;
+  const chuanNorm = _NC_CHUAN.map(_ncNorm);
+  kh.nhu_cau_ho_tro.forEach(nc => {
+    if (!nc || typeof nc !== 'object') return;
+    if (chuanNorm.indexOf(_ncNorm(nc.loai)) !== -1) return;   // đã đúng 1 trong 8 loại
+    // "loai" lạ thì đừng bỏ đi — nó là thông tin NVXH ghi. Xếp vào loại gần nhất, và nếu
+    // muc_tieu còn trống thì đẩy nguyên văn loai cũ xuống làm mục tiêu để không mất chữ.
+    const cu = cf(nc.loai);
+    const loaiMoi = _ncClassify(nc.muc_tieu || cu);
+    if (cu && !cf(nc.muc_tieu)) nc.muc_tieu = cu;
+    if (loaiMoi) nc.loai = loaiMoi;
+  });
+  return D;
+}
+
 function _fillFormFromReport(D, r) {
   if (!D || !r) return D;
   const txt = (v) => Array.isArray(v) ? v.filter(Boolean).join('; ') : (v == null ? '' : String(v));

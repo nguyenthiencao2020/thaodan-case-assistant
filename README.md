@@ -284,7 +284,7 @@ Không có test tự động trong repo (app là script không module, không c�
 Kiểm thử được viết dưới dạng script Playwright chạy ngoài, dựng máy chủ tĩnh trên `localhost:8899`
 và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồng mà không cần khóa thật.
 
-**Lần QA gần nhất: 08/09/2026 — 16 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
+**Lần QA gần nhất: 08/09/2026 — 17 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
 
 | Bộ | Kết quả | Phủ những gì |
 |---|---|---|
@@ -296,6 +296,7 @@ và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồn
 | `contrast` | tất cả đạt | Tương phản WCAG mọi phần tử có chữ, chặn dưới 2.5:1; soi file CSS tìm `var()` trỏ vào biến chưa khai báo mà không có giá trị dự phòng |
 | `hover` | 73/73 phần tử | Tương phản ở **cả** trạng thái nghỉ và trỏ chuột — bộ cũ chỉ kiểm lúc đứng yên nên bỏ sót chip gợi ý mất chữ khi hover |
 | `pii` | 20/20 đạt | Đường ghi chép → AI → biểu mẫu của SĐT/CCCD/email: che có đánh số, khôi phục nguyên văn, hai số khác nhau không lẫn người, không phá số thường ("bé 12 tuổi"), dung sai khi model sao lại nhãn sai kiểu (`[ sdt_1 ]`, `[SĐT_1]`); `deepMerge` với mảng giàu/nghèo hơn |
+| `plan` | 11/11 đạt | Chuẩn hóa kế hoạch: xếp 7 mục tiêu thật của ca mẫu vào đúng 1 trong 8 loại của Mục I Form 4; `loai` lạ thì không mất chữ mà đẩy xuống `muc_tieu`; `fmtDate` không được thay trắng cả câu bằng cái ngày trong câu (8 câu phải giữ nguyên, 9 giá trị phải đổi) |
 | `mapall` · `mapping` · `bridge` · `bridge5` · `perform` | tất cả đạt | 170 khóa schema × 11 biểu mẫu: không khóa nào mất, không ô nào chỉ có trên web hoặc chỉ có trong .docx; cầu nối báo cáo → biểu mẫu cho cả 5 giai đoạn (không ghi đè chữ NVXH đã ghi) |
 | `cb` · `cbdocx` | tất cả đạt | Chọn ô ☑ theo từ khóa (thay cách so 4 ký tự đầu): mỗi nhóm loại trừ chỉ tích tối đa 1 ô, trên cả web và .docx |
 | `clip` | 0 chỗ bị cắt | Chữ **không** tràn khỏi trang nhưng bị chính khung bao (`overflow:hidden`), chiều cao đặt cứng, hoặc `text-overflow:ellipsis` do cột quá hẹp (báo khi mất >25% bề rộng) cắt mất. Bộ dò phân biệt "tới được bằng cách cuộn" với "mất hẳn", bỏ qua thứ đang ẩn có chủ ý |
@@ -332,7 +333,9 @@ trong code. Nơi nên đọc trước:
 | Vì sao SĐT/email từng không điền được vào form | `main.js` ngay trên `maskContactsInText` — trước đây thay bằng `***` là mất hẳn giá trị |
 | Vì sao trần token là 8192 | `api/chat.js` ngay trên `MAX_TOKENS_CAP` — JSON trích xuất bị cắt cụt là biểu mẫu trống trơn |
 | Vớt JSON bị cắt cụt | `src/js/utils.js` gần `_salvageJSON` |
-| Vì sao mảng trong `deepMerge` so số lượng | `src/js/utils.js` trong `deepMerge`, nhánh `Array.isArray(sv)` |
+| Vì sao mảng gộp theo hợp, không so số lượng | `src/js/utils.js` gần `mergeArrays`, `_arrIdent` — có ghi cả hai cách làm sai trước đó |
+| Vì sao `fmtDate` có cổng chặn ở đầu | `src/js/utils.js` ngay trên `fmtDate` — trước đây một câu dài chứa ngày bị thay trắng |
+| Vì sao Mục I Form 4 từng trống | `main.js` gần `_normalizePlan`, `_NC_KW` |
 | Truy vết nguồn (chặn AI bịa) | `main.js` gần `F()`, `_checkGround`, `_GROUND_RATIO` |
 | Thu gọn / mở rộng khu chat | `main.js` gần `setChatView`, `_restoreChatView` |
 | Emoji → icon nét, 3 tông màu báo cáo | `main.js` gần `_SEC_ICON`, `_SEC_TONE`, `_secHead` |
