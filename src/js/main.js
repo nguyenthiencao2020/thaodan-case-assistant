@@ -3427,7 +3427,7 @@ function renderFormTab(idx) {
     h+=Sec("C. Tình trạng trẻ","s0c",
       Dv("Lao động")+F("Công việc",tt.cong_viec,'-','tinh_trang.cong_viec')+F("Thời gian (h/ngày)",tt.thoi_gian_lam_viec,'-','tinh_trang.thoi_gian_lam_viec')+F("Bắt đầu làm từ",tt.bat_dau_lam_tu,'-','tinh_trang.bat_dau_lam_tu')+
       Dv("Giấy tờ")+F("Khai sinh",[cf(gks.co),cf(gks.ly_do)].filter(Boolean).join(' — '))+F("Thường trú",[cf(tr.co),cf(tr.ly_do)].filter(Boolean).join(' — '))+F("CCCD",[cf(cc.co),cf(cc.ly_do)].filter(Boolean).join(' — '))+
-      Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Kết quả học tập",hv.ket_qua,'-','tinh_trang.hoc_van.ket_qua')+F("Bỏ học",cf(hv.bo_hoc)?'Lớp '+cf(hv.bo_hoc)+(cf(hv.nam_bo_hoc)?' ('+cf(hv.nam_bo_hoc)+')':''):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc,'-','tinh_trang.hoc_van.ly_do_bo_hoc')+F("Học nghề",cf(hv.hoc_nghe)?(cf(hv.nghe_da_hoc)||'Có'):'Không')+F("Sở thích",hv.so_thich,'-','tinh_trang.hoc_van.so_thich')+F("Ước mơ",hv.uoc_mo,'-','tinh_trang.hoc_van.uoc_mo')+
+      Dv("Giáo dục")+F("Đang học",cf(hv.lop)?'Lớp '+cf(hv.lop)+(cf(hv.truong)?' — '+cf(hv.truong):''):'')+F("Kết quả học tập",hv.ket_qua,'-','tinh_trang.hoc_van.ket_qua')+F("Bỏ học",cf(hv.bo_hoc)?'Lớp '+cf(hv.bo_hoc)+(cf(hv.nam_bo_hoc)?' ('+cf(hv.nam_bo_hoc)+')':''):'')+F("Lý do bỏ học",hv.ly_do_bo_hoc,'-','tinh_trang.hoc_van.ly_do_bo_hoc')+F("Học nghề",[cf(hv.hoc_nghe),cf(hv.nghe_da_hoc)].filter(Boolean).join(' — '),'-','tinh_trang.hoc_van.hoc_nghe')+F("Sở thích",hv.so_thich,'-','tinh_trang.hoc_van.so_thich')+F("Ước mơ",hv.uoc_mo,'-','tinh_trang.hoc_van.uoc_mo')+
       Dv("Sức khỏe")+F("Tình trạng",sk.tinh_trang,'-','tinh_trang.suc_khoe.tinh_trang')+F("Cân nặng (kg)",sk.can_nang,'-','tinh_trang.suc_khoe.can_nang')+F("Chiều cao (cm)",sk.chieu_cao,'-','tinh_trang.suc_khoe.chieu_cao')+F("Bệnh trong 6 tháng",sk.benh_trong_6t,'-','tinh_trang.suc_khoe.benh_trong_6t')+F("Được khám",sk.duoc_kham,'-','tinh_trang.suc_khoe.duoc_kham')+F("BHYT",sk.bhyt,'-','tinh_trang.suc_khoe.bhyt')+
       Dv("Tâm lý")+F("Tăng động",tl.tang_dong,'-','tinh_trang.tam_ly.tang_dong')+F("Bi quan",tl.bi_quan,'-','tinh_trang.tam_ly.bi_quan')+F("Tự tổn thương",tl.tu_ton_thuong,'-','tinh_trang.tam_ly.tu_ton_thuong')+F("Mô tả",tl.mo_ta,'-','tinh_trang.tam_ly.mo_ta')+
       (()=>{ const dass=(tt.dass||null); if(!dass) return ''; const dL=_getDASSSeverity('D',dass.D||0),aL=_getDASSSeverity('A',dass.A||0),sL=_getDASSSeverity('S',dass.S||0); return Dv('DASS-'+dass.version+' ('+dass.date+')')+`<div class="dass-form-result"><span class="dass-fb" style="color:${dL.c};border-color:${dL.c};background:${dL.c}15">😔 TC: ${dass.D} — ${dL.lv}</span><span class="dass-fb" style="color:${aL.c};border-color:${aL.c};background:${aL.c}15">😰 LA: ${dass.A} — ${aL.lv}</span><span class="dass-fb" style="color:${sL.c};border-color:${sL.c};background:${sL.c}15">😤 CT: ${dass.S} — ${sL.lv}</span></div>`; })());
@@ -3850,6 +3850,72 @@ function toggleNote(i) {
   btn.textContent = open
     ? 'Xem đầy đủ (còn ' + (el.dataset.full.length - el.dataset.short.length + 1) + ' chữ)'
     : 'Thu gọn';
+}
+
+// ════════════════════
+// KHỚP Ô VUÔNG TRONG BIỂU MẪU
+// ════════════════════
+// Trước đây hàm CB() khớp bằng 4 KÝ TỰ ĐẦU của lựa chọn:
+//     sel.toLowerCase().includes(opt.toLowerCase().substring(0,4))
+// Với 3 trong 4 nhóm ô vuông của biểu mẫu, các lựa chọn đều bắt đầu bằng "Trẻ " nên 4 ký tự đầu
+// TRÙNG NHAU — hậu quả là hễ giá trị có chữ "trẻ" thì TẤT CẢ ô trong nhóm cùng được tích, kể cả
+// hai lựa chọn loại trừ nhau ("Trẻ chưa từng học nghề" và "Trẻ đã từng tham gia học nghề").
+// Ngược lại, khi AI viết bằng từ khác ("Mẹ và em gái" cho ô "Cha mẹ") thì không ô nào được tích.
+//
+// Bộ khớp mới: bỏ dấu, đếm từ đặc trưng trùng nhau, chỉ tích ĐÚNG MỘT ô điểm cao nhất; hai ô
+// bằng điểm thì không tích ô nào (thà để trống cho NVXH điền hơn là tích sai).
+const _CB_STOP = new Set(['tre','co','va','cua','hoac','voi','cac','nguoi','vao','la','thuoc','nhom','o','va']);
+// Bản in chính thức dùng viết tắt ("Trẻ có HCĐB") còn AI thì viết đủ ("Trẻ có hoàn cảnh đặc
+// biệt"), nên phải quy về một dạng trước khi so, không thì ô viết tắt không bao giờ khớp và ô
+// dài hơn ("nguy cơ rơi vào...") bị tích oan.
+const _CB_ALIAS = [
+  [/\bhcdb\b/g, 'hoan canh dac biet'],
+  [/\bhcdd\b/g, 'hoan canh dac biet'],
+  [/\bnvxh\b/g, 'nhan vien xa hoi'],
+  [/\bbhyt\b/g, 'bao hiem y te'],
+];
+function _cbNorm(s) {
+  let t = String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+  for (const [re, to] of _CB_ALIAS) t = t.replace(re, to);
+  return t;
+}
+// Từ đặc trưng của một lựa chọn = phần TRƯỚC dấu phẩy / gạch chéo / ngoặc (mệnh đề chính),
+// bỏ từ chức năng. Lấy mệnh đề chính là để "Trẻ có hoàn cảnh đặc biệt, nhóm cộng đồng nghèo/
+// nhập cư" không bị phần sau dấu phẩy làm loãng.
+function _cbWords(opt) {
+  const head = _cbNorm(opt).split(/[,/(]/)[0];
+  return head.split(/[^a-z0-9]+/).filter(w => w.length >= 2 && !_CB_STOP.has(w));
+}
+function _cbPick(opts, sel) {
+  const v = _cbNorm(sel);
+  if (!v.trim()) return -1;
+  const vset = new Set(v.split(/[^a-z0-9]+/).filter(Boolean));   // so theo TỪ, không so chuỗi con,
+                                                                  // để "me" không khớp trong "them"
+  // Cặp phủ định / khẳng định ("chưa từng" vs "đã từng"): các từ còn lại gần như trùng hết nên
+  // phải xét dấu phủ định trước, không thể đếm từ.
+  if (opts.length === 2) {
+    const negIdx = opts.findIndex(o => /(^| )(chua|khong)( |$)/.test(_cbNorm(o)));
+    const posIdx = opts.findIndex((o, i) => i !== negIdx && /(^| )(da|co)( |$)/.test(_cbNorm(o)));
+    if (negIdx >= 0 && posIdx >= 0)
+      return /(^| )(chua|khong)( |$)/.test(v) ? negIdx : posIdx;
+  }
+  // Điểm chính = số từ đặc trưng khớp. Bằng điểm thì ưu tiên lựa chọn khớp ĐỦ từ của nó
+  // (tỷ lệ khớp cao hơn) — nhờ vậy "Trẻ có hoàn cảnh đặc biệt" chọn đúng ô ngắn, còn khi ghi
+  // chép có thêm "nguy cơ rơi vào" thì chọn ô dài hơn vì khớp nhiều từ hơn.
+  const cand = opts.map((o, i) => {
+    const w = _cbWords(o);
+    const hit = w.filter(x => vset.has(x)).length;
+    return { i, hit, ratio: w.length ? hit / w.length : 0 };
+  });
+  const best = Math.max(...cand.map(c => c.hit));
+  if (best === 0) return -1;
+  let top = cand.filter(c => c.hit === best);
+  if (top.length > 1) {
+    const r = Math.max(...top.map(c => c.ratio));
+    top = top.filter(c => c.ratio === r);
+  }
+  return top.length === 1 ? top[0].i : -1;   // vẫn bằng nhau → không tích ô nào
 }
 
 function updateHeader() {
@@ -4953,9 +5019,10 @@ async function buildDocx(fi,logoData,footerData,_collector){
   // CB: Checkbox
   function CB(opts,sel){
     const ch=[];
+    const pick=_cbPick(opts,sel);   // chỉ tích đúng một ô, xem ghi chú ở _cbPick
     opts.forEach((opt,i)=>{
       if(i>0) ch.push(R("     ",{size:T_BODY}));
-      const chk=sel&&sel.toLowerCase().includes(opt.toLowerCase().substring(0,4));
+      const chk=i===pick;
       ch.push(R(chk?"☑ ":"☐ ",{font:"Segoe UI Symbol",size:T_BODY,color:chk?"1E293B":"555555"}));
       ch.push(R(opt,{size:T_BODY,color:"333333"}));
     });
