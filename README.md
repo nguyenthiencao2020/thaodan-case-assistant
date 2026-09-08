@@ -256,6 +256,7 @@ theo dõi sau đóng ca · audit log.
 
 | Điểm | Chi tiết |
 |---|---|
+| Bề rộng cột | Ba cột cố định được nới theo cỡ chữ mới: danh sách biểu mẫu 220→260px (mọi nhãn về một dòng), danh sách ca 270→330px (tên ca không còn bị cắt còn "Nguyễn V…"), hàng 5 mốc giai đoạn xuống 2 hàng |
 | Cỡ chữ | Thang chữ đã nâng một bậc toàn app (542 chỗ): sàn 11px cho nhãn nhỏ nhất, thân chữ 15–16px, chữ nền trang 16px. Cỡ chữ trong bản xuất `.docx` **giữ nguyên** Times New Roman 12pt theo quy cách văn bản hành chính |
 | Vùng bấm | Sàn 32px ở mọi kích cỡ màn hình, 34–36px trên màn hẹp — người lớn tuổi bấm kém chính xác hơn |
 | Icon | Bộ 45 icon nét nhúng sẵn dạng `<symbol>`, `stroke:currentColor` nên tự ăn theo màu chữ, không thêm request nào. Emoji đã bỏ trong khu chat và toàn bộ báo cáo (mỗi hệ điều hành vẽ emoji một kiểu, một sắc độ — đây là thứ làm giao diện trông thô nhất). Cột trái và thanh menu vẫn còn emoji |
@@ -294,7 +295,7 @@ và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồn
 | `mob2` | tất cả đạt | Menu ⋯ (5 mục ≥44px, bấm ra ngoài đóng, mang theo số thông báo), thu gọn/mở rộng trên phone, tab biểu mẫu |
 | `contrast` | tất cả đạt | Tương phản WCAG mọi phần tử có chữ, chặn dưới 2.5:1; soi file CSS tìm `var()` trỏ vào biến chưa khai báo mà không có giá trị dự phòng |
 | `hover` | 73/73 phần tử | Tương phản ở **cả** trạng thái nghỉ và trỏ chuột — bộ cũ chỉ kiểm lúc đứng yên nên bỏ sót chip gợi ý mất chữ khi hover |
-| `clip` | 0 chỗ bị cắt | Chữ **không** tràn khỏi trang nhưng bị chính khung bao (`overflow:hidden`) hoặc chiều cao đặt cứng cắt mất. Bộ dò phân biệt "tới được bằng cách cuộn" với "mất hẳn", bỏ qua thứ đang ẩn có chủ ý |
+| `clip` | 0 chỗ bị cắt | Chữ **không** tràn khỏi trang nhưng bị chính khung bao (`overflow:hidden`), chiều cao đặt cứng, hoặc `text-overflow:ellipsis` do cột quá hẹp (báo khi mất >25% bề rộng) cắt mất. Bộ dò phân biệt "tới được bằng cách cuộn" với "mất hẳn", bỏ qua thứ đang ẩn có chủ ý |
 
 Ba bộ cuối (`contrast`, `hover`, `clip`) sinh ra từ chính các lỗi đã gặp — chúng bắt được lớp lỗi
 mà kiểm tra tràn trang không bao giờ thấy. Nếu QA lại, dựng ba bộ này trước.

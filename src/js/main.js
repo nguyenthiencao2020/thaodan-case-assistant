@@ -3840,6 +3840,19 @@ function _hdrMoreOutside(ev) {
   closeHdrMore();
 }
 
+// Mở / thu một ghi chép trong tab "Ghi chép" của Danh sách ca.
+function toggleNote(i) {
+  const el = document.getElementById('ctn-' + i);
+  const btn = document.querySelector('.btn-note-more[data-i="' + i + '"]');
+  if (!el || !btn) return;
+  const open = el.dataset.open === '1';
+  el.textContent = open ? el.dataset.short : el.dataset.full;
+  el.dataset.open = open ? '' : '1';
+  btn.textContent = open
+    ? 'Xem đầy đủ (còn ' + (el.dataset.full.length - el.dataset.short.length + 1) + ' chữ)'
+    : 'Thu gọn';
+}
+
 function updateHeader() {
   const c = curCaseId ? loadCases()[curCaseId] : null;
   const isDraft = curCaseId && curCaseId === _draftCaseId;
@@ -4011,8 +4024,26 @@ function showCaseDetail(id) {
       <div style="display:flex;align-items:center;gap:0;max-width:280px;">${stageDots}</div>
     </div>`;
 
+  // Trước đây cắt cứng ở 300 ký tự KHÔNG có dấu … nên ghi chép dài bị chặt giữa từ
+  // ("Mẹ 38 tuổi, công nhân may, thu") và NVXH không hề biết là còn nữa. Nay cắt ở ranh giới
+  // từ, nói rõ còn bao nhiêu chữ, và mở xem đầy đủ ngay tại chỗ.
+  const NOTE_PREVIEW = 400;
   const tabEntries = entries.length
-    ? entries.map(e=>`<div class="ct-item"><div class="ct-date">📅 ${fmtVN(e.date)}</div><div class="ct-notes">${esc((e.notes||'').substring(0,300))}</div></div>`).join('')
+    ? entries.map((e, i) => {
+        const full = e.notes || '';
+        const long = full.length > NOTE_PREVIEW;
+        let cut = full;
+        if (long) {
+          cut = full.slice(0, NOTE_PREVIEW);
+          const sp = cut.lastIndexOf(' ');
+          if (sp > NOTE_PREVIEW * 0.6) cut = cut.slice(0, sp);   // không chặt giữa từ
+        }
+        return `<div class="ct-item">
+          <div class="ct-date"><svg class="ic ic-sm" style="vertical-align:-2px"><use href="#i-calendar"/></svg> ${fmtVN(e.date)}</div>
+          <div class="ct-notes" id="ctn-${i}" data-full="${escAttr(full)}" data-short="${escAttr(cut + (long ? '…' : ''))}">${esc(cut)}${long ? '…' : ''}</div>
+          ${long ? `<button class="btn-note-more" data-i="${i}" onclick="toggleNote(${i})">Xem đầy đủ (còn ${full.length - cut.length} chữ)</button>` : ''}
+        </div>`;
+      }).join('')
     : '<div class="cd-empty">Chưa có ghi chép</div>';
 
   const tabEditLog = (c.editLog && c.editLog.length)
