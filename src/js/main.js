@@ -2457,6 +2457,14 @@ function _collectTasks() {
             .sort((a, b) => a.due - b.due);
 }
 
+// Mở ca từ danh sách việc: nạp ca vào app rồi sang tab làm việc. Tách thành hàm riêng thay
+// vì nhồi hai lệnh vào onclick để chỗ này còn kiểm thử được.
+function openCaseFromTodo(id) {
+  if (isHistMode()) exitHistMode();
+  loadCaseIntoApp(id);
+  switchMain('dash');
+}
+
 function renderTodo() {
   const box = document.getElementById('todo-box');
   if (!box) return;
@@ -2488,7 +2496,7 @@ function renderTodo() {
       + '<div class="todo-main"><div class="todo-what">' + esc(t.what) + '</div>'
       + '<div class="todo-meta">' + esc(t.caseName) + ' · hạn ' + hanTxt + treTxt
       + (t.note ? ' · ' + esc(t.note) : '') + '</div></div>'
-      + '<button class="todo-open" onclick="showCaseDetail(\'' + escAttr(t.caseId) + '\')">Mở ca</button>'
+      + '<button class="todo-open" onclick="openCaseFromTodo(\'' + escAttr(t.caseId) + '\')">Mở ca</button>'
       + '</div>';
   };
 
@@ -4900,6 +4908,10 @@ function renderCaseList() {
     </div>`;
   }).join('');
   renderCasesStats();
+  // Vẽ lại luôn danh sách việc: renderCaseList được gọi sau mọi lần lưu ca, phân tích, đóng/mở
+  // ca. Thiếu dòng này thì vừa lập kế hoạch xong mà danh sách việc vẫn trống cho tới khi người
+  // dùng bấm sang tab khác rồi bấm lại — nhìn như tính năng không chạy.
+  renderTodo();
 }
 
 function selectCase(id) {
@@ -5312,9 +5324,16 @@ function _setCaseTeam(caseId, teamId) {
 }
 
 // Ghi audit log — best-effort, không chặn UI nếu lỗi (VD: mất mạng, hết phiên).
+// Bọc try/catch: đây là hàm GHI SỔ, gọi ngay dòng đầu loadCaseIntoApp. Nếu nó ném lỗi đồng bộ
+// (mạng lỗi kiểu lạ, client Supabase chưa dựng xong, phiên bản SDK đổi kiểu trả về) thì cả việc
+// MỞ CA thất bại theo — người dùng bấm "Mở" mà không có gì xảy ra, không thông báo gì. Không
+// ghi được sổ là chuyện nhỏ; không mở được ca là tool coi như hỏng.
 function _logAudit(caseId, action) {
   if (!_currentUser || !caseId) return;
-  _supabase.from('audit_logs').insert({ user_id: _currentUser.id, case_id: caseId, action }).then(() => {}, () => {});
+  try {
+    const q = _supabase.from('audit_logs').insert({ user_id: _currentUser.id, case_id: caseId, action });
+    if (q && typeof q.then === 'function') q.then(() => {}, () => {});
+  } catch (e) { console.warn('Không ghi được audit log:', e); }
 }
 
 function loadCaseIntoApp(id) {
