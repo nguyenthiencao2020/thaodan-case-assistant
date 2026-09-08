@@ -1557,9 +1557,13 @@ async function runAnalysis() {
         });
       }
 
-      _resetGrounding(notes);
       D._notes_stage4 = (D._notes_stage4 || []);
       D._notes_stage4.push({ date: new Date().toISOString(), notes });
+      D._notesByStage = D._notesByStage || {};
+      D._notesByStage[4] = [(D._notesByStage[4] || ''), notes].filter(Boolean).join('\n\n');
+      // Gom ghi chép SAU khi đã ghi ghi chép buổi này vào, không thì chính buổi vừa nhập lại
+      // bị coi là không có căn cứ.
+      _refreshGrounding();
 
       // ★ Thêm báo cáo AI cho GĐ 4
       try {
@@ -1613,10 +1617,16 @@ async function runAnalysis() {
       // Bản trích xuất RIÊNG của buổi này, chụp TRƯỚC deepMerge. Sau khi gộp thì D.vang_gia là
       // tích luỹ của mọi buổi, không còn phân biệt được buổi nào nói gì — mà phúc trình vãng gia
       // phải là biên bản của ĐÚNG một buổi.
-      let _vgRaw = null;
-      if (currentStage === 2 && formData && formData.vang_gia) {
-        _vgRaw = JSON.parse(JSON.stringify(formData.vang_gia));
-        restoreRealNamesDeep(_vgRaw);
+      let _vgRaw = null, _vgCoTruoc = false;
+      if (currentStage === 2) {
+        // Bản gộp đã có nội dung TRƯỚC lần phân tích này? Đo ngay đây, vì deepMerge ở dòng dưới
+        // sẽ làm mất khả năng phân biệt "ca cũ đã vãng gia" với "chính lần này vừa trộn vào".
+        _vgCoTruoc = !!(D.vang_gia && Object.keys(D.vang_gia)
+          .some(k => k.charAt(0) !== '_' && cf(D.vang_gia[k])));
+        if (formData && formData.vang_gia) {
+          _vgRaw = JSON.parse(JSON.stringify(formData.vang_gia));
+          restoreRealNamesDeep(_vgRaw);
+        }
       }
 
       // ★ DEEP MERGE — không bao giờ ghi đè D
@@ -1631,7 +1641,7 @@ async function runAnalysis() {
 
       // ── GĐ2: nối buổi vãng gia vừa ghi thành một phúc trình riêng ──
       if (currentStage === 2) {
-        const _ds = _ensureVgList(D);
+        const _ds = _ensureVgList(D, _vgCoTruoc);
         // Buổi này = phần AI trích được, bù các ô còn trống bằng nội dung báo cáo GĐ2.
         const _rec = deepMergeFields(_vgFromReport(report), _vgRaw || {});
         if (Object.keys(_rec).some(k => cf(_rec[k]))) {
@@ -1667,8 +1677,11 @@ async function runAnalysis() {
       // Có nội dung AI mới → xác nhận trước đó không còn giá trị, bản in về lại BẢN NHÁP.
       D._verified = null;
       D._notes = notes;
+      // Giữ ghi chép theo TỪNG giai đoạn — lớp truy vết cần cả 5 giai đoạn, không chỉ lần cuối.
+      D._notesByStage = D._notesByStage || {};
+      D._notesByStage[currentStage] = notes;
       D._currentStage = currentStage;
-      _resetGrounding(notes);
+      _refreshGrounding();
       if (!D.co_ban) D.co_ban = {};
 
       _validateData(D);
@@ -3368,6 +3381,44 @@ let _groundCache = new Map();     // giá trị đã đối chiếu → kết qu
 let _groundNotesNorm = '';        // ghi chép gốc đã chuẩn hóa
 let _groundSentences = [];        // các câu gốc, để trích dẫn lại cho NVXH
 
+// Gom TOÀN BỘ ghi chép của ca để đối chiếu.
+// LỖI đã gặp thật: trước đây chỉ đối chiếu với ghi chép của lần phân tích GẦN NHẤT, mà biểu mẫu
+// thì hiển thị dữ liệu TÍCH LUỸ của cả 5 giai đoạn. Hậu quả: vừa phân tích GĐ2 (vãng gia) là
+// mọi ô của Form 0 và Form 1 — trích từ ghi chép GĐ1 — đồng loạt bị đóng dấu "chưa có căn cứ",
+// dù ghi chép GĐ1 nói rõ ràng. Báo động giả trên một cơ chế an toàn còn tệ hơn không có: NVXH
+// thấy sai vài lần là bỏ qua dấu đó luôn, tới lúc AI bịa thật thì không ai để ý.
+// Nguồn ghi chép, gộp hết và bỏ trùng:
+//   D._notesByStage  — ghi chép từng giai đoạn (nguồn chính, thêm từ bản này)
+//   D._notes         — hồ sơ cũ chỉ có ghi chép lần cuối
+//   D._notes_stage4  — mọi buổi theo dõi GĐ4
+//   D.vang_gia_ds    — nguyên văn ghi chép từng buổi vãng gia
+//   c.stageData      — ghi chép đang gõ ở từng giai đoạn
+//   c.entries        — mọi mốc ghi chép đã lưu
+function _allCaseNotes(D, c) {
+  const parts = [];
+  const add = (x) => { const t = String(x || '').trim(); if (t) parts.push(t); };
+  if (D) {
+    const bs = D._notesByStage;
+    if (bs && typeof bs === 'object') Object.keys(bs).forEach(k => add(bs[k]));
+    add(D._notes);
+    (Array.isArray(D._notes_stage4) ? D._notes_stage4 : []).forEach(x => add(x && x.notes));
+    (Array.isArray(D.vang_gia_ds) ? D.vang_gia_ds : []).forEach(v => add(v && v._ghi_chep));
+  }
+  if (c) {
+    const sd = c.stageData;
+    if (sd && typeof sd === 'object') Object.keys(sd).forEach(k => add(sd[k] && sd[k].notes));
+    (Array.isArray(c.entries) ? c.entries : []).forEach(e => add(e && e.notes));
+  }
+  const seen = new Set();
+  return parts.filter(t => { if (seen.has(t)) return false; seen.add(t); return true; }).join('\n\n');
+}
+
+// Dựng lại lớp truy vết từ toàn bộ ghi chép của ca đang mở.
+function _refreshGrounding() {
+  const c = curCaseId ? loadCases()[curCaseId] : null;
+  _resetGrounding(_allCaseNotes(D, c));
+}
+
 // Gọi lại mỗi khi ghi chép đổi (sau mỗi lần phân tích).
 function _resetGrounding(notes) {
   _groundCache = new Map();
@@ -4284,11 +4335,17 @@ function _cbPick(opts, sel) {
 // Nay: D.vang_gia_ds giữ TỪNG buổi (in ra mỗi buổi một phiếu), còn D.vang_gia vẫn là bản gộp
 // tích luỹ của cả ca — giữ nguyên để phần tóm tắt, ngữ cảnh chat, truy vết nguồn và các hồ sơ
 // cũ (chưa có danh sách) không phải sửa gì.
-function _ensureVgList(D) {
+// allowSeed: chỉ dựng "buổi 1" từ bản gộp khi bản gộp ĐÃ CÓ TỪ TRƯỚC lần phân tích này.
+// LỖI đã gặp: gọi hàm này SAU deepMerge thì bản gộp vừa được chính lần này trộn vào, nên nó
+// dựng ra một "buổi 1" trống ngày rồi lần vừa ghi thành "buổi 2" — buổi vãng gia đầu tiên của
+// ca đã thành 2 phiếu, và ô chọn buổi đánh số lệch hết từ đó.
+function _ensureVgList(D, allowSeed) {
   if (!D) return [];
   if (!Array.isArray(D.vang_gia_ds)) D.vang_gia_ds = [];
   // Hồ sơ cũ: đã có phúc trình gộp mà chưa có danh sách → coi đó là buổi thứ nhất.
-  if (!D.vang_gia_ds.length && D.vang_gia && Object.keys(D.vang_gia).some(k => cf(D.vang_gia[k]))) {
+  const hasCu = D.vang_gia && Object.keys(D.vang_gia)
+    .some(k => k.charAt(0) !== '_' && cf(D.vang_gia[k]));
+  if (allowSeed !== false && !D.vang_gia_ds.length && hasCu) {
     D.vang_gia_ds.push(Object.assign({}, D.vang_gia));
   }
   return D.vang_gia_ds;
@@ -4512,6 +4569,34 @@ function renderCasesStats() {
     card('check', 'Hoàn thành', 'Hoàn thành', done.length, '#166534');
 }
 
+// ── Trạng thái 5 chấm tiến trình — MỘT nguồn duy nhất ────────────────────────────────────
+// LỖI đã gặp: thẻ ca bên trái và trang chi tiết bên phải tự tính riêng, hai quy tắc khác nhau,
+// nên cùng một ca mà hai chỗ vẽ khác nhau. Thẻ bên trái tô XANH CẢ 5 GIAI ĐOẠN cho mọi ca đã
+// đóng — vừa lệch với bên phải, vừa nói sai: ca đóng ở GĐ4 thì GĐ5 (Kết thúc ca) chưa hề chạy,
+// tô xanh là khai rằng đã làm.
+// Quy tắc chung, không nói quá:
+//   · giai đoạn TRƯỚC giai đoạn hiện tại  → xong (xanh)
+//   · giai đoạn hiện tại                  → ca đang mở: đang làm (cam); ca đã đóng: xong (xanh)
+//   · giai đoạn SAU                       → chưa tới (xám), kể cả ca đã đóng
+function _stageStates(c) {
+  const stage = Math.min(5, Math.max(1, (c && c.currentStage) || 1));
+  const closed = !!(c && c.status === 'closed');
+  return [1, 2, 3, 4, 5].map(s => {
+    if (s < stage) return 'done';
+    if (s === stage) return closed ? 'done' : 'current';
+    return 'todo';
+  });
+}
+
+// Câu giải thích khi trỏ chuột vào dải chấm — để không ai phải đoán ý nghĩa màu.
+function _stageStatesTitle(c) {
+  const stage = Math.min(5, Math.max(1, (c && c.currentStage) || 1));
+  const names = ['', 'Tiếp cận', 'Vãng gia', 'Kế hoạch', 'Tiến trình', 'Kết thúc'];
+  return (c && c.status === 'closed')
+    ? 'Ca đã đóng ở GĐ ' + stage + ' — ' + names[stage] + (stage < 5 ? '. Các giai đoạn sau chưa thực hiện.' : '')
+    : 'Đang ở GĐ ' + stage + ' — ' + names[stage] + '/5';
+}
+
 function renderCaseList() {
   const cases = loadCases();
   const q = (document.getElementById('cases-search')?.value||'').toLowerCase();
@@ -4537,8 +4622,8 @@ function renderCaseList() {
     const days = Math.floor((now - new Date(c.updatedAt)) / 86400000);
     const isStale = c.status === 'open' && days > 14;
     const riskClass = risk === 'Cao' ? 'ci-risk-high' : risk === 'Trung bình' ? 'ci-risk-med' : risk === 'Thấp' ? 'ci-risk-low' : '';
-    const stageDots = [1,2,3,4,5].map(s =>
-      `<div class="ci-stage-dot ${(c.status==='closed' || s < stage) ? 'done' : s === stage ? 'current' : ''}"></div>`
+    const stageDots = _stageStates(c).map(st =>
+      `<div class="ci-stage-dot ${st === 'todo' ? '' : st}"></div>`
     ).join('');
     
     const isDraft = c.id === _draftCaseId;
@@ -4573,7 +4658,7 @@ function renderCaseList() {
         <span>${(c.entries||[]).length} ghi chép</span>
         <span class="ci-ago">${_timeAgo(c.updatedAt)}${isStale ? ' ⚠️' : ''}</span>
       </div>
-      <div class="ci-stage-bar">${stageDots}</div>
+      <div class="ci-stage-bar" title="${escAttr(_stageStatesTitle(c))}">${stageDots}</div>
     </div>`;
   }).join('');
   renderCasesStats();
@@ -4599,12 +4684,14 @@ function showCaseDetail(id) {
     : risk === 'Trung bình' ? '<span class="ci-risk ci-risk-med">🟡 Rủi ro TB</span>'
     : risk === 'Thấp' ? '<span class="ci-risk ci-risk-low">🟢 Rủi ro thấp</span>' : '';
   const stageLabels = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'];
-  const stageDots = [1,2,3,4,5].map(s => 
-    `<div style="display:flex;align-items:center;gap:3px;">
-      <div style="width:8px;height:8px;border-radius:50%;background:${s < stage ? '#16a34a' : s === stage ? 'var(--org)' : '#e2e8f0'};"></div>
-      <span style="font-size:12px;color:${s === stage ? 'var(--org)' : 'var(--t3)'};font-weight:${s === stage ? '700' : '400'};">${s}</span>
-    </div>`
-  ).join('<div style="flex:1;height:2px;background:#e2e8f0;min-width:8px;"></div>');
+  const _stDotColor = { done: '#16a34a', current: 'var(--org)', todo: '#e2e8f0' };
+  const stageDots = _stageStates(c).map((st, i) => {
+    const s = i + 1;
+    return `<div style="display:flex;align-items:center;gap:3px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:${_stDotColor[st]};"></div>
+      <span style="font-size:12px;color:${st === 'current' ? 'var(--org)' : 'var(--t3)'};font-weight:${st === 'current' ? '700' : '400'};">${s}</span>
+    </div>`;
+  }).join('<div style="flex:1;height:2px;background:#e2e8f0;min-width:8px;"></div>');
 
   const isClosed = c.status === 'closed';
   const closedAtTxt = c.closedAt ? ' · Đóng: '+fmtVN(c.closedAt) : '';
@@ -4632,7 +4719,8 @@ function showCaseDetail(id) {
     </div>
     <div class="cd-section">
       <div class="cd-section-title">Tiến trình</div>
-      <div style="display:flex;align-items:center;gap:0;max-width:280px;">${stageDots}</div>
+      <div style="display:flex;align-items:center;gap:0;max-width:280px;" title="${escAttr(_stageStatesTitle(c))}">${stageDots}</div>
+      <div style="font-size:13px;color:var(--t3);margin-top:6px;">${esc(_stageStatesTitle(c))}</div>
     </div>
     ${_caseStatusLogHTML(c)}`;
 
@@ -4907,7 +4995,7 @@ function loadCaseIntoApp(id) {
     D = c.lastAnalysis;
     if (!Array.isArray(D.cap_nhat)) D.cap_nhat = [];
     // Dựng lại lớp truy vết từ ghi chép đã lưu, để mở lại ca cũ vẫn thấy ô nào chưa có căn cứ.
-    _resetGrounding(D._notes || (c.entries || []).map(e => e.notes || '').join('\n'));
+    _resetGrounding(_allCaseNotes(D, c));
     if (D.co_ban && Object.keys(D.co_ban).length) {
       document.getElementById('btn-fill').disabled = false;
       document.getElementById('chat-input').disabled = false;
