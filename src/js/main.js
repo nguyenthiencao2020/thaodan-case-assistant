@@ -3447,6 +3447,23 @@ function renderFormTab(idx) {
   } else if (idx===2) {
     h+=Sec("Thông tin vãng gia","s2a",F("Ngày vãng gia",vg.ngay_vang_gia,'-','vang_gia.ngay_vang_gia')+F("Người tiếp xúc",vg.nguoi_tiep_xuc,'-','vang_gia.nguoi_tiep_xuc')+F("Lần thứ",vg.lan_vang_gia,'-','vang_gia.lan_vang_gia')+F("Gặp TC",vg.co_gap_tc,'-','vang_gia.co_gap_tc')+F("Mục đích",vg.muc_dich,'-','vang_gia.muc_dich'));
     h+=Sec("Quan sát gia đình","s2b",F("Môi trường sống",vg.quan_sat_mt,'-','vang_gia.quan_sat_mt')+F("Loại hình GĐ",vg.loai_hinh_gd||gd.loai_hinh,'-','vang_gia.loai_hinh_gd')+F("Bầu khí",vg.bau_khi_gd||gd.bau_khi,'-','vang_gia.bau_khi_gd')+F("Hôn nhân cha mẹ",vg.tinh_trang_hn,'-','vang_gia.tinh_trang_hn')+F("Kinh tế",vg.van_de_kinh_te,'-','vang_gia.van_de_kinh_te')+F("Đánh giá chung",vg.danh_gia_chung,'-','vang_gia.danh_gia_chung'));
+  // ── 29 trường dưới đây trước đây CHỈ có trong bản in / bản .docx, không hiện trên màn hình.
+  //    Đó là lỗi thiết kế: cả cơ chế kiểm chứng (dấu BẢN NHÁP → nút "Tôi đã kiểm chứng") dựa
+  //    trên việc NVXH ĐỌC ĐƯỢC những gì sẽ in ra. Trường in lên giấy mà không xem được trên
+  //    màn hình thì không ai kiểm chứng nổi. Nhãn giữ đúng nhãn của bản in để đối chiếu.
+    h+=Sec("Người tiếp xúc","s2c",F("Quan hệ với trẻ",vg.quan_he_voi_tre,'-','vang_gia.quan_he_voi_tre')+F("Số điện thoại liên hệ",vg.sdt,'-','vang_gia.sdt'));
+    h+=Sec("Vấn đề ghi nhận trong buổi vãng gia","s2d",
+      F("Mối quan hệ giữa trẻ và người sống cùng",vg.quan_he_tre_gd,'-','vang_gia.quan_he_tre_gd')+
+      F("Cách tương tác giữa các thành viên",vg.cach_tuong_tac,'-','vang_gia.cach_tuong_tac')+
+      F("Vấn đề giáo dục",vg.van_de_giao_duc,'-','vang_gia.van_de_giao_duc')+
+      F("Vấn đề sức khỏe",vg.van_de_suc_khoe,'-','vang_gia.van_de_suc_khoe')+
+      F("Vấn đề hành chính",vg.van_de_hanh_chinh,'-','vang_gia.van_de_hanh_chinh')+
+      F("Quan hệ với cộng đồng xung quanh",vg.van_de_cong_dong,'-','vang_gia.van_de_cong_dong')+
+      F("Vấn đề gia đình / gia đình mở rộng",vg.van_de_tu_gd,'-','vang_gia.van_de_tu_gd')+
+      F("Vấn đề khác",vg.van_de_khac,'-','vang_gia.van_de_khac'));
+    h+=Sec("Quan sát và phát hiện thêm của NVXH","s2e",
+      F("Quan sát khác về gia đình",vg.quan_sat_khac,'-','vang_gia.quan_sat_khac')+
+      F("Phát hiện khác",vg.phat_hien_khac,'-','vang_gia.phat_hien_khac'));
   } else if (idx===3) {
     h+=Sec("Đánh giá khẩn cấp","s3a",F("Họ tên",cb.ho_ten,'-','co_ban.ho_ten')+F("Tuổi",cb.tuoi,'-','co_ban.tuoi')+F("Hoàn cảnh GĐ",gd.hoan_canh,'-','gia_dinh.hoan_canh')+F("Tổn thương",[cf(dg.van_de_the_chat),cf(dg.van_de_tam_ly)].filter(Boolean).join(' | '))+F("Nguy cơ",dg.nguy_co,'-','danh_gia.nguy_co')+F("Mức khẩn cấp",dg.muc_khan_cap,'-','danh_gia.muc_khan_cap')+F("Yếu tố bảo vệ",dg.yeu_to_bao_ve,'-','danh_gia.yeu_to_bao_ve')+F("Nhận xét",dg.nhan_xet_nvxh,'-','danh_gia.nhan_xet_nvxh'));
   } else if (idx===4) {
@@ -3459,6 +3476,11 @@ function renderFormTab(idx) {
     h+=Sec("Nhu cầu hỗ trợ","s5a",TBL(["TT","Nhu cầu","Ưu tiên","Mục tiêu"],ncR));
     h+=Sec("Hoạt động","s5b",TBL(["Mục tiêu","Hoạt động","Ưu tiên","Người phụ trách","Thời gian","Nguồn lực"],(kh.hoat_dong||[]).map(h=>[h.muc_tieu_so,h.noi_dung,h.uu_tien||'',h.nguoi_phu_trach||'',h.thoi_gian,h.nguon_luc])));
     h+=Sec("Nguồn lực","s5c",F("",kh.nguon_luc_ket_noi));
+  // ── 29 trường dưới đây trước đây CHỈ có trong bản in / bản .docx, không hiện trên màn hình.
+  //    Đó là lỗi thiết kế: cả cơ chế kiểm chứng (dấu BẢN NHÁP → nút "Tôi đã kiểm chứng") dựa
+  //    trên việc NVXH ĐỌC ĐƯỢC những gì sẽ in ra. Trường in lên giấy mà không xem được trên
+  //    màn hình thì không ai kiểm chứng nổi. Nhãn giữ đúng nhãn của bản in để đối chiếu.
+    h+=Sec("Mốc thời gian kế hoạch","s5f",F("Thời gian bắt đầu case",kh.bat_dau_case,'-','ke_hoach.bat_dau_case')+F("Thời gian thực hiện KH",kh.thoi_gian_kh,'-','ke_hoach.thoi_gian_kh'));
     if ((kh.xem_xet||[]).length) h+=Sec("Mốc xem xét lại kế hoạch","s5e",(kh.xem_xet||[]).filter(Boolean).map(x=>F("",x)).join(''),'🔁');
     if (kh.cam_ket_gia_dinh || kh.cam_ket_tre || kh.cam_ket_nvxh) {
       h+=Sec("Cam kết 2 phía","s5d",
@@ -3492,13 +3514,23 @@ function renderFormTab(idx) {
       <div style="font-size:14px;color:#3b82f6;margin-top:2px">Soạn sẵn bản Word theo thể thức hành chính từ dữ liệu phiếu này — chỉ cần sửa và ký.</div></div>
       <button class="btn-dl-docx-brand" onclick="dlReferralLetter()">📨 Soạn công văn</button></div>`;
     h+=Sec("Trẻ cần chuyển gửi","s8a",F("Họ tên",cb.ho_ten)+F("Năm sinh",cb.ngay_sinh)+F("Người chăm sóc",ncs.ho_ten));
-    h+=Sec("Người chuyển gửi","s8b",F("Họ tên",cg.nguoi_chuyen)+F("Đơn vị",cg.don_vi_chuyen));
-    h+=Sec("Nơi nhận","s8c",F("Đơn vị",cg.don_vi_nhan)+F("Người nhận",cg.nguoi_nhan));
+  // ── 29 trường dưới đây trước đây CHỈ có trong bản in / bản .docx, không hiện trên màn hình.
+  //    Đó là lỗi thiết kế: cả cơ chế kiểm chứng (dấu BẢN NHÁP → nút "Tôi đã kiểm chứng") dựa
+  //    trên việc NVXH ĐỌC ĐƯỢC những gì sẽ in ra. Trường in lên giấy mà không xem được trên
+  //    màn hình thì không ai kiểm chứng nổi. Nhãn giữ đúng nhãn của bản in để đối chiếu.
+    h+=Sec("Người chuyển gửi","s8b",F("Họ tên",cg.nguoi_chuyen,'-','chuyen_gui.nguoi_chuyen')+F("Chức danh / vai trò",cg.chuc_danh,'-','chuyen_gui.chuc_danh')+F("Đơn vị",cg.don_vi_chuyen,'-','chuyen_gui.don_vi_chuyen')+F("Số điện thoại",cg.sdt_chuyen,'-','chuyen_gui.sdt_chuyen')+F("Email",cg.email_chuyen,'-','chuyen_gui.email_chuyen'));
+    h+=Sec("Nơi nhận","s8c",F("Đơn vị",cg.don_vi_nhan,'-','chuyen_gui.don_vi_nhan')+F("Người nhận",cg.nguoi_nhan,'-','chuyen_gui.nguoi_nhan')+F("Địa chỉ",cg.dia_chi_nhan,'-','chuyen_gui.dia_chi_nhan')+F("Số điện thoại liên hệ",cg.sdt_nhan,'-','chuyen_gui.sdt_nhan')+F("Email",cg.email_nhan,'-','chuyen_gui.email_nhan'));
   } else if (idx===9) {
+  // ── 29 trường dưới đây trước đây CHỈ có trong bản in / bản .docx, không hiện trên màn hình.
+  //    Đó là lỗi thiết kế: cả cơ chế kiểm chứng (dấu BẢN NHÁP → nút "Tôi đã kiểm chứng") dựa
+  //    trên việc NVXH ĐỌC ĐƯỢC những gì sẽ in ra. Trường in lên giấy mà không xem được trên
+  //    màn hình thì không ai kiểm chứng nổi. Nhãn giữ đúng nhãn của bản in để đối chiếu.
+    h+=Sec("Người nuôi dưỡng trẻ","s9b",F("Họ tên",ktu.nguoi_nuoi_duong,'-','ket_thuc.nguoi_nuoi_duong')+F("Quan hệ với trẻ",ktu.quan_he,'-','ket_thuc.quan_he')+F("Năm sinh",ktu.nam_sinh_nd,'-','ket_thuc.nam_sinh_nd')+F("Nghề nghiệp",ktu.nghe_nghiep_nd,'-','ket_thuc.nghe_nghiep_nd')+F("Số điện thoại",ktu.sdt_nd,'-','ket_thuc.sdt_nd'));
+    h+=Sec("NVXH phụ trách","s9c",F("Họ và tên NVXH",ktu.nvxh_phu_trach,'-','ket_thuc.nvxh_phu_trach')+F("Số điện thoại liên hệ",ktu.sdt_nvxh,'-','ket_thuc.sdt_nvxh')+F("Thời gian bắt đầu case",ktu.bat_dau_case,'-','ket_thuc.bat_dau_case'));
     h+=Sec("Kết thúc ca","s9a",F("Kết quả đạt",ktu.ket_qua_dat)+F("Chưa đạt",ktu.ket_qua_chua_dat)+F("Lý do",ktu.ly_do)+F("KH theo dõi",ktu.ke_hoach_theo_doi));
   } else {
     h+=Sec("PHẦN I — Thông tin cơ bản","sbc1",F("Họ tên",cb.ho_ten)+F("Năm sinh",cb.ngay_sinh)+F("Yêu cầu",dg.yeu_cau_tre)+F("Nguy cơ",dg.nguy_co));
-    h+=Sec("PHẦN II — Tiến trình","sbc2",F("Bối cảnh GĐ",gd.hoan_canh)+F("Nhu cầu thể chất",dg.nhu_cau_the_chat)+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly)+F("Ưu thế trẻ",dg.uu_the_tre)+F("Đề xuất",D.de_xuat));
+    h+=Sec("PHẦN II — Tiến trình","sbc2",F("Bối cảnh GĐ",gd.hoan_canh)+F("Nhu cầu thể chất",dg.nhu_cau_the_chat)+F("Nhu cầu tâm lý",dg.nhu_cau_tam_ly)+F("Ưu thế trẻ",dg.uu_the_tre,'-','danh_gia.uu_the_tre')+F("Đề xuất",D.de_xuat,'-','de_xuat')+F("Sự kiện hiện tại (dòng thời gian)",D.timeline,'-','timeline'));
   }
   // Gắn phần Đánh giá chuyên môn tương ứng với từng form (SecDashboard tự bỏ qua form 5/6 vận hành).
   if (D && D._report) h += SecDashboard(idx);
