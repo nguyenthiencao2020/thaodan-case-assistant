@@ -4569,6 +4569,34 @@ function renderCasesStats() {
     card('check', 'Hoàn thành', 'Hoàn thành', done.length, '#166534');
 }
 
+// ── Trạng thái 5 chấm tiến trình — MỘT nguồn duy nhất ────────────────────────────────────
+// LỖI đã gặp: thẻ ca bên trái và trang chi tiết bên phải tự tính riêng, hai quy tắc khác nhau,
+// nên cùng một ca mà hai chỗ vẽ khác nhau. Thẻ bên trái tô XANH CẢ 5 GIAI ĐOẠN cho mọi ca đã
+// đóng — vừa lệch với bên phải, vừa nói sai: ca đóng ở GĐ4 thì GĐ5 (Kết thúc ca) chưa hề chạy,
+// tô xanh là khai rằng đã làm.
+// Quy tắc chung, không nói quá:
+//   · giai đoạn TRƯỚC giai đoạn hiện tại  → xong (xanh)
+//   · giai đoạn hiện tại                  → ca đang mở: đang làm (cam); ca đã đóng: xong (xanh)
+//   · giai đoạn SAU                       → chưa tới (xám), kể cả ca đã đóng
+function _stageStates(c) {
+  const stage = Math.min(5, Math.max(1, (c && c.currentStage) || 1));
+  const closed = !!(c && c.status === 'closed');
+  return [1, 2, 3, 4, 5].map(s => {
+    if (s < stage) return 'done';
+    if (s === stage) return closed ? 'done' : 'current';
+    return 'todo';
+  });
+}
+
+// Câu giải thích khi trỏ chuột vào dải chấm — để không ai phải đoán ý nghĩa màu.
+function _stageStatesTitle(c) {
+  const stage = Math.min(5, Math.max(1, (c && c.currentStage) || 1));
+  const names = ['', 'Tiếp cận', 'Vãng gia', 'Kế hoạch', 'Tiến trình', 'Kết thúc'];
+  return (c && c.status === 'closed')
+    ? 'Ca đã đóng ở GĐ ' + stage + ' — ' + names[stage] + (stage < 5 ? '. Các giai đoạn sau chưa thực hiện.' : '')
+    : 'Đang ở GĐ ' + stage + ' — ' + names[stage] + '/5';
+}
+
 function renderCaseList() {
   const cases = loadCases();
   const q = (document.getElementById('cases-search')?.value||'').toLowerCase();
@@ -4594,8 +4622,8 @@ function renderCaseList() {
     const days = Math.floor((now - new Date(c.updatedAt)) / 86400000);
     const isStale = c.status === 'open' && days > 14;
     const riskClass = risk === 'Cao' ? 'ci-risk-high' : risk === 'Trung bình' ? 'ci-risk-med' : risk === 'Thấp' ? 'ci-risk-low' : '';
-    const stageDots = [1,2,3,4,5].map(s =>
-      `<div class="ci-stage-dot ${(c.status==='closed' || s < stage) ? 'done' : s === stage ? 'current' : ''}"></div>`
+    const stageDots = _stageStates(c).map(st =>
+      `<div class="ci-stage-dot ${st === 'todo' ? '' : st}"></div>`
     ).join('');
     
     const isDraft = c.id === _draftCaseId;
@@ -4630,7 +4658,7 @@ function renderCaseList() {
         <span>${(c.entries||[]).length} ghi chép</span>
         <span class="ci-ago">${_timeAgo(c.updatedAt)}${isStale ? ' ⚠️' : ''}</span>
       </div>
-      <div class="ci-stage-bar">${stageDots}</div>
+      <div class="ci-stage-bar" title="${escAttr(_stageStatesTitle(c))}">${stageDots}</div>
     </div>`;
   }).join('');
   renderCasesStats();
@@ -4656,12 +4684,14 @@ function showCaseDetail(id) {
     : risk === 'Trung bình' ? '<span class="ci-risk ci-risk-med">🟡 Rủi ro TB</span>'
     : risk === 'Thấp' ? '<span class="ci-risk ci-risk-low">🟢 Rủi ro thấp</span>' : '';
   const stageLabels = ['','Tiếp cận','Vãng gia','Kế hoạch','Tiến trình','Kết thúc'];
-  const stageDots = [1,2,3,4,5].map(s => 
-    `<div style="display:flex;align-items:center;gap:3px;">
-      <div style="width:8px;height:8px;border-radius:50%;background:${s < stage ? '#16a34a' : s === stage ? 'var(--org)' : '#e2e8f0'};"></div>
-      <span style="font-size:12px;color:${s === stage ? 'var(--org)' : 'var(--t3)'};font-weight:${s === stage ? '700' : '400'};">${s}</span>
-    </div>`
-  ).join('<div style="flex:1;height:2px;background:#e2e8f0;min-width:8px;"></div>');
+  const _stDotColor = { done: '#16a34a', current: 'var(--org)', todo: '#e2e8f0' };
+  const stageDots = _stageStates(c).map((st, i) => {
+    const s = i + 1;
+    return `<div style="display:flex;align-items:center;gap:3px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:${_stDotColor[st]};"></div>
+      <span style="font-size:12px;color:${st === 'current' ? 'var(--org)' : 'var(--t3)'};font-weight:${st === 'current' ? '700' : '400'};">${s}</span>
+    </div>`;
+  }).join('<div style="flex:1;height:2px;background:#e2e8f0;min-width:8px;"></div>');
 
   const isClosed = c.status === 'closed';
   const closedAtTxt = c.closedAt ? ' · Đóng: '+fmtVN(c.closedAt) : '';
@@ -4689,7 +4719,8 @@ function showCaseDetail(id) {
     </div>
     <div class="cd-section">
       <div class="cd-section-title">Tiến trình</div>
-      <div style="display:flex;align-items:center;gap:0;max-width:280px;">${stageDots}</div>
+      <div style="display:flex;align-items:center;gap:0;max-width:280px;" title="${escAttr(_stageStatesTitle(c))}">${stageDots}</div>
+      <div style="font-size:13px;color:var(--t3);margin-top:6px;">${esc(_stageStatesTitle(c))}</div>
     </div>
     ${_caseStatusLogHTML(c)}`;
 

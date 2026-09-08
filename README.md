@@ -292,7 +292,7 @@ Không có test tự động trong repo (app là script không module, không c�
 Kiểm thử được viết dưới dạng script Playwright chạy ngoài, dựng máy chủ tĩnh trên `localhost:8899`
 và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồng mà không cần khóa thật.
 
-**Lần QA gần nhất: 08/09/2026 — 25 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
+**Lần QA gần nhất: 08/09/2026 — 26 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
 
 | Bộ | Kết quả | Phủ những gì |
 |---|---|---|
@@ -304,6 +304,7 @@ và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồn
 | `contrast` | tất cả đạt | Tương phản WCAG mọi phần tử có chữ, chặn dưới 2.5:1; soi file CSS tìm `var()` trỏ vào biến chưa khai báo mà không có giá trị dự phòng |
 | `hover` | 73/73 phần tử | Tương phản ở **cả** trạng thái nghỉ và trỏ chuột — bộ cũ chỉ kiểm lúc đứng yên nên bỏ sót chip gợi ý mất chữ khi hover |
 | `pii` | 20/20 đạt | Đường ghi chép → AI → biểu mẫu của SĐT/CCCD/email: che có đánh số, khôi phục nguyên văn, hai số khác nhau không lẫn người, không phá số thường ("bé 12 tuổi"), dung sai khi model sao lại nhãn sai kiểu (`[ sdt_1 ]`, `[SĐT_1]`); `deepMerge` với mảng giàu/nghèo hơn |
+| `stbar` | 12/12 đạt | Dải 5 chấm tiến trình phải khớp giữa thẻ ca bên trái và trang chi tiết bên phải — quét đủ 10 tổ hợp (5 giai đoạn × mở/đóng), đọc màu thật đã tính ra chứ không đọc code; ca đóng ở GĐ4 thì GĐ5 phải còn xám |
 | `vglan` | 14/14 đạt | Đánh số buổi vãng gia qua luồng thật (giả lập AI, gọi `runAnalysis`): buổi đầu ra ĐÚNG 1 phiếu, bấm Phân tích lại cùng nội dung thì cập nhật phiếu đó chứ không sinh phiếu trùng, đổi nội dung mới thành buổi 2, ghi chép nói "lần thứ 5" thì lấy số theo ghi chép, ô chọn buổi liệt kê đúng |
 | `ground2` | 14/14 đạt | Truy vết nguồn phải đối chiếu với ghi chép của CẢ ca: tái hiện báo động giả của cách cũ (4/4 ô Form 0 bị đánh dấu sau khi phân tích GĐ2), rồi kiểm cách mới cho lại "có căn cứ" mà vẫn bắt được 3 giá trị bịa; gom đủ 7 nguồn ghi chép, bỏ trùng; ca chưa có ghi chép thì không đánh dấu bừa; hồ sơ cũ dùng `entries` làm căn cứ |
 | `hist2` | 19/19 đạt | Nút "Xem lại / In lại" phải nằm ở đúng chỗ NGƯỜI DÙNG THẤY: panel "📚 Lịch sử nhập — GĐ N" trên Dashboard và tab Ghi chép trong trang chi tiết ca; bấm cả dòng thì xem lại chứ không lặng lẽ ghi đè ô ghi chép; nút Khôi phục vẫn còn và vẫn chạy; mốc không có bản chụp thì ẩn 2 nút mới |
@@ -356,6 +357,7 @@ trong code. Nơi nên đọc trước:
 | Sổ ghi đóng / mở lại ca, vì sao lý do là bắt buộc | `main.js` gần `_logCaseStatus`, `_CLOSE_PROMPT`, và `showConfirm` tham số `prompt` |
 | Vì sao lịch sử từng bị mất dù vẫn thấy đủ mốc | `main.js` trong `saveCaseNow`, chỗ `const snap = _snapD()` |
 | Chọn in riêng một buổi vãng gia | `main.js` gần `_vgPick`, `_vgShown`, `_vgFileSuffix` |
+| Dải 5 chấm tiến trình, vì sao ca đã đóng không xanh hết | `main.js` gần `_stageStates` |
 | Truy vết nguồn (chặn AI bịa) | `main.js` gần `F()`, `_checkGround`, `_GROUND_RATIO` |
 | Vì sao đối chiếu với ghi chép CẢ ca, không phải lần cuối | `main.js` ngay trên `_allCaseNotes` — có ghi lại đúng ca báo động giả đã gặp |
 | Thu gọn / mở rộng khu chat | `main.js` gần `setChatView`, `_restoreChatView` |
