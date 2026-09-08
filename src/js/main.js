@@ -1617,10 +1617,16 @@ async function runAnalysis() {
       // Bản trích xuất RIÊNG của buổi này, chụp TRƯỚC deepMerge. Sau khi gộp thì D.vang_gia là
       // tích luỹ của mọi buổi, không còn phân biệt được buổi nào nói gì — mà phúc trình vãng gia
       // phải là biên bản của ĐÚNG một buổi.
-      let _vgRaw = null;
-      if (currentStage === 2 && formData && formData.vang_gia) {
-        _vgRaw = JSON.parse(JSON.stringify(formData.vang_gia));
-        restoreRealNamesDeep(_vgRaw);
+      let _vgRaw = null, _vgCoTruoc = false;
+      if (currentStage === 2) {
+        // Bản gộp đã có nội dung TRƯỚC lần phân tích này? Đo ngay đây, vì deepMerge ở dòng dưới
+        // sẽ làm mất khả năng phân biệt "ca cũ đã vãng gia" với "chính lần này vừa trộn vào".
+        _vgCoTruoc = !!(D.vang_gia && Object.keys(D.vang_gia)
+          .some(k => k.charAt(0) !== '_' && cf(D.vang_gia[k])));
+        if (formData && formData.vang_gia) {
+          _vgRaw = JSON.parse(JSON.stringify(formData.vang_gia));
+          restoreRealNamesDeep(_vgRaw);
+        }
       }
 
       // ★ DEEP MERGE — không bao giờ ghi đè D
@@ -1635,7 +1641,7 @@ async function runAnalysis() {
 
       // ── GĐ2: nối buổi vãng gia vừa ghi thành một phúc trình riêng ──
       if (currentStage === 2) {
-        const _ds = _ensureVgList(D);
+        const _ds = _ensureVgList(D, _vgCoTruoc);
         // Buổi này = phần AI trích được, bù các ô còn trống bằng nội dung báo cáo GĐ2.
         const _rec = deepMergeFields(_vgFromReport(report), _vgRaw || {});
         if (Object.keys(_rec).some(k => cf(_rec[k]))) {
@@ -4329,11 +4335,17 @@ function _cbPick(opts, sel) {
 // Nay: D.vang_gia_ds giữ TỪNG buổi (in ra mỗi buổi một phiếu), còn D.vang_gia vẫn là bản gộp
 // tích luỹ của cả ca — giữ nguyên để phần tóm tắt, ngữ cảnh chat, truy vết nguồn và các hồ sơ
 // cũ (chưa có danh sách) không phải sửa gì.
-function _ensureVgList(D) {
+// allowSeed: chỉ dựng "buổi 1" từ bản gộp khi bản gộp ĐÃ CÓ TỪ TRƯỚC lần phân tích này.
+// LỖI đã gặp: gọi hàm này SAU deepMerge thì bản gộp vừa được chính lần này trộn vào, nên nó
+// dựng ra một "buổi 1" trống ngày rồi lần vừa ghi thành "buổi 2" — buổi vãng gia đầu tiên của
+// ca đã thành 2 phiếu, và ô chọn buổi đánh số lệch hết từ đó.
+function _ensureVgList(D, allowSeed) {
   if (!D) return [];
   if (!Array.isArray(D.vang_gia_ds)) D.vang_gia_ds = [];
   // Hồ sơ cũ: đã có phúc trình gộp mà chưa có danh sách → coi đó là buổi thứ nhất.
-  if (!D.vang_gia_ds.length && D.vang_gia && Object.keys(D.vang_gia).some(k => cf(D.vang_gia[k]))) {
+  const hasCu = D.vang_gia && Object.keys(D.vang_gia)
+    .some(k => k.charAt(0) !== '_' && cf(D.vang_gia[k]));
+  if (allowSeed !== false && !D.vang_gia_ds.length && hasCu) {
     D.vang_gia_ds.push(Object.assign({}, D.vang_gia));
   }
   return D.vang_gia_ds;
