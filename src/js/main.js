@@ -4570,31 +4570,68 @@ function renderCasesStats() {
 }
 
 // ── Trạng thái 5 chấm tiến trình — MỘT nguồn duy nhất ────────────────────────────────────
-// LỖI đã gặp: thẻ ca bên trái và trang chi tiết bên phải tự tính riêng, hai quy tắc khác nhau,
-// nên cùng một ca mà hai chỗ vẽ khác nhau. Thẻ bên trái tô XANH CẢ 5 GIAI ĐOẠN cho mọi ca đã
-// đóng — vừa lệch với bên phải, vừa nói sai: ca đóng ở GĐ4 thì GĐ5 (Kết thúc ca) chưa hề chạy,
-// tô xanh là khai rằng đã làm.
-// Quy tắc chung, không nói quá:
-//   · giai đoạn TRƯỚC giai đoạn hiện tại  → xong (xanh)
-//   · giai đoạn hiện tại                  → ca đang mở: đang làm (cam); ca đã đóng: xong (xanh)
-//   · giai đoạn SAU                       → chưa tới (xám), kể cả ca đã đóng
+// LỖI 1 (đã sửa): thẻ ca bên trái và trang chi tiết bên phải tự tính riêng, hai quy tắc khác
+// nhau, nên cùng một ca mà hai chỗ vẽ khác nhau. Bên trái tô xanh cả 5 giai đoạn cho mọi ca đã
+// đóng — vừa lệch, vừa khai rằng GĐ5 đã làm trong khi ca đóng ở GĐ4.
+//
+// LỖI 2 (bản này): lấy currentStage làm mốc. Nhưng ca ĐI NGƯỢC được — lùi giai đoạn, hoặc mở
+// lại ca ở giai đoạn trước. Ca thật của người dùng: sổ ghi có dòng "Đóng ca · GĐ 5" (bằng chứng
+// GĐ5 đã chạy) mà currentStage là 4, nên GĐ5 bị tô xám như chưa từng làm. Sai theo hướng nguy
+// hơn hướng cũ: xóa dấu một giai đoạn đã thực hiện khỏi hồ sơ.
+//
+// Nay tách hai khái niệm:
+//   currentStage — đang làm ở đâu
+//   reached      — đã từng đi xa nhất tới đâu, đọc từ CHÍNH hồ sơ (sổ đóng/mở ca, các mốc ghi
+//                  chép, lịch sử nhập từng giai đoạn, ghi chép đang gõ ở từng giai đoạn)
+// Quy tắc:
+//   · s <= reached, và không phải giai đoạn đang làm → đã thực hiện (xanh)
+//   · s === currentStage, ca đang mở                 → đang làm (cam)
+//   · s === currentStage, ca đã đóng                 → đã thực hiện (xanh)
+//   · s > reached                                    → chưa tới (xám)
+function _stageReached(c) {
+  if (!c) return 1;
+  let m = Math.min(5, Math.max(1, c.currentStage || 1));
+  const bump = (v) => { const n = parseInt(v, 10); if (n >= 1 && n <= 5 && n > m) m = n; };
+  bump(c.lastAnalysis && c.lastAnalysis._currentStage);
+  (Array.isArray(c.statusLog) ? c.statusLog : []).forEach(x => bump(x && x.stage));
+  (Array.isArray(c.entries) ? c.entries : []).forEach(x => bump(x && x.stage));
+  const sh = c.stageHistory;
+  if (sh && typeof sh === 'object') Object.keys(sh).forEach(k => {
+    if (Array.isArray(sh[k]) && sh[k].length) bump(k);
+  });
+  const sd = c.stageData;
+  if (sd && typeof sd === 'object') Object.keys(sd).forEach(k => {
+    if (sd[k] && String(sd[k].notes || '').trim()) bump(k);
+  });
+  const bs = c.lastAnalysis && c.lastAnalysis._notesByStage;
+  if (bs && typeof bs === 'object') Object.keys(bs).forEach(k => {
+    if (String(bs[k] || '').trim()) bump(k);
+  });
+  return m;
+}
+
 function _stageStates(c) {
   const stage = Math.min(5, Math.max(1, (c && c.currentStage) || 1));
   const closed = !!(c && c.status === 'closed');
+  const reached = _stageReached(c);
   return [1, 2, 3, 4, 5].map(s => {
-    if (s < stage) return 'done';
     if (s === stage) return closed ? 'done' : 'current';
-    return 'todo';
+    return s <= reached ? 'done' : 'todo';
   });
 }
 
-// Câu giải thích khi trỏ chuột vào dải chấm — để không ai phải đoán ý nghĩa màu.
+// Câu giải thích khi trỏ chuột / dưới dải chấm — để không ai phải đoán ý nghĩa màu.
+// Nói cả hai con số khi chúng khác nhau, vì đó chính là lúc dải chấm dễ bị hiểu sai nhất.
 function _stageStatesTitle(c) {
   const stage = Math.min(5, Math.max(1, (c && c.currentStage) || 1));
+  const reached = _stageReached(c);
   const names = ['', 'Tiếp cận', 'Vãng gia', 'Kế hoạch', 'Tiến trình', 'Kết thúc'];
-  return (c && c.status === 'closed')
-    ? 'Ca đã đóng ở GĐ ' + stage + ' — ' + names[stage] + (stage < 5 ? '. Các giai đoạn sau chưa thực hiện.' : '')
-    : 'Đang ở GĐ ' + stage + ' — ' + names[stage] + '/5';
+  const xa = reached > stage ? ' Đã từng thực hiện tới GĐ ' + reached + ' — ' + names[reached] + '.' : '';
+  if (c && c.status === 'closed') {
+    return 'Ca đã đóng ở GĐ ' + stage + ' — ' + names[stage] + '.' + xa
+      + (reached < 5 ? ' GĐ ' + (reached + 1) + '–5 chưa thực hiện.' : '');
+  }
+  return 'Đang ở GĐ ' + stage + ' — ' + names[stage] + '/5.' + xa;
 }
 
 function renderCaseList() {
@@ -4875,6 +4912,7 @@ function _caseStatusLogHTML(c) {
   const rows = (log.length ? log : old).slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
   if (!rows.length) return '';
   return '<div class="cd-section"><div class="cd-section-title">Lịch sử đóng / mở lại ca</div>'
+    + '<div style="font-size:13px;color:var(--t3);margin:-2px 0 4px;">Theo thứ tự thời gian — cũ nhất ở trên.</div>'
     + '<div class="cs-log">' + rows.map(r => {
         const isClose = r.action === 'close';
         const meta = [fmtVN(r.at), r.stage ? 'GĐ ' + r.stage : '', r.by ? esc(r.by) : ''].filter(Boolean).join(' · ');
