@@ -290,7 +290,7 @@ Không có test tự động trong repo (app là script không module, không c�
 Kiểm thử được viết dưới dạng script Playwright chạy ngoài, dựng máy chủ tĩnh trên `localhost:8899`
 và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồng mà không cần khóa thật.
 
-**Lần QA gần nhất: 08/09/2026 — 18 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
+**Lần QA gần nhất: 08/09/2026 — 19 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
 
 | Bộ | Kết quả | Phủ những gì |
 |---|---|---|
@@ -302,6 +302,7 @@ và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồn
 | `contrast` | tất cả đạt | Tương phản WCAG mọi phần tử có chữ, chặn dưới 2.5:1; soi file CSS tìm `var()` trỏ vào biến chưa khai báo mà không có giá trị dự phòng |
 | `hover` | 73/73 phần tử | Tương phản ở **cả** trạng thái nghỉ và trỏ chuột — bộ cũ chỉ kiểm lúc đứng yên nên bỏ sót chip gợi ý mất chữ khi hover |
 | `pii` | 20/20 đạt | Đường ghi chép → AI → biểu mẫu của SĐT/CCCD/email: che có đánh số, khôi phục nguyên văn, hai số khác nhau không lẫn người, không phá số thường ("bé 12 tuổi"), dung sai khi model sao lại nhãn sai kiểu (`[ sdt_1 ]`, `[SĐT_1]`); `deepMerge` với mảng giàu/nghèo hơn |
+| `hist` | 23/23 đạt | Xem lại / in lại bản lưu: mốc lịch sử là bản chụp (sửa dữ liệu hiện tại không làm đổi bản cũ), bản lưu kế hoạch bản 1 vẫn chỉ có 2 mục tiêu, chế độ chỉ đọc chặn sửa/lưu/phân tích/chuyển giai đoạn, in ra đúng nội dung bản lưu, thoát về đúng dữ liệu hiện tại; ô chọn buổi vãng gia lọc cả màn hình lẫn file .docx và đặt tên file kèm số lần + ngày |
 | `vg` | 18/18 đạt | Vãng gia nhiều buổi: 3 buổi ra 3 phúc trình có ngắt trang và số lần đúng, ca một buổi in y như cũ, hồ sơ cũ (chỉ có bản gộp) vẫn in được, màn hình hiện đủ 3 buổi, sửa buổi 3 không đổi buổi 1, ẩn danh phủ hết danh sách |
 | `plan` | 11/11 đạt | Chuẩn hóa kế hoạch: xếp 7 mục tiêu thật của ca mẫu vào đúng 1 trong 8 loại của Mục I Form 4; `loai` lạ thì không mất chữ mà đẩy xuống `muc_tieu`; `fmtDate` không được thay trắng cả câu bằng cái ngày trong câu (8 câu phải giữ nguyên, 9 giá trị phải đổi) |
 | `mapall` · `mapping` · `bridge` · `bridge5` · `perform` | tất cả đạt | 170 khóa schema × 11 biểu mẫu: không khóa nào mất, không ô nào chỉ có trên web hoặc chỉ có trong .docx; cầu nối báo cáo → biểu mẫu cho cả 5 giai đoạn (không ghi đè chữ NVXH đã ghi) |
@@ -344,6 +345,9 @@ trong code. Nơi nên đọc trước:
 | Vì sao `fmtDate` có cổng chặn ở đầu | `src/js/utils.js` ngay trên `fmtDate` — trước đây một câu dài chứa ngày bị thay trắng |
 | Vì sao Mục I Form 4 từng trống | `main.js` gần `_normalizePlan`, `_NC_KW` |
 | Vãng gia nhiều buổi: bản gộp vs từng buổi | `main.js` gần `_ensureVgList`, `_vgList`, `_vgFromReport` |
+| Xem lại / in lại bản lưu, vì sao phải chặn đường ghi | `main.js` gần `viewEntrySnapshot`, `isHistMode`, `_snapD` |
+| Vì sao lịch sử từng bị mất dù vẫn thấy đủ mốc | `main.js` trong `saveCaseNow`, chỗ `const snap = _snapD()` |
+| Chọn in riêng một buổi vãng gia | `main.js` gần `_vgPick`, `_vgShown`, `_vgFileSuffix` |
 | Truy vết nguồn (chặn AI bịa) | `main.js` gần `F()`, `_checkGround`, `_GROUND_RATIO` |
 | Thu gọn / mở rộng khu chat | `main.js` gần `setChatView`, `_restoreChatView` |
 | Emoji → icon nét, 3 tông màu báo cáo | `main.js` gần `_SEC_ICON`, `_SEC_TONE`, `_secHead` |
