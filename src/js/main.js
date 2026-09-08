@@ -1551,6 +1551,8 @@ async function runAnalysis() {
       restoreRealNamesDeep(report);
       report._stage = currentStage;
       D._report = report;
+      // Lấp chỗ trống của biểu mẫu bằng nội dung báo cáo — xem ghi chú ở _fillFormFromReport
+      D = _fillFormFromReport(D, report);
       // Có nội dung AI mới → xác nhận trước đó không còn giá trị, bản in về lại BẢN NHÁP.
       D._verified = null;
       D._notes = notes;
@@ -3950,6 +3952,44 @@ function _cbPick(opts, sel) {
   return top.length === 1 ? top[0].i : -1;   // vẫn bằng nhau → không tích ô nào
 }
 
+// ════════════════════
+// NỐI BÁO CÁO → BIỂU MẪU
+// ════════════════════
+// Một lần phân tích gọi HAI lượt AI SONG SONG: một sinh báo cáo cho khung chat, một trích xuất
+// dữ liệu cho biểu mẫu. Trước đây hai lượt hoàn toàn độc lập, nên hay gặp cảnh báo cáo ghi rõ
+// "Rủi ro: Cao — vết bầm chưa rõ nguyên nhân" mà ô NGUY CƠ trong biểu mẫu vẫn để trống. NVXH
+// thấy hai kết quả lệch nhau cho cùng một ca, và phần việc AI đã làm bị mất.
+//
+// Hàm này lấp CHỖ TRỐNG của biểu mẫu bằng chính nội dung báo cáo — KHÔNG ghi đè giá trị đã có,
+// và không thêm suy diễn nào mới: mọi giá trị đều là chữ AI đã viết ra cho cùng ghi chép đó,
+// nên vẫn đi qua bộ truy vết nguồn (📎 / ❓) như mọi ô khác.
+function _fillFormFromReport(D, r) {
+  if (!D || !r) return D;
+  const txt = (v) => Array.isArray(v) ? v.filter(Boolean).join('; ') : (v == null ? '' : String(v));
+  const put = (obj, key, val) => {
+    const v = txt(val).trim();
+    if (!v) return;
+    if (!obj) return;
+    if (cf(obj[key])) return;         // đã có nội dung → giữ nguyên, không ghi đè
+    obj[key] = v;
+  };
+  D.danh_gia = D.danh_gia || {};
+  const dg = D.danh_gia, nw = r.needs_vs_wants || {};
+  put(dg, 'nguy_co',        r.red_flags && r.red_flags.length ? r.red_flags : r.risk_reason);
+  put(dg, 'muc_khan_cap',   r.risk || r.risk_level);
+  put(dg, 'yeu_to_bao_ve',  r.yeu_to_bao_ve);
+  put(dg, 'uu_the_tre',     r.strengths);
+  put(dg, 'nhan_xet_nvxh',  r.summary || r.progress_summary);
+  put(dg, 'yeu_cau_tre',    nw.wants);
+  // Nhu cầu khách quan: báo cáo chỉ cho một danh sách chung, không tách thể chất / tâm lý /
+  // nhận thức. Đặt vào ô "nhu cầu thể chất" là đoán, nên KHÔNG làm — để trống cho NVXH phân
+  // loại, đúng nguyên tắc thà thiếu hơn sai.
+  if (r.parentification && r.parentification.detected) {
+    put(dg, 'van_de_tam_ly', [r.parentification.type, r.parentification.description]);
+  }
+  return D;
+}
+
 function updateHeader() {
   const c = curCaseId ? loadCases()[curCaseId] : null;
   const isDraft = curCaseId && curCaseId === _draftCaseId;
@@ -5203,6 +5243,13 @@ async function buildDocx(fi,logoData,footerData,_collector){
     body.push(TBLF(["Họ và tên","Quan hệ với trẻ","Năm sinh","Tình trạng SK","Nghề nghiệp","Ghi chú"],tvR,[1600,1300,900,1400,1500,1938]));
 
     body.push(SUB("Hoàn cảnh gia đình (kinh tế, điều kiện sống, nhà ở, thu nhập)"));
+    // Sáu trường này là các thành phần của chính "hoàn cảnh gia đình" mà AI trích xuất riêng.
+    // Trước đây chỉ hiện trên màn hình, bản in chỉ có đoạn mô tả gộp.
+    body.push(FTBL([
+      ["Loại hình gia đình", gd.loai_hinh||"", "Tình trạng hôn nhân", gd.tinh_trang_hon_nhan||""],
+      ["Bầu khí gia đình", gd.bau_khi||"", "Kinh tế", gd.kinh_te||""],
+      ["Nhà ở", gd.nha_o||"", "Quan hệ cộng đồng", gd.cong_dong||""],
+    ],{cols:2}));
     body.push(...ML(gd.hoan_canh,3));
 
     body.push(SH("C. TÌNH TRẠNG CỦA TRẺ"));
@@ -5393,13 +5440,39 @@ async function buildDocx(fi,logoData,footerData,_collector){
     const mts=(kh.nhu_cau_ho_tro||[]).filter(n=>n.muc_tieu);
     mts.forEach((m,i)=>body.push(FL("Mục tiêu "+(i+1),m.muc_tieu)));
     if(!mts.length){body.push(FL("Mục tiêu 1",""));body.push(FL("Mục tiêu 2",""));}
+    // Hai bảng dưới đây trước đây điền LỆCH CỘT:
+    //   - bảng mục tiêu: cột "Mục tiêu" nhận m.loai (tên nhóm nhu cầu) còn cột "Giải pháp"
+    //     nhận m.muc_tieu (chính là mục tiêu) — đảo nghĩa hai cột; ba cột người thực hiện /
+    //     thời gian / nguồn lực để trống dù ke_hoach.hoat_dong đã có sẵn;
+    //   - bảng hoạt động: cột "Người thực hiện" nhận h.muc_tieu_so, tức SỐ THỨ TỰ MỤC TIÊU bị
+    //     in vào ô tên người phụ trách.
+    // Nay ghép hoạt động về đúng mục tiêu của nó qua muc_tieu_so để lấy người phụ trách, thời
+    // gian và nguồn lực; mức ưu tiên ghi thành tiền tố vì mẫu chính thức không có cột riêng.
+    const _actOf = (i) => (kh.hoat_dong||[]).find(h=>String(h.muc_tieu_so||'')===String(i+1)) || {};
     body.push(TBLF(["Mục tiêu","Giải pháp","Người thực hiện","Thời gian","Nguồn lực/Kinh phí"],
-      mts.length?mts.map(m=>[m.loai,m.muc_tieu,"","",""]):[[""],[""],[""],[""],[""],[""]]));
+      mts.length?mts.map((m,i)=>{ const a=_actOf(i);
+        return [ (m.uu_tien?'(Ưu tiên '+m.uu_tien+') ':'')+(m.muc_tieu||''), a.noi_dung||'',
+                 a.nguoi_phu_trach||'', a.thoi_gian||'', a.nguon_luc||'' ];
+      }):[["","","","",""],["","","","",""],["","","","",""]]));
     body.push(P([R("4) Xây dựng hoạt động can thiệp:",{bold:true})]));
-    const hds=(kh.hoat_dong||[]).map(h=>[h.noi_dung,"",h.muc_tieu_so||"",h.thoi_gian,""]);
+    const hds=(kh.hoat_dong||[]).map(h=>[
+      (h.uu_tien?'(Ưu tiên '+h.uu_tien+') ':'')+(h.noi_dung||''), "",
+      h.nguoi_phu_trach||"", h.thoi_gian||"", h.nguon_luc||""]);
     while(hds.length<3)hds.push(["","","","",""]);
     body.push(TBLF(["Hoạt động","Chỉ số đầu ra","Người thực hiện","Thời gian","Kết quả"],hds));
-    body.push(P([R("5) Nhận xét/đánh giá/đề xuất:",{bold:true})]));body.push(P([V(D.de_xuat)]));body.push(...ML("",2));
+    // Bốn khối dưới đây AI đã trích xuất và bản xem trên màn hình đã hiện từ trước, nhưng bản
+    // in thì KHÔNG có — trong đó có phần cam kết, tức đúng phần các bên đặt bút ký.
+    body.push(P([R("5) Mốc thời gian:",{bold:true})]));
+    body.push(FLM(["Thời gian bắt đầu case",kh.bat_dau_case||""],["Thời gian thực hiện kế hoạch",kh.thoi_gian_kh||""]));
+    const _xx=(kh.xem_xet||[]).filter(Boolean);
+    body.push(P([R("6) Mốc xem xét lại kế hoạch:",{bold:true})]));
+    if(_xx.length) _xx.forEach((x,i)=>body.push(FL("Lần "+(i+1),x)));
+    else body.push(...ML("",2));
+    body.push(P([R("7) Cam kết của các bên:",{bold:true})]));
+    body.push(FL("Gia đình cam kết",kh.cam_ket_gia_dinh||""));
+    body.push(FL("Trẻ cam kết",kh.cam_ket_tre||""));
+    body.push(FL("NVXH cam kết",kh.cam_ket_nvxh||""));
+    body.push(P([R("8) Nhận xét/đánh giá/đề xuất:",{bold:true})]));body.push(P([V(D.de_xuat)]));body.push(...ML("",2));
     body.push(DATE_R());body.push(SGN(["Giám sát","Nhân viên xã hội"]));
 
     // ── TRANG 3: PHIẾU THEO DÕI TÌNH HÌNH ──
@@ -5435,6 +5508,12 @@ async function buildDocx(fi,logoData,footerData,_collector){
     body.push(SUB("Về tâm lý/tình cảm"));body.push(P([V(dg.nhu_cau_tam_ly)]));body.push(...ML("",1));
     body.push(SUB("Về nhận thức"));body.push(P([V(dg.nhu_cau_nhan_thuc)]));body.push(...ML("",1));
     body.push(SH("Mong đợi và đề xuất của trẻ:"));body.push(P([V(dg.yeu_cau_tre)]));body.push(...ML("",1));
+    // Ưu thế và nguồn lực: AI đã trích xuất, bản xem trên màn hình đã hiện, nhưng bản in
+    // trước đây bỏ hết — bản in chỉ còn vấn đề và nguy cơ, mất hẳn góc nhìn dựa trên điểm mạnh.
+    body.push(SH("Ưu thế và nguồn lực"));
+    body.push(FL("Ưu thế của trẻ",dg.uu_the_tre||""));
+    body.push(FL("Ưu thế của gia đình / cộng đồng",dg.uu_the_gia_dinh||""));
+    body.push(FL("Nguồn lực của trẻ",dg.nguon_luc_tre||""));
     body.push(SH("Nhận xét — định hướng của NVXH"));body.push(P([V(dg.nhan_xet_nvxh)]));body.push(...ML("",2));
     body.push(DATE_R());body.push(SGN(["Giám sát","Nhân viên xã hội TC"]));
   }else if(fi===5){
@@ -5464,7 +5543,14 @@ async function buildDocx(fi,logoData,footerData,_collector){
     });
     body.push(TBLF(["TT","Nhu cầu cần hỗ trợ","Mức độ ưu tiên (1, 2, 3)","Mục tiêu cụ thể cần đạt được"],nc5,[400,2800,1600,4838]));
     body.push(SH("II. Các hoạt động trợ giúp"));
-    const hd5=(kh.hoat_dong||[]).map((h,i)=>[h.muc_tieu_so||String(i+1),h.noi_dung,fmtDate(h.thoi_gian),h.nguon_luc,h.nguon_luc_gd,h.nguon_luc_cs]);
+    // Mẫu chính thức của bảng này chỉ có 6 cột, không có cột "Người thực hiện" cũng không có
+    // cột ưu tiên — mà AI thì trích xuất cả hai. Trước đây hai thông tin đó rơi mất khỏi bản
+    // in. Nay ghép vào ô "Hoạt động" thay vì thêm cột lạ vào mẫu.
+    const hd5=(kh.hoat_dong||[]).map((h,i)=>[
+      h.muc_tieu_so||String(i+1),
+      [(h.uu_tien?'(Ưu tiên '+h.uu_tien+')':''), h.noi_dung||'',
+       (h.nguoi_phu_trach?'· Người thực hiện: '+h.nguoi_phu_trach:'')].filter(Boolean).join(' '),
+      fmtDate(h.thoi_gian),h.nguon_luc,h.nguon_luc_gd,h.nguon_luc_cs]);
     while(hd5.length<4)hd5.push(["","","","","",""]);
     body.push(TBLF(["Mục tiêu số","Hoạt động","Thời gian thực hiện","Nguồn lực/kinh phí","Nguồn lực gia đình","Nguồn lực Cơ sở"],hd5,[600,2600,1200,1600,1300,2338]));
     body.push(SH("III. Nguồn lực kết nối hỗ trợ"));
@@ -5472,7 +5558,16 @@ async function buildDocx(fi,logoData,footerData,_collector){
     body.push(SH("IV. Đánh giá nhận xét của nhân viên xã hội"));
     body.push(...ML(dg.nhan_xet_nvxh,3));
     body.push(SH("V. Ngày xem xét và điều chỉnh kế hoạch (tối thiểu 3–6 tháng)"));
-    body.push(TBLF(["Lần 1 (ngày/tháng/năm)","Lần 2 (ngày/tháng/năm)","Lần 3 (ngày/tháng/năm)"],[["","",""]],[Math.floor(CW/3),Math.floor(CW/3),CW-2*Math.floor(CW/3)]));
+    // Bảng này trước đây in ra RỖNG dù AI đã trích xuất kh.xem_xet từ ghi chép họp kế hoạch.
+    const _xx5=(kh.xem_xet||[]).filter(Boolean).slice(0,3);
+    while(_xx5.length<3)_xx5.push("");
+    body.push(TBLF(["Lần 1 (ngày/tháng/năm)","Lần 2 (ngày/tháng/năm)","Lần 3 (ngày/tháng/năm)"],[_xx5],[Math.floor(CW/3),Math.floor(CW/3),CW-2*Math.floor(CW/3)]));
+    // Cam kết ba bên: đây là phần gia đình, trẻ và NVXH đặt bút ký (chữ ký cuối phiếu đã có ô
+    // "PH Thân chủ"), nhưng nội dung cam kết trước đây không hề có trên bản in.
+    body.push(SH("VI. Cam kết của các bên"));
+    body.push(FL("Gia đình cam kết",kh.cam_ket_gia_dinh||""));
+    body.push(FL("Trẻ cam kết",kh.cam_ket_tre||""));
+    body.push(FL("NVXH cam kết",kh.cam_ket_nvxh||""));
     body.push(DATE_R());body.push(SGN(["Giám sát","PH Thân chủ","Nhân viên xã hội"]));
   }else if(fi===6){
     body.push(...TITLE("TIẾN ĐỘ THỰC HIỆN KẾ HOẠCH HỖ TRỢ CASE"));
