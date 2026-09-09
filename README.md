@@ -126,6 +126,7 @@ Chạy theo đúng thứ tự trong `supabase/migrations/`, dán từng file và
 | `0014_fix_admin_email_policy_permission.sql` | **Sửa lỗi `permission denied for table users` khi lưu ca lần thứ hai.** Các policy admin từ `0003`→`0010` đọc trực tiếp `auth.users`, mà role `authenticated` không có quyền SELECT trên bảng đó; `INSERT … ON CONFLICT DO UPDATE` lại đòi cả policy SELECT nên câu lệnh lưu thất bại. Migration bọc phép so email vào `private.is_super_admin()` (SECURITY DEFINER) rồi dựng lại 5 policy. Không đổi dữ liệu, không đổi ai xem được ca nào |
 | `0015_fix_profiles_role_values.sql` | **Sửa lỗi của `0011`.** Đã chạy: `convalidated = true`, `role = 'officer'` cho cả 2 tài khoản. `alter table … add column if not exists role` bị Postgres bỏ qua vì cột `role` đã có sẵn (giá trị `'user'`) **và đã có ràng buộc `profiles_role_check` riêng của schema gốc, với bộ giá trị không chứa `'officer'`/`'team_leader'`**, nên cả `default 'officer'` lẫn ràng buộc `check` mới đều không được tạo — khiến `private.is_team_leader()` không bao giờ khớp và cơ chế trưởng nhóm coi như không tồn tại. Migration **bỏ ràng buộc cũ trước**, rồi chuẩn hóa `'user'` → `'officer'`, đặt lại DEFAULT/NOT NULL và tạo lại `check` bằng `add constraint` (đảo thứ tự là lỗi 23514). Chỉ cần chạy nếu định dùng vai trưởng nhóm |
 | `0016_transfer_case_and_set_role.sql` | **Bàn giao ca** cho NVXH khác (hàm `transfer_case`, sổ `case_transfers` ghi ở tầng DB nên không sửa lại được từ app) và **gán vai trò/nhóm** (`set_user_role`) — trước đó phải chạy SQL tay. Lý do bàn giao là **bắt buộc**, kiểm ngay trong hàm chứ không chỉ ở giao diện |
+| `0017_admin_by_role.sql` | **Quyền "xem tất cả ca" chuyển từ email cứng sang `profiles.role = 'admin'`** — tổ chức tự gán/thu quyền trong app, không phải sửa code, và đọc bảng là biết ai có quyền gì. Giữ một email dự phòng trong hàm để không bao giờ mất hết quyền quản trị. Kèm bù dòng `profiles` cho tài khoản còn thiếu (4/6 tài khoản chưa có) và phân quyền theo yêu cầu 09/09/2026 |
 
 ### Bước làm tay không nằm trong migration nào
 
@@ -157,29 +158,55 @@ update cases_v2 set data_enc = encrypt_case_data(data) where data_enc is null an
 
 | Vai | Xem được | Sửa/xóa | Xác định bằng |
 |---|---|---|---|
-| NVXH (`officer`) | chỉ ca của chính mình | ✅ ca của mình | `cases_v2.user_id = auth.uid()` |
+| CBXH (`officer`) | chỉ ca của chính mình | ✅ ca của mình | `cases_v2.user_id = auth.uid()` |
+| Quản lý (`admin`) | **toàn bộ ca của mọi người** | ❌ chỉ xem | `profiles.role = 'admin'` |
 | Trưởng nhóm (`team_leader`) | ca của mình **+ ca cùng `team_id`** | ❌ chỉ xem | `profiles.role` + `profiles.team_id` |
-| Admin | **toàn bộ ca của mọi người** | ❌ chỉ xem | **email viết cứng** |
 
-Chỉ **một** người xem được hết ca: `hangcong.nguyen@thaodancenter.org.vn`. Email này phải khớp ở
-hai nơi — `ADMIN_EMAIL` trong `src/js/main.js` (quyết định giao diện có tải hết ca không) và hàm
-`private.is_super_admin()` trong DB (quyết định RLS có cho đọc không).
+Từ migration `0017`, quyền quản lý là **dữ liệu**, không còn là email viết cứng. Gán/thu quyền
+ngay trong app: menu **⋯ → "Gán vai trò & nhóm (quản trị)"**, hoặc bằng SQL (xem dưới). Người
+được gán tải lại trang là có hiệu lực — **không cần deploy**.
 
-Ba điều dễ hiểu sai, đã trả giá để biết:
+Vẫn còn **một email dự phòng** trong `private.is_super_admin()` và `ADMIN_EMAIL`
+(`hangcong.nguyen@thaodancenter.org.vn`). Nó tồn tại để nếu ai lỡ tay hạ hết `role = 'admin'` thì
+còn một đường vào gán lại — mất hết quyền quản trị thì không ai vào sửa được. **Hai chỗ đó phải
+luôn khớp nhau**; bộ kiểm thử `role` có một kiểm tra đối chiếu đúng việc này.
 
-1. **Gán `profiles.role = 'admin'` KHÔNG cho ai xem hết ca.** Cột `role` chỉ dùng cho policy của
-   bảng `profiles`. Bốn policy cũ trên `cases_v2` dựa theo `is_admin()` đã bị xóa ở migration
-   `0007`. Muốn thêm người xem hết ca thì sửa `private.is_super_admin()` hoặc thêm policy.
-2. **Admin xem được nhưng không sửa được ca người khác** (`admin_all_cases` là `FOR SELECT`). Admin
-   mở ca của NVXH khác rồi bấm Lưu thì DB từ chối — giao diện hiện chưa nói trước việc này.
+Phân quyền đang áp dụng (yêu cầu của tổ chức 09/09/2026): `hangcong.nguyen@thaodancenter.org.vn` ·
+`ngan.lee@thaodancenter.org.vn` · `thien.nguyen@asif.foundation` là **quản lý**; còn lại là
+**CBXH**. Không dùng nhóm — cơ chế trưởng nhóm vẫn còn đó cho lúc chia địa bàn.
+
+Bốn điều dễ hiểu sai, đã trả giá để biết:
+
+1. **Quản lý xem được nhưng KHÔNG sửa được ca người khác** (`admin_all_cases` là `FOR SELECT`,
+   còn `users_own_cases` là `FOR ALL` trên ca của mình). Quản lý mở ca của CBXH khác rồi bấm Lưu
+   thì DB từ chối — giao diện hiện chưa nói trước việc này.
+2. **Tài khoản không có dòng `profiles` thì mọi lệnh `update profiles` sửa 0 dòng và im lặng.**
+   Đã gặp thật: 4 trong 6 tài khoản chưa có dòng nào, nên lệnh gán quyền "chạy xong" mà không đổi
+   gì. Dùng `insert … on conflict` hoặc bù dòng trước (migration `0017` làm sẵn).
 3. **Trưởng nhóm chỉ có hiệu lực khi gán đủ 3 chỗ**: `role` và `team_id` cho người, `team_id` cho
    ca. Policy đòi `team_id IS NOT NULL` ở cả hai, mà trong SQL `NULL = NULL` không bao giờ đúng.
-   Gán `team_id` cho ca thì app có sẵn (chỉ admin thấy); gán `role`/`team_id` cho người **chưa có
-   UI**, phải chạy SQL:
+4. **`set_user_role()` KHÔNG chạy được trong SQL Editor** — nó kiểm người gọi qua `auth.uid()`, mà
+   SQL Editor không có ai đăng nhập nên hàm coi như không phải quản trị và báo lỗi. Hàm đó dành
+   cho app; trong SQL Editor thì sửa thẳng bảng.
+
+Gán quyền bằng SQL (chạy được trong SQL Editor, an toàn khi chạy lại):
 
 ```sql
-update profiles set role = 'team_leader', team_id = 'nhom-1' where id = '<uid trưởng nhóm>';
-update profiles set team_id = 'nhom-1'                        where id = '<uid NVXH>';
+-- Quản lý (xem tất cả ca)
+insert into profiles (id, role, team_id)
+select id, 'admin', null from auth.users where lower(email) = 'nguoi@thaodancenter.org.vn'
+on conflict (id) do update set role = 'admin', team_id = null;
+
+-- CBXH (chỉ ca của mình)
+insert into profiles (id, role, team_id)
+select id, 'officer', null from auth.users where lower(email) = 'nguoi@thaodancenter.org.vn'
+on conflict (id) do update set role = 'officer', team_id = null;
+
+-- Xem ai đang có quyền gì (kể cả người chưa có dòng profiles)
+select u.email, coalesce(p.role,'(chưa có dòng profiles)') as role,
+       coalesce(p.team_id,'—') as nhom, u.last_sign_in_at::date as dang_nhap_lan_cuoi
+from auth.users u left join profiles p on p.id = u.id
+order by p.role, u.email;
 ```
 
 Xem trạng thái thật bất cứ lúc nào:
@@ -300,7 +327,7 @@ Không có test tự động trong repo (app là script không module, không c�
 Kiểm thử được viết dưới dạng script Playwright chạy ngoài, dựng máy chủ tĩnh trên `localhost:8899`
 và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồng mà không cần khóa thật.
 
-**Lần QA gần nhất: 08/09/2026 — 30 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
+**Lần QA gần nhất: 09/09/2026 — 31 bộ, tất cả đạt**, trên 11 khổ máy từ 360px tới 1920px:
 
 | Bộ | Kết quả | Phủ những gì |
 |---|---|---|
@@ -312,6 +339,7 @@ và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồn
 | `contrast` | tất cả đạt | Tương phản WCAG mọi phần tử có chữ, chặn dưới 2.5:1; soi file CSS tìm `var()` trỏ vào biến chưa khai báo mà không có giá trị dự phòng |
 | `hover` | 73/73 phần tử | Tương phản ở **cả** trạng thái nghỉ và trỏ chuột — bộ cũ chỉ kiểm lúc đứng yên nên bỏ sót chip gợi ý mất chữ khi hover |
 | `pii` | 20/20 đạt | Đường ghi chép → AI → biểu mẫu của SĐT/CCCD/email: che có đánh số, khôi phục nguyên văn, hai số khác nhau không lẫn người, không phá số thường ("bé 12 tuổi"), dung sai khi model sao lại nhãn sai kiểu (`[ sdt_1 ]`, `[SĐT_1]`); `deepMerge` với mảng giàu/nghèo hơn |
+| `role` | 24/24 đạt | Quyền quản lý đọc từ `profiles.role`: gán/hạ quyền có hiệu lực ngay không cần sửa code, email dự phòng vẫn vào được khi role bị hạ, đọc vai trò lỗi mạng thì nghiêng về phía ÍT quyền, đăng xuất xoá vai trò; đối chiếu email dự phòng trong migration `0017` phải khớp `ADMIN_EMAIL` trong code |
 | `qanew` | 34/34 đạt | Bấm THẬT từng nút của các tính năng mới trong trạng thái đã đăng nhập: mở ca từ danh sách việc (cả ca đang mở và ca đã đóng), tick xong việc, 4 nút trên thanh công cụ form đều tạo được file, dải BẢN NHÁP còn 1 dòng, header/menu ⋯/3 tab, xuất JSON hỏi trước và chỉ hỏi một lần, bàn giao + màn quản trị, không còn vết tích OCR, RAG không gọi mạng. Kèm bắt lỗi JS trong suốt bài kiểm |
 | `todo` | 20/20 đạt | "Việc cần làm": dựng đúng việc từ hoạt động kế hoạch + mốc xem xét + lịch theo dõi sau đóng ca; chia trễ hạn/hôm nay/7 ngày; ca đã đóng chỉ lấy lịch theo dõi; hạn không phải ngày cụ thể ("hàng tháng", "2 tuần") thì bỏ qua chứ không bịa hạn; đánh dấu xong lưu vào hồ sơ ca |
 | `handover` | 26/26 đạt | Bàn giao ca: đòi cả email người nhận (đúng dạng) lẫn lý do ≥10 ký tự, ghi sổ TRƯỚC rồi mới gọi chuyển, RPC lỗi thì ca vẫn còn tại máy và hiện nguyên văn lỗi máy chủ, không phải chủ ca thì không mở được hộp thoại; màn gán vai trò chỉ quản trị mở được (gọi trực tiếp cũng chặn) |

@@ -11,8 +11,27 @@ const SUPABASE_URL = 'https://mlhtvxoricudzstpzquh.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_SemT5e_eSp8FqkONPGTr0g_HWWtgRT2';
 const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let _currentUser = null;
+// Email quản trị DỰ PHÒNG. Từ migration 0017, quyền quản trị đọc từ profiles.role = 'admin' —
+// tổ chức tự gán được trong app, không phải sửa code. Giữ email này làm đường vào cuối: nếu ai
+// lỡ tay hạ hết role admin thì không còn ai gán lại được nữa. Phải khớp với email dự phòng
+// trong hàm private.is_super_admin() (migration 0017), nếu không thì giao diện và RLS lệch nhau.
 const ADMIN_EMAIL = 'hangcong.nguyen@thaodancenter.org.vn';
-function isAdmin() { return _currentUser?.email === ADMIN_EMAIL; }
+let _currentRole = null;   // 'admin' | 'team_leader' | 'officer' — nạp sau khi đăng nhập
+
+function isAdmin() { return _currentRole === 'admin' || _currentUser?.email === ADMIN_EMAIL; }
+
+// Nạp vai trò từ profiles. Phải xong TRƯỚC khi vẽ danh sách ca, vì isAdmin() quyết định hiện
+// mục quản trị và cột chủ ca. Lỗi mạng thì để null — lúc đó chỉ còn email dự phòng có quyền,
+// tức nghiêng về phía ÍT quyền hơn, đúng hướng an toàn cho hồ sơ trẻ.
+async function _loadRole() {
+  _currentRole = null;
+  if (!_currentUser) return;
+  try {
+    const { data, error } = await _supabase
+      .from('profiles').select('role').eq('id', _currentUser.id).maybeSingle();
+    if (!error && data && data.role) _currentRole = data.role;
+  } catch (e) { console.warn('Không đọc được vai trò:', e); }
+}
 
 // ── STATE ──
 let D = null;
@@ -206,7 +225,7 @@ async function loginEmail() {
 async function logoutUser() {
   document.getElementById('session-warn')?.classList.remove('show');
   await _supabase.auth.signOut();
-  _currentUser = null; _cases = {};
+  _currentUser = null; _currentRole = null; _cases = {};
   window._sessionReset?.();
   // ── Reset toàn bộ state ──
   _discardDraft();
@@ -263,8 +282,11 @@ function _onLogin(user) {
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('user-bar').style.display = 'flex';
   document.getElementById('user-email').textContent = user.email;
-  // Load cases từ Supabase rồi hiển thị màn hình sạch — user chọn ca từ danh sách
-  initStorage().then(() => {
+  // Load cases từ Supabase rồi hiển thị màn hình sạch — user chọn ca từ danh sách.
+  // Nạp vai trò TRƯỚC: isAdmin() quyết định mục quản trị trong menu ⋯ và cột chủ ca trong danh
+  // sách, nên nếu vẽ trước khi biết vai trò thì quản lý đăng nhập vào không thấy nút của mình.
+  _loadRole().then(() => initStorage()).then(() => {
+    applyFeatureFlags();
     updateCasesCount();
     renderCaseList();
     if (isAdmin()) showNotif('👑 Chế độ Admin — hiển thị ' + Object.keys(_cases).length + ' ca toàn hệ thống', 'info');
