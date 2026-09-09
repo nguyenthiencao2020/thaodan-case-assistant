@@ -341,7 +341,7 @@ và giả lập Supabase + Groq + OpenAI để chạy được toàn bộ luồn
 | `pii` | 20/20 đạt | Đường ghi chép → AI → biểu mẫu của SĐT/CCCD/email: che có đánh số, khôi phục nguyên văn, hai số khác nhau không lẫn người, không phá số thường ("bé 12 tuổi"), dung sai khi model sao lại nhãn sai kiểu (`[ sdt_1 ]`, `[SĐT_1]`); `deepMerge` với mảng giàu/nghèo hơn |
 | `role` | 24/24 đạt | Quyền quản lý đọc từ `profiles.role`: gán/hạ quyền có hiệu lực ngay không cần sửa code, email dự phòng vẫn vào được khi role bị hạ, đọc vai trò lỗi mạng thì nghiêng về phía ÍT quyền, đăng xuất xoá vai trò; đối chiếu email dự phòng trong migration `0017` phải khớp `ADMIN_EMAIL` trong code |
 | `qanew` | 34/34 đạt | Bấm THẬT từng nút của các tính năng mới trong trạng thái đã đăng nhập: mở ca từ danh sách việc (cả ca đang mở và ca đã đóng), tick xong việc, 4 nút trên thanh công cụ form đều tạo được file, dải BẢN NHÁP còn 1 dòng, header/menu ⋯/3 tab, xuất JSON hỏi trước và chỉ hỏi một lần, bàn giao + màn quản trị, không còn vết tích OCR, RAG không gọi mạng. Kèm bắt lỗi JS trong suốt bài kiểm |
-| `todo` | 20/20 đạt | "Việc cần làm": dựng đúng việc từ hoạt động kế hoạch + mốc xem xét + lịch theo dõi sau đóng ca; chia trễ hạn/hôm nay/7 ngày; ca đã đóng chỉ lấy lịch theo dõi; hạn không phải ngày cụ thể ("hàng tháng", "2 tuần") thì bỏ qua chứ không bịa hạn; đánh dấu xong lưu vào hồ sơ ca |
+| `todo` | 33/33 đạt | "Việc cần làm": dựng đúng việc từ hoạt động kế hoạch + mốc xem xét + lịch theo dõi sau đóng ca; mức độ gấp hiện bằng "thẻ hạn" trên từng dòng (không còn tiêu đề nhóm), mỗi dòng một hành động mở ca, thu gọn được và nhớ lựa chọn; ca đã đóng chỉ lấy lịch theo dõi; hạn không phải ngày cụ thể ("hàng tháng", "2 tuần") thì bỏ qua chứ không bịa hạn; đánh dấu xong lưu vào hồ sơ ca |
 | `handover` | 26/26 đạt | Bàn giao ca: đòi cả email người nhận (đúng dạng) lẫn lý do ≥10 ký tự, ghi sổ TRƯỚC rồi mới gọi chuyển, RPC lỗi thì ca vẫn còn tại máy và hiện nguyên văn lỗi máy chủ, không phải chủ ca thì không mở được hộp thoại; màn gán vai trò chỉ quản trị mở được (gọi trực tiếp cũng chặn) |
 | `nl` | 18/18 đạt | Danh bạ nguồn lực đọc từ file .md: bỏ dòng mẫu chưa điền, tìm theo tên/nhóm/số điện thoại, nút Chép; phiếu trắng KHÔNG lẫn dữ liệu ca đang mở và trả dữ liệu ca về nguyên vẹn sau khi in |
 | `stbar` | 18/18 đạt | Dải 5 chấm tiến trình phải khớp giữa thẻ ca bên trái và trang chi tiết bên phải — quét đủ 10 tổ hợp (5 giai đoạn × mở/đóng), đọc màu thật đã tính ra chứ không đọc code. Ca đóng ở GĐ4 mà chưa từng tới GĐ5 → GĐ5 xám; ca **đã từng** tới GĐ5 rồi lùi lại (mở lại ca, lùi giai đoạn) → GĐ5 vẫn xanh, đọc bằng chứng từ sổ đóng/mở ca và các mốc ghi chép |
@@ -367,7 +367,7 @@ Bảng phủ của bộ quy trình + logic:
 | Nhánh phụ | Lùi giai đoạn, mở lại ca, backup/khôi phục (id độc bị vô hiệu), cảnh báo thiếu trường |
 | Truy vết nguồn | 10 ca thử, trong đó bắt đúng 3 giá trị bịa hoàn toàn và không báo động giả với giá trị chuẩn hóa |
 | Dấu BẢN NHÁP | Dấu trên cả 3 đường xuất; xác nhận rồi thì đổi dấu; phân tích lại thì thu hồi |
-| Che danh tính | Địa chỉ (12 câu mẫu: 5 phải che, 7 phải giữ nguyên), nhiều tên với placeholder riêng, SĐT/CCCD/email có đánh số (bộ `pii`) |
+| Che danh tính | Địa chỉ (12 câu mẫu: 5 phải che, 7 phải giữ nguyên), **"thành phố"/"khu phố" không bị coi là tên đường**, tên đường viết thường thì không che nửa vời, nhiều tên với placeholder riêng, SĐT/CCCD/email có đánh số (bộ `pii`) |
 | Chống mất dữ liệu | Mất mạng khi lưu, nháp `localStorage`, chỉ ghi ca thực sự đổi (200 ca: 0 và 1 lệnh ghi) |
 | XSS | Khai thác thật bằng tên ca chứa `<img onerror>` và id độc trong `onclick`; `escAttr()` cho giá trị thuộc tính |
 | In & xuất | Đọc XML file Word xuất ra: số mục La Mã, KHẨN CẤP, chữ ký, số trang, ảnh footer trải trọn khổ giấy, 10 biểu mẫu, công văn chuyển gửi |
@@ -385,6 +385,8 @@ trong code. Nơi nên đọc trước:
 |---|---|
 | Vì sao mỗi migration làm như vậy | comment đầu mỗi file trong `supabase/migrations/` — đặc biệt `0014` (lỗi phân quyền khi lưu ca), `0015` (lỗi ràng buộc `role` mà `0011` bỏ sót) và `0016` (bàn giao ca + gán vai trò) |
 | Việc cần làm dựng từ đâu | `main.js` gần `_collectTasks`, `renderTodo` |
+| Vì sao khối "Việc cần làm" bỏ tiêu đề nhóm | comment đầu mục `Việc cần làm` trong `src/css/main.css` — bản đầu bị NVXH nhận xét là xấu: 4 tầng tiêu đề, 2 nút mỗi dòng, khung cắt ngang thân một dòng |
+| Vì sao `_toDate` đọc riêng chuỗi `YYYY-MM-DD` | `main.js` ngay trong `_toDate` — mốc theo dõi ghi kèm giờ thì `fmtDate` trả null và việc lặng lẽ mất khỏi danh sách |
 | Bàn giao ca: vì sao ghi sổ trước khi chuyển | `main.js` gần `transferCase`; và `supabase/migrations/0016_*.sql` |
 | Vì sao `_logAudit` phải bọc try/catch | `main.js` ngay trên `_logAudit` — nó chạy ở dòng đầu `loadCaseIntoApp`, ném lỗi là không mở được ca |
 | Che danh tính, khôi phục tên | `main.js` gần `pseudonymizeForAI`, `_maskPiiKeys`, `maskAddressInText`, `maskContactsInText`, `restoreIdentityText` |
@@ -406,5 +408,8 @@ trong code. Nơi nên đọc trước:
 | Thu gọn / mở rộng khu chat | `main.js` gần `setChatView`, `_restoreChatView` |
 | Emoji → icon nét, 3 tông màu báo cáo | `main.js` gần `_SEC_ICON`, `_SEC_TONE`, `_secHead` |
 | Vì sao có `escAttr` riêng | `src/js/utils.js` ngay dưới `esc` |
+| Vì sao `\b` không dùng được với chữ có dấu | `main.js` ngay trên `_CB_KIN` (và `_WB` ở phần che tên thật) — `\bbố\b` KHÔNG khớp chữ "bố" |
+| "thành phố" vs "phố" (tên đường) | `main.js` gần `_ADDR_PHO_ADMIN` |
+| "ba mẹ" mà không tích ô "Cha mẹ" | `main.js` gần `_CB_KIN` — bỏ dấu thì "ba" trùng "bà" |
 | Bảng quy đổi cỡ chữ, vùng bấm tối thiểu | `src/css/main.css` — khối `VÙNG BẤM TỐI THIỂU` và các comment trong `@media` |
 | Biến CSS từng bị dùng mà chưa khai báo | `src/css/main.css` trong khối `:root` (`--bg`, `--bg2`, `--t1`, `--bd2`, `--navy-tint`) |
