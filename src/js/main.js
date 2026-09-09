@@ -2426,7 +2426,17 @@ function _vgFileSuffix(fi) {
 // AI hay trả về (dd/mm/yyyy, yyyy-mm-dd, "tháng 9/2025"...). Không parse được thì bỏ qua việc
 // đó — thà thiếu một việc còn hơn hiện một hạn sai làm NVXH đi sai ngày.
 function _toDate(v) {
-  const t = fmtDate(String(v || '').trim());
+  const raw = String(v || '').trim();
+  // Mốc theo dõi sau đóng ca do hệ thống sinh ra ở dạng YYYY-MM-DD (_genFollowUpSchedule), nhưng
+  // hồ sơ cũ / dữ liệu sửa tay có thể ghi cả giờ (…T03:00:00.000Z). fmtDate chỉ nhận chuỗi ngày
+  // đơn thuần nên chuỗi có giờ sẽ trả về null và việc theo dõi lặng lẽ mất khỏi danh sách — đọc
+  // phần ngày ở đầu trước để không rơi việc nào.
+  const iso = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s]|$)/);
+  if (iso) {
+    const di = new Date(+iso[1], +iso[2] - 1, +iso[3]);
+    return isNaN(di.getTime()) ? null : di;
+  }
+  const t = fmtDate(raw);
   const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!m) return null;
   const d = new Date(+m[3], +m[2] - 1, +m[1]);
@@ -2499,6 +2509,25 @@ function openCaseFromTodo(id) {
   switchMain('dash');
 }
 
+// Thu gọn khối việc: CBXH đang có nhiều việc thì khối này chiếm gần nửa màn, che danh sách ca.
+// Nhớ lựa chọn theo máy (localStorage) để mỗi lần mở app không phải thu gọn lại.
+const _TODO_FOLD_KEY = 'thaodan_todo_folded';
+function _todoFolded() { try { return localStorage.getItem(_TODO_FOLD_KEY) === '1'; } catch (e) { return false; } }
+function toggleTodoFold() {
+  try { localStorage.setItem(_TODO_FOLD_KEY, _todoFolded() ? '0' : '1'); } catch (e) {}
+  renderTodo();
+}
+
+// Thẻ hạn trên từng dòng — thay cho các tiêu đề nhóm TRỄ HẠN / HÔM NAY / 7 NGÀY TỚI trước đây.
+// Cùng một thông tin nhưng đọc được ngay trên dòng việc, và bớt được một tầng tiêu đề.
+function _todoWhen(due, today) {
+  const n = Math.round((_dayStart(due) - today) / 86400000);
+  if (n < 0) return 'Trễ ' + (-n) + ' ngày';
+  if (n === 0) return 'Hôm nay';
+  if (n === 1) return 'Ngày mai';
+  return 'Còn ' + n + ' ngày';
+}
+
 function renderTodo() {
   const box = document.getElementById('todo-box');
   if (!box) return;
@@ -2510,6 +2539,7 @@ function renderTodo() {
   const tuan = all.filter(t => _dayStart(t.due) > today && _dayStart(t.due) <= in7);
   const sau = all.length - qua.length - homNay.length - tuan.length;
 
+  box.classList.remove('todo-folded');
   if (!qua.length && !homNay.length && !tuan.length) {
     box.hidden = all.length === 0;
     if (all.length) {
@@ -2522,27 +2552,39 @@ function renderTodo() {
 
   const row = (t, tone) => {
     const key = escAttr(_taskKey(t));
-    const hanTxt = fmtVN(t.due.toISOString());
-    const treTxt = tone === 'qua'
-      ? ' · <strong>trễ ' + Math.round((today - _dayStart(t.due)) / 86400000) + ' ngày</strong>' : '';
     return '<div class="todo-row todo-' + tone + '">'
-      + '<button class="todo-tick" title="Đánh dấu đã làm xong" onclick="toggleTask(\'' + key + '\')">✓</button>'
+      + '<button class="todo-tick" title="Đánh dấu đã làm xong" aria-label="Đánh dấu đã làm xong"'
+      + ' onclick="toggleTask(\'' + key + '\')">✓</button>'
+      + '<span class="todo-when">' + esc(_todoWhen(t.due, today)) + '</span>'
       + '<div class="todo-main"><div class="todo-what">' + esc(t.what) + '</div>'
-      + '<div class="todo-meta">' + esc(t.caseName) + ' · hạn ' + hanTxt + treTxt
+      + '<div class="todo-meta">' + esc(t.caseName) + ' · hạn ' + fmtVN(t.due.toISOString())
       + (t.note ? ' · ' + esc(t.note) : '') + '</div></div>'
-      + '<button class="todo-open" onclick="openCaseFromTodo(\'' + escAttr(t.caseId) + '\')">Mở ca</button>'
+      + '<button class="todo-open" title="Mở ca ' + escAttr(t.caseName) + '" aria-label="Mở ca"'
+      + ' onclick="openCaseFromTodo(\'' + escAttr(t.caseId) + '\')">›</button>'
       + '</div>';
   };
 
+  const folded = _todoFolded();
+  if (folded) box.classList.add('todo-folded');
+
   let h = '<div class="todo-hd"><span class="todo-ttl">📌 Việc cần làm</span>'
-    + '<span class="todo-sub">'
-    + (qua.length ? '<strong class="todo-c-qua">' + qua.length + ' trễ hạn</strong> · ' : '')
-    + homNay.length + ' hôm nay · ' + tuan.length + ' trong 7 ngày'
-    + (sau ? ' · ' + sau + ' ở xa hơn' : '') + '</span></div>';
-  if (qua.length) h += '<div class="todo-grp todo-grp-qua">Trễ hạn</div>' + qua.map(t => row(t, 'qua')).join('');
-  if (homNay.length) h += '<div class="todo-grp">Hôm nay</div>' + homNay.map(t => row(t, 'nay')).join('');
-  if (tuan.length) h += '<div class="todo-grp">7 ngày tới</div>' + tuan.map(t => row(t, 'tuan')).join('');
+    + '<span class="todo-pills">'
+    + (qua.length ? '<span class="todo-pill todo-pill-qua">' + qua.length + ' trễ hạn</span>' : '')
+    + (homNay.length ? '<span class="todo-pill todo-pill-nay">' + homNay.length + ' hôm nay</span>' : '')
+    + (tuan.length ? '<span class="todo-pill">' + tuan.length + ' trong 7 ngày</span>' : '')
+    + '</span>'
+    + '<button class="todo-fold" onclick="toggleTodoFold()">' + (folded ? 'Mở ra' : 'Thu gọn') + '</button>'
+    + '</div>';
+  h += '<div class="todo-list">'
+    + qua.map(t => row(t, 'qua')).join('')
+    + homNay.map(t => row(t, 'nay')).join('')
+    + tuan.map(t => row(t, 'tuan')).join('')
+    + '</div>';
+  if (sau) h += '<div class="todo-foot">Còn ' + sau + ' việc ở xa hơn 7 ngày — sẽ hiện khi tới gần hạn.</div>';
   box.innerHTML = h;
+  // Vùng cuộn tràn thì bật dải mờ ở đáy. Phải đo SAU khi gắn HTML nên không làm được bằng CSS.
+  const list = box.querySelector('.todo-list');
+  if (list) list.classList.toggle('todo-more', list.scrollHeight - list.clientHeight > 2);
 }
 
 // ════════════════════════════════════════════════════════════
