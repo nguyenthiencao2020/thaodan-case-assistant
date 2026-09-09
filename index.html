@@ -254,10 +254,6 @@
 
 <div class="tab-panel" id="panel-cases" style="flex-direction:column;">
   <div id="cases-stats-row" style="display:flex;gap:10px;padding:12px 16px 0;flex-shrink:0;"></div>
-  <!-- ══ VIỆC CẦN LÀM ══
-       Dựng từ ngày tháng ĐÃ CÓ trong hồ sơ (hoạt động của kế hoạch, mốc xem xét kế hoạch, lịch
-       theo dõi sau đóng ca) — xem _collectTasks() trong main.js. -->
-  <div id="todo-box" class="todo-box" hidden></div>
   <div class="cases-tab" style="flex:1;min-height:0;">
     <div class="cases-sidebar">
       <div class="cases-search-row"><input type="text" id="cases-search" class="cases-search" placeholder="Tìm theo tên ca, tên trẻ..." oninput="renderCaseList()"><button class="btn-new-case" onclick="newCase()">＋ Mới</button></div>
@@ -267,7 +263,17 @@
       </div>
       <div class="cases-list" id="cases-list"><div style="padding:24px;text-align:center;color:var(--t3);font-size:15px;">Chưa có ca nào</div></div>
     </div>
-    <div class="cases-main" id="cases-main"><div class="case-detail-empty"><div><div style="font-size:38px;margin-bottom:12px;">🗂</div><div style="font-size:17px;font-weight:600;margin-bottom:6px;">Chọn một ca để xem</div></div></div></div>
+    <!-- ══ VÙNG PHẢI: VIỆC CẦN LÀM hoặc CHI TIẾT CA ══
+         Trước đây "Việc cần làm" là một dải riêng nằm giữa hàng thống kê và danh sách ca, nên
+         màn hình có ba tầng chồng nhau trong khi hơn nửa bên phải chỉ để chữ "Chọn một ca để
+         xem" — NVXH nhận xét là rối mắt. Nay hai thứ đó dùng CHUNG vùng phải: chưa chọn ca thì
+         là danh sách việc, chọn ca rồi thì là chi tiết ca (xem _setCaseDetailHTML trong main.js).
+         Việc cần làm ĐỨNG TRƯỚC trong DOM để thứ tự đọc bằng bàn phím / trình đọc màn hình đúng
+         với thứ tự nhìn thấy. -->
+    <div class="cases-main" id="cases-main">
+      <div id="todo-box" class="todo-box" hidden></div>
+      <div id="cases-detail" class="cases-detail"><div class="case-detail-empty"><div><div class="cde-ic">🗂</div><div class="cde-t">Chọn một ca để xem</div></div></div></div>
+    </div>
   </div>
 </div>
 

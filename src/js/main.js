@@ -250,7 +250,7 @@ async function logoutUser() {
   if (ep) ep.innerHTML = '';
   // Cases tab
   document.getElementById('cases-list').innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:15px;">Chưa có ca nào</div>';
-  document.getElementById('cases-main').innerHTML = '<div class="case-detail-empty"><div><div style="font-size:38px;margin-bottom:12px;">🗂</div><div style="font-size:17px;font-weight:600;margin-bottom:6px;">Chọn một ca để xem</div></div></div>';
+  _setCaseDetailHTML(_CASE_EMPTY_HTML, false);
   // Analysis tab
   const eo = document.getElementById('eval-output');
   if (eo) eo.innerHTML = '<div class="eval-placeholder"><div class="ep-icon">📝</div><div class="ep-title">Báo cáo Phân tích & Đánh giá Tổng hợp</div><div class="ep-sub">Nhấn nút bên trên để AI tạo báo cáo đánh giá toàn diện.</div></div>';
@@ -2512,6 +2512,10 @@ function openCaseFromTodo(id) {
 // Thu gọn khối việc: CBXH đang có nhiều việc thì khối này chiếm gần nửa màn, che danh sách ca.
 // Nhớ lựa chọn theo máy (localStorage) để mỗi lần mở app không phải thu gọn lại.
 const _TODO_FOLD_KEY = 'thaodan_todo_folded';
+// Vùng phải tab Danh sách ca đang hiện chi tiết ca hay không — khai báo cạnh renderTodo vì đây
+// là chỗ đọc nó; chỗ ghi là _setCaseDetailHTML. Đặt trên renderTodo để không rơi vào vùng chưa
+// khởi tạo nếu có lần nào renderTodo chạy sớm.
+let _caseDetailOpen = false;
 function _todoFolded() { try { return localStorage.getItem(_TODO_FOLD_KEY) === '1'; } catch (e) { return false; } }
 function toggleTodoFold() {
   try { localStorage.setItem(_TODO_FOLD_KEY, _todoFolded() ? '0' : '1'); } catch (e) {}
@@ -2531,6 +2535,9 @@ function _todoWhen(due, today) {
 function renderTodo() {
   const box = document.getElementById('todo-box');
   if (!box) return;
+  // Vùng phải dùng chung: đang xem chi tiết một ca thì khối việc nhường chỗ hẳn, không chen
+  // lên trên đầu khung chi tiết.
+  if (_caseDetailOpen) { box.hidden = true; return; }
   const today = _dayStart(new Date());
   const in7 = new Date(today); in7.setDate(in7.getDate() + 7);
   const all = _collectTasks();
@@ -2585,6 +2592,23 @@ function renderTodo() {
   // Vùng cuộn tràn thì bật dải mờ ở đáy. Phải đo SAU khi gắn HTML nên không làm được bằng CSS.
   const list = box.querySelector('.todo-list');
   if (list) list.classList.toggle('todo-more', list.scrollHeight - list.clientHeight > 2);
+  _syncCaseDetailSlim();
+}
+
+// Khi khối việc đang chiếm phần trên vùng phải thì lời mời "Chọn một ca để xem" thu còn một
+// dòng mảnh: để nguyên khối icon 38px bên dưới danh sách việc là lại thành hai tầng rỗng.
+function _syncCaseDetailSlim() {
+  const det = document.getElementById('cases-detail');
+  const box = document.getElementById('todo-box');
+  if (!det || !box) return;
+  const slim = !box.hidden && !!det.querySelector('.case-detail-empty');
+  det.classList.toggle('cd-slim', slim);
+  // Điện thoại: hai cột xếp dọc, mà vùng phải nằm dưới danh sách ca — nếu để nguyên thì phải
+  // cuộn qua hết danh sách mới thấy việc cần làm, tức việc chính lại nằm cuối. Khi đang là danh
+  // sách việc thì cho vùng phải lên trước; chọn ca rồi thì trả về thứ tự cũ (chi tiết ca nằm
+  // dưới danh sách như trước nay).
+  const tab = document.querySelector('.cases-tab');
+  if (tab) tab.classList.toggle('ct-todo-first', slim);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -5023,10 +5047,29 @@ function selectCase(id) {
   showCaseDetail(id);
 }
 
+// ── Vùng phải tab Danh sách ca ─────────────────────────────────────────────────────────────
+// Một vùng, hai nội dung: chưa chọn ca thì là "Việc cần làm", chọn ca rồi thì là chi tiết ca.
+// Trước đây hai thứ này là hai dải xếp dọc nên màn hình có ba tầng chồng nhau mà bên phải vẫn
+// trống. Mọi chỗ đổi nội dung vùng phải phải đi qua hàm này, không gán innerHTML trực tiếp —
+// nếu không, cờ dưới đây lệch và khối việc cần làm hiện chồng lên chi tiết ca.
+const _CASE_EMPTY_HTML = '<div class="case-detail-empty"><div>'
+  + '<div class="cde-ic">🗂</div><div class="cde-t">Chọn một ca để xem</div></div></div>';
+function _setCaseDetailHTML(html, hasCase) {
+  const el = document.getElementById('cases-detail');
+  if (el) el.innerHTML = html;
+  _caseDetailOpen = !!hasCase;
+  renderTodo();
+  _syncCaseDetailSlim();
+}
+// Quay về danh sách việc mà không phải rời tab. Không đụng tới curCaseId: đó là ca đang mở ở
+// tab Dashboard, đóng khung xem chi tiết không có nghĩa là đóng ca đang làm.
+function closeCaseDetail() {
+  _setCaseDetailHTML(_CASE_EMPTY_HTML, false);
+}
+
 function showCaseDetail(id) {
   const c = loadCases()[id];
-  const main = document.getElementById('cases-main');
-  if (!c) { main.innerHTML = '<div class="case-detail-empty"><div>Chọn ca để xem</div></div>'; return; }
+  if (!c) { _setCaseDetailHTML(_CASE_EMPTY_HTML, false); return; }
   const entries = (c.entries||[]).slice().reverse();
   const stage = c.currentStage || 1;
   const risk = c.lastAnalysis?._report?.risk?.level || c.lastAnalysis?._report?.risk_level || '';
@@ -5142,7 +5185,7 @@ function showCaseDetail(id) {
   const panelMap = { overview: tabOverview, entries: tabEntries, editlog: tabEditLog, followup: tabFollowUp, files: tabFiles };
   const activePanel = panelMap[active] || tabOverview;
 
-  main.innerHTML = `
+  _setCaseDetailHTML(`
     <div class="case-detail-hd">
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
@@ -5152,6 +5195,7 @@ function showCaseDetail(id) {
         <div class="case-detail-meta">Tạo ${fmtVN(c.createdAt)} · Cập nhật ${_timeAgo(c.updatedAt)}${closedAtTxt}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        <button class="btn-secondary" onclick="closeCaseDetail()" title="Quay lại danh sách việc cần làm">↩ Việc cần làm</button>
         <button class="btn-secondary" onclick="loadCaseIntoApp('${id}');switchMain('dash')">🔬 Mở</button>
         <button class="btn-secondary" onclick="loadCaseIntoApp('${id}');setTimeout(printFullCase,300)">🖨 In</button>
         ${closeBtn}
@@ -5159,7 +5203,7 @@ function showCaseDetail(id) {
       </div>
     </div>
     <div class="cd-tabs-bar">${tabsBar}</div>
-    <div class="case-detail-body cd-panel-${active}">${activePanel}</div>`;
+    <div class="case-detail-body cd-panel-${active}">${activePanel}</div>`, true);
   // Load files async
   if (active === 'files') refreshFileList(id);
 }
@@ -5294,9 +5338,9 @@ function transferCase(id) {
         if (curCaseId === id) { D = null; curCaseId = null; currentStage = 1; updateStageUI(); }
         const cs2 = loadCases(); delete cs2[id]; _cases = cs2;
         renderCaseList(); renderTodo(); updateCasesCount();
-        document.getElementById('cases-main').innerHTML =
-          '<div class="case-detail-empty"><div><div style="font-size:38px;margin-bottom:12px;">🤝</div>'
-          + '<div style="font-size:17px;font-weight:600;">Đã bàn giao ca</div></div></div>';
+        _setCaseDetailHTML('<div class="case-detail-empty"><div>'
+          + '<div style="font-size:38px;margin-bottom:12px;">🤝</div>'
+          + '<div style="font-size:17px;font-weight:600;">Đã bàn giao ca</div></div></div>', false);
       } catch (e) {
         // Nói nguyên văn lỗi của DB: các thông báo trong hàm 0016 đã viết cho người đọc
         // (VD "Người nhận phải đăng nhập app ít nhất một lần trước khi nhận ca").
@@ -5609,7 +5653,7 @@ function deleteCase(id) {
       deleteCaseFromDB(id);
       if (curCaseId===id) { curCaseId=null; D=null; updateHeader(); }
       renderCaseList(); updateCasesCount();
-      document.getElementById('cases-main').innerHTML = '<div class="case-detail-empty"><div>Đã xóa</div></div>';
+      _setCaseDetailHTML('<div class="case-detail-empty"><div>Đã xóa</div></div>', false);
       showNotif('✅ Đã xóa ca');
     }
   });

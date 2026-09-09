@@ -850,7 +850,17 @@ svg.ic-sm { width:13px; height:13px; }
 .ci-stage-dot.current { background:var(--org); }
 .ci-ago { font-size:12px; color:var(--t3); font-style:italic; }
 .cases-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+/* Khung chi tiết ca — nằm dưới khối "Việc cần làm" trong cùng vùng phải. Hai thứ dùng chung
+   vùng này: xem comment ở _setCaseDetailHTML trong main.js. */
+.cases-detail { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
 .case-detail-empty { display:flex; align-items:center; justify-content:center; height:100%; text-align:center; color:var(--t3); }
+.cde-ic { font-size:38px; margin-bottom:12px; }
+.cde-t { font-size:17px; font-weight:600; }
+/* Đang có danh sách việc ở trên: lời mời chọn ca thu còn một dòng mảnh, bỏ icon lớn. */
+.cases-detail.cd-slim { flex:0 0 auto; }
+.cd-slim .case-detail-empty { height:auto; padding:14px 16px 4px; }
+.cd-slim .cde-ic { display:none; }
+.cd-slim .cde-t { font-size:14px; font-weight:600; }
 .case-detail-hd {
   padding:14px 18px; border-bottom:1px solid var(--bd); background:#fff;
   display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;
@@ -1162,6 +1172,10 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 
   /* ── CASES TAB: stacked ── */
   .cases-tab { flex-direction:column !important; }
+  /* Xem comment trong _syncCaseDetailSlim (main.js): trên điện thoại, khi vùng phải đang là
+     danh sách việc cần làm thì nó lên trước danh sách ca. */
+  .cases-tab.ct-todo-first .cases-main { order:1; }
+  .cases-tab.ct-todo-first .cases-sidebar { order:2; max-height:none; }
   .cases-sidebar {
     width:100% !important; height:auto !important;
     max-height:40vh; border-right:none !important;
@@ -1675,12 +1689,15 @@ body.hist-mode { padding-bottom:64px; }
    cuộn xuống" chứ không phải hỏng. Thêm nút thu gọn vì CBXH nhiều việc thì khối này che danh
    sách ca. */
 .todo-box {
-  flex-shrink:0; margin:12px 16px 0;
+  /* Nằm trong vùng phải: co theo số việc, nhưng nhiều việc thì tự nhường chỗ cho khung chi
+     tiết bên dưới (min-height:0 để phần cuộn bên trong co được). */
+  flex:0 1 auto; min-height:0; display:flex; flex-direction:column;
+  margin:14px 16px 0;
   background:var(--white); border:1px solid var(--bd); border-radius:12px;
   overflow:hidden;
 }
 .todo-hd {
-  display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  flex:0 0 auto; display:flex; align-items:center; gap:9px; flex-wrap:wrap;
   padding:9px 12px; background:var(--bg2); border-bottom:1px solid var(--bd);
 }
 .todo-box.todo-folded .todo-hd { border-bottom:none; }
@@ -1702,7 +1719,7 @@ body.hist-mode { padding-bottom:64px; }
 
 /* Vùng cuộn: giới hạn theo SỐ DÒNG (px) chứ không theo vh — trên màn thấp thì 38vh cắt ngang
    giữa một dòng, còn trên màn cao thì khối này dài quá đẩy danh sách ca xuống dưới màn hình. */
-.todo-list { max-height:340px; overflow-y:auto; padding:5px 6px 6px; position:relative; }
+.todo-list { flex:1 1 auto; min-height:0; overflow-y:auto; padding:5px 6px 6px; position:relative; }
 /* Khi còn việc bên dưới, làm mờ dần đáy vùng cuộn: dòng bị che khi đó đọc ra là "còn nữa, cuộn
    xuống" — chứ không phải một dòng bị cắt ngang thân như bản trước. renderTodo() gắn/bỏ lớp này
    theo việc vùng cuộn có tràn hay không. */
@@ -1750,7 +1767,7 @@ body.hist-mode { padding-bottom:64px; }
 .todo-row:hover .todo-open { color:var(--navy); border-color:var(--bd2); background:var(--white); }
 .todo-open:hover { background:var(--navy) !important; color:#fff !important; border-color:var(--navy) !important; }
 .todo-foot {
-  padding:7px 12px 9px; font-size:12.5px; color:var(--t3);
+  flex:0 0 auto; padding:7px 12px 9px; font-size:12.5px; color:var(--t3);
   border-top:1px solid var(--bd); background:var(--bg2);
 }
 @media (max-width:640px) {
@@ -1760,8 +1777,7 @@ body.hist-mode { padding-bottom:64px; }
   .todo-ttl { order:1; }
   .todo-fold { order:2; }
   .todo-pills { order:3; flex:1 1 100%; }
-  /* Vẫn phải chặn chiều cao, không thì vài việc là danh sách ca bị đẩy khỏi màn hình. */
-  .todo-list { max-height:52vh; }
+
   /* Điện thoại: thẻ hạn xuống dòng riêng để tên việc không bị bóp còn vài chữ. */
   .todo-row { flex-wrap:wrap; row-gap:5px; }
   .todo-main { flex:1 1 100%; order:3; padding-left:36px; }
