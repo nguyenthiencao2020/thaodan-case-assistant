@@ -384,15 +384,19 @@
              placeholder="nvxh@thaodancenter.org.vn">
       <label class="adm-lb" for="adm-role">Vai trò</label>
       <select id="adm-role" class="nl-search">
-        <option value="officer">NVXH (officer) — chỉ ca của mình</option>
-        <option value="team_leader">Trưởng nhóm — xem thêm ca cùng nhóm</option>
-        <option value="admin">Quản trị (admin)</option>
+        <option value="officer">CBXH — chỉ thấy ca của mình</option>
+        <option value="admin">Quản lý — xem TẤT CẢ ca + gán được vai trò</option>
+        <option value="team_leader">Trưởng nhóm — chỉ xem ca cùng nhóm</option>
       </select>
       <label class="adm-lb" for="adm-team">Nhóm (để trống nếu không thuộc nhóm nào)</label>
       <input id="adm-team" class="nl-search" type="text" autocomplete="off" placeholder="nhom-1">
       <div class="adm-note">Người được gán <strong>phải đăng nhập app ít nhất một lần</strong>
-        trước đó. Trưởng nhóm chỉ <strong>xem</strong> ca cùng nhóm, không sửa và không bàn giao
-        được ca của người khác — và chỉ có hiệu lực khi cả ca lẫn người đều đã được gán nhóm.</div>
+        trước đó, và <strong>tải lại trang</strong> thì quyền mới mới có hiệu lực.<br><br>
+        <strong>Quản lý</strong> xem được mọi ca nhưng chỉ <strong>sửa/xóa ca của chính mình</strong>
+        — xem hồ sơ người khác thì được, viết vào thì không.<br>
+        <strong>Trưởng nhóm</strong> chỉ xem ca <em>cùng nhóm</em>, và chỉ có hiệu lực khi cả ca
+        lẫn người đều đã được gán cùng một nhóm. Nếu tổ chức chưa chia địa bàn thì dùng
+        <strong>Quản lý</strong> / <strong>CBXH</strong> là đủ, để trống ô nhóm.</div>
       <button class="btn-analyze adm-go" onclick="submitUserRole()">Gán vai trò</button>
       <div id="adm-msg" class="adm-msg"></div>
     </div>
@@ -442,9 +446,9 @@
   </div>
 </div>
 
-<script src="/src/js/config.js?v=37"></script>
-<script src="/src/js/prompts.js?v=37"></script>
-<script src="/src/js/utils.js?v=37"></script>
-<script src="/src/js/main.js?v=37"></script>
+<script src="/src/js/config.js?v=38"></script>
+<script src="/src/js/prompts.js?v=38"></script>
+<script src="/src/js/utils.js?v=38"></script>
+<script src="/src/js/main.js?v=38"></script>
 </body>
 </html>
