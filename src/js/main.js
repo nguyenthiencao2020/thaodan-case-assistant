@@ -2682,13 +2682,16 @@ function _syncCaseDetailSlim() {
 // DANH BẠ NGUỒN LỰC — tra tại chỗ khi đang điền form
 // ════════════════════════════════════════════════════════════
 // Lúc điền "Nguồn lực kết nối" thì NVXH cần ngay số của phường, Hội Phụ nữ, trạm y tế, chùa...
-// Trước đây phải tra sổ tay giấy: file docs/nguon-luc/danh-ba-nguon-luc.md ĐÃ CÓ nhưng app
+// Trước đây phải tra sổ tay giấy: file danh bạ ĐÃ CÓ nhưng app
 // không đọc được, nên nó nằm đó không ai dùng.
 // Cách làm: đọc thẳng file .md đó lúc chạy (Vercel phục vụ tĩnh cả repo) rồi dựng bảng tra cứu.
 // Nhờ vậy tổ chức chỉ phải sửa MỘT chỗ — đúng file họ đang có — không cần ai build lại app.
 // Lưu ý bảo mật đã ghi sẵn trong file: chỉ ghi đầu mối dịch vụ công khai, KHÔNG ghi thông tin
 // của trẻ hay gia đình, vì file này ai mở app cũng tải được.
-const _NL_URL = 'docs/nguon-luc/danh-ba-nguon-luc.md';
+// PHẢI nằm ngoài docs/: .vercelignore loại cả thư mục docs/ khỏi bản deploy (để tài liệu nội bộ
+// không bị công khai), nên đường dẫn cũ 'docs/nguon-luc/...' trả về 404 trên Vercel và danh bạ
+// lúc nào cũng hiện "chưa được điền" — lỗi này chỉ lộ ra khi mở trên bản deploy thật.
+const _NL_URL = 'nguon-luc/danh-ba-nguon-luc.md';
 let _nlCache = null;
 
 // Ô còn nguyên chữ mẫu của khung thì coi như CHƯA điền — thà nói thẳng là chưa có dữ liệu còn

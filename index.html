@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/src/css/main.css?v=42">
+<link rel="stylesheet" href="/src/css/main.css?v=43">
 </head>
 <body>
 
@@ -344,10 +344,10 @@
     <button class="login-btn login-btn-primary" id="login-btn" onclick="loginEmail()" disabled>Đăng nhập</button>
     <div id="login-err" class="login-err"></div>
     <!-- Sổ tay đặt NGAY TRÊN màn đăng nhập: người mới được cấp tài khoản cần đọc trước khi vào,
-         mà lúc đó họ chưa đăng nhập được. Trang này là tài liệu công khai, chỉ chứa ảnh minh hoạ
-         dữ liệu hư cấu — xem docs/huong-dan-su-dung.README.md. -->
-    <a class="login-guide" href="/docs/huong-dan-su-dung.html" target="_blank" rel="noopener">
-      📘 Chưa dùng bao giờ? Đọc sổ tay hướng dẫn
+         mà lúc đó họ chưa đăng nhập được. File nằm ở huong-dan/index.html (thư mục gốc), KHÔNG
+         phải trong docs/ — .vercelignore loại docs/ khỏi bản deploy nên đặt trong đó là 404. -->
+    <a class="login-guide" href="/huong-dan/" target="_blank" rel="noopener">
+      📘 Đọc sổ tay hướng dẫn
     </a>
     <div class="login-footer">🔒 Dữ liệu được mã hóa và bảo mật · Liên hệ quản trị viên nếu chưa có tài khoản</div>
   </div>
@@ -385,7 +385,7 @@
   <button onclick="showNotifications();closeHdrMore()">Thông báo <span id="hdr-more-badge" class="hdr-more-badge" hidden></span></button>
   <button id="hdr-more-eval" onclick="switchMain('analysis');closeHdrMore()">Đánh giá tổng hợp (giám sát)</button>
   <button id="hdr-more-admin" hidden onclick="openAdminPanel();closeHdrMore()">Gán vai trò &amp; nhóm (quản trị)</button>
-  <button onclick="window.open('/docs/huong-dan-su-dung.html','_blank','noopener');closeHdrMore()">Sổ tay hướng dẫn sử dụng</button>
+  <button onclick="window.open('/huong-dan/','_blank','noopener');closeHdrMore()">Sổ tay hướng dẫn sử dụng</button>
   <button onclick="exportCaseJSON();closeHdrMore()">Xuất hồ sơ JSON (sao lưu)</button>
   <button onclick="importCaseJSON();closeHdrMore()">Nhập hồ sơ JSON</button>
   <div class="hdr-more-email" id="hdr-more-email"></div>
@@ -427,7 +427,7 @@
 </div>
 
 <!-- ══ DANH BẠ NGUỒN LỰC ══
-     Đọc thẳng docs/nguon-luc/danh-ba-nguon-luc.md lúc chạy, nên tổ chức chỉ sửa một file .md
+     Đọc thẳng nguon-luc/danh-ba-nguon-luc.md lúc chạy, nên tổ chức chỉ sửa một file .md
      là app cập nhật — không cần build lại. Xem openResourceDir() trong main.js. -->
 <div id="nl-overlay" class="dass-overlay" style="display:none" onclick="if(event.target===this)closeResourceDir()">
   <div class="dass-modal nl-modal">
@@ -440,7 +440,7 @@
              placeholder="Tìm: học bổng, khai sinh, tâm lý, quận 12, 111...">
     </div>
     <div id="nl-body" class="nl-body"></div>
-    <div class="nl-foot">Sửa nội dung tại <code>docs/nguon-luc/danh-ba-nguon-luc.md</code> — chỉ ghi
+    <div class="nl-foot">Sửa nội dung tại <code>nguon-luc/danh-ba-nguon-luc.md</code> — chỉ ghi
       đầu mối dịch vụ công khai, <strong>không ghi thông tin của trẻ hay gia đình</strong>.</div>
   </div>
 </div>
@@ -469,9 +469,9 @@
   </div>
 </div>
 
-<script src="/src/js/config.js?v=42"></script>
-<script src="/src/js/prompts.js?v=42"></script>
-<script src="/src/js/utils.js?v=42"></script>
-<script src="/src/js/main.js?v=42"></script>
+<script src="/src/js/config.js?v=43"></script>
+<script src="/src/js/prompts.js?v=43"></script>
+<script src="/src/js/utils.js?v=43"></script>
+<script src="/src/js/main.js?v=43"></script>
 </body>
 </html>
