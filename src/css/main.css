@@ -1267,37 +1267,120 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 }
 
 /* ── LOGIN SCREEN ── */
-.login-overlay{position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#0f2d6b 0%,#1a3f8f 50%,#0a1f4d 100%);display:flex;align-items:center;justify-content:center;font-family:'Be Vietnam Pro',sans-serif;isolation:isolate;}
-.login-box{background:#fff;border-radius:16px;padding:40px 36px;width:90%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center;}
-.login-logo{width:120px;margin:0 auto 16px;display:block;}
-.login-title{font-size:23px;font-weight:700;color:#0f2d6b;margin-bottom:4px;}
-.login-sub{font-size:16px;color:#666;margin-bottom:24px;}
-.login-input{width:100%;padding:12px 14px;border:1.5px solid #ddd;border-radius:10px;font-size:17px;font-family:inherit;margin-bottom:12px;box-sizing:border-box;transition:border-color .2s;}
-.login-input:focus{outline:none;border-color:#f07020;box-shadow:0 0 0 3px rgba(240,112,32,.15);}
-.login-btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:18px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;}
-.login-btn-primary{background:#f07020;color:#fff;margin-bottom:10px;}
-.login-btn-primary:hover{background:#d05a10;}
-.login-btn-google{background:#fff;color:#333;border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;gap:8px;}
-.login-btn-google:hover{background:#f8f8f8;border-color:#bbb;}
-.login-btn-google svg{width:18px;height:18px;}
-/* Câu mô tả tool trên màn đăng nhập: căn trái và có vạch cam bên cạnh để đọc như một lời giới
-   thiệu, không phải chữ trang trí giữa trang. */
-.login-what{
-  text-align:left;font-size:14px;line-height:1.55;color:#475569;
-  background:#f8fafc;border-left:3px solid #f07020;border-radius:0 7px 7px 0;
-  padding:10px 12px;margin:0 0 16px;
+/* ══ MÀN ĐĂNG NHẬP ══════════════════════════════════════════════════════════════════════════
+   Hai nửa: nửa navy giới thiệu (tool này là gì, giới hạn của nó, căn cứ pháp lý), nửa trắng là
+   biểu mẫu. Bản trước dồn hết vào một cột hẹp căn giữa: đoạn cam kết pháp lý dài mà căn giữa thì
+   đọc rất mệt, ba khối chữ xám nhỏ chen nhau, và trên màn rộng cái khung nhỏ trôi giữa nền xanh
+   mênh mông. Điện thoại thì xếp dọc và ẩn phần gạch đầu dòng để không phải cuộn mới thấy ô nhập.
+   ────────────────────────────────────────────────────────────────────────────────────────── */
+.login-overlay{
+  position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;
+  padding:24px;overflow-y:auto;font-family:'Be Vietnam Pro',sans-serif;isolation:isolate;
+  background:
+    radial-gradient(1100px 620px at 12% -8%, rgba(240,112,32,.24), transparent 62%),
+    radial-gradient(900px 560px at 88% 108%, rgba(37,99,235,.30), transparent 60%),
+    linear-gradient(140deg,#0b2050 0%,#123a86 52%,#0a1c46 100%);
 }
-.login-err{color:#dc2626;font-size:15px;margin-top:8px;min-height:18px;}
-/* Link sổ tay trên màn đăng nhập: đủ rõ để người mới thấy, nhưng không cạnh tranh với nút
-   Đăng nhập — nên là link viền mảnh, không phải nút màu. */
+.login-box{
+  display:grid;grid-template-columns:1.05fr 1fr;
+  width:100%;max-width:880px;background:#fff;border-radius:20px;overflow:hidden;
+  box-shadow:0 30px 80px -20px rgba(4,14,40,.6), 0 2px 8px rgba(4,14,40,.25);
+}
+
+/* ── Nửa giới thiệu ─────────────────────────────────────────────────────────────────────── */
+.lg-brand{
+  padding:38px 34px;color:#e8eefb;display:flex;flex-direction:column;gap:20px;
+  /* Gom nội dung vào giữa theo chiều dọc: nửa này thấp hơn nửa biểu mẫu, nếu ghim dòng pháp lý
+     xuống đáy bằng margin-top:auto thì giữa khối để lại một khoảng trống lớn nhìn như thiếu. */
+  justify-content:center;
+  background:linear-gradient(165deg,#0f2d6b 0%,#14357d 60%,#0d2559 100%);
+}
+.lg-brand-top{display:flex;align-items:center;gap:14px;}
+.lg-logo{width:52px;height:auto;flex:0 0 auto;filter:brightness(0) invert(1);opacity:.95;}
+.lg-name{font-size:22px;font-weight:800;letter-spacing:-.2px;color:#fff;line-height:1.2;}
+.lg-role{font-size:12.5px;font-weight:600;letter-spacing:1.1px;text-transform:uppercase;color:rgba(255,255,255,.62);margin-top:2px;}
+/* Câu mô tả tool: chữ to hơn thân, có vạch cam — đây là câu người mới đọc đầu tiên. */
+.login-what{
+  margin:0;padding-left:14px;border-left:3px solid #f07020;
+  font-size:15.5px;line-height:1.6;color:rgba(255,255,255,.88);
+}
+.login-what strong{color:#fff;font-weight:700;}
+.lg-points{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px;}
+.lg-points li{
+  position:relative;padding-left:26px;font-size:14.5px;line-height:1.5;color:rgba(255,255,255,.78);
+}
+.lg-points li::before{
+  content:'';position:absolute;left:2px;top:.55em;width:9px;height:9px;border-radius:3px;
+  background:rgba(240,112,32,.9);box-shadow:0 0 0 4px rgba(240,112,32,.16);
+}
+.lg-legal{
+  margin-top:6px;padding-top:18px;border-top:1px solid rgba(255,255,255,.14);
+  font-size:13px;line-height:1.5;color:rgba(255,255,255,.6);
+}
+.lg-legal strong{color:rgba(255,255,255,.86);font-weight:600;}
+
+/* ── Nửa biểu mẫu ───────────────────────────────────────────────────────────────────────── */
+.lg-form{padding:38px 36px 30px;display:flex;flex-direction:column;}
+.lg-h{font-size:26px;font-weight:800;color:#0f2d6b;margin:0 0 4px;letter-spacing:-.3px;}
+.lg-h-sub{font-size:14.5px;color:#64748b;margin:0 0 22px;line-height:1.5;}
+.lg-lbl{
+  display:block;font-size:13px;font-weight:700;color:#334155;
+  margin-bottom:6px;letter-spacing:.2px;
+}
+.login-input{
+  width:100%;padding:12px 14px;margin-bottom:16px;box-sizing:border-box;
+  border:1.5px solid #dbe2ec;border-radius:10px;background:#f8fafc;
+  font-size:16px;font-family:inherit;color:#0f172a;transition:border-color .15s, box-shadow .15s, background .15s;
+}
+.login-input::placeholder{color:#9aa6b8;}
+.login-input:focus{outline:none;border-color:#f07020;background:#fff;box-shadow:0 0 0 3px rgba(240,112,32,.14);}
+/* Ô cam kết: đóng khung để nó là một hành động phải làm, không phải chữ nhỏ dễ bỏ qua. */
+.lg-commit{
+  display:flex;align-items:flex-start;gap:10px;margin:2px 0 18px;padding:12px 13px;
+  background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;
+  font-size:13.5px;line-height:1.55;color:#475569;text-align:left;cursor:pointer;
+}
+.lg-commit:hover{border-color:#cbd5e1;background:#f1f5f9;}
+.lg-commit input{margin-top:2px;flex:0 0 auto;width:17px;height:17px;accent-color:#f07020;cursor:pointer;}
+.lg-commit strong{color:#0f2d6b;font-weight:700;}
+.login-btn{
+  width:100%;padding:13px;border:none;border-radius:10px;
+  font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;
+}
+.login-btn-primary{background:#f07020;color:#fff;box-shadow:0 2px 10px rgba(240,112,32,.32);}
+.login-btn-primary:hover:not(:disabled){background:#d85f12;box-shadow:0 4px 16px rgba(240,112,32,.42);transform:translateY(-1px);}
+/* Lúc chưa tick cam kết, nút bị vô hiệu hoá — nhưng chữ "Đăng nhập" vẫn phải đọc được. Bản đầu
+   để chữ #f8fafc trên nền #cbd5e1, chỉ 1.42:1, tức là mất hẳn chữ: người dùng không biết cái
+   khối xám đó là nút gì. */
+.login-btn-primary:disabled{background:#e6eaf0;color:#4b5768;box-shadow:none;cursor:not-allowed;}
+.login-err{color:#dc2626;font-size:14.5px;line-height:1.45;margin-top:10px;min-height:18px;}
+/* Sổ tay: link viền mảnh, không cạnh tranh với nút Đăng nhập. */
 .login-guide{
-  display:block;margin-top:14px;padding:10px 12px;border-radius:8px;
-  border:1px solid #cbd5e1;background:#f8fafc;color:#0f2d6b;
-  font-size:14.5px;font-weight:600;text-decoration:none;
+  display:block;margin-top:14px;padding:11px 12px;border-radius:9px;text-align:center;
+  border:1px solid #dbe2ec;background:#fff;color:#0f2d6b;
+  font-size:14.5px;font-weight:700;text-decoration:none;transition:all .15s;
 }
 .login-guide:hover{background:#0f2d6b;color:#fff;border-color:#0f2d6b;}
-.login-footer{font-size:14px;color:#999;margin-top:20px;}
-.login-spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:6px;}
+.login-footer{
+  /* #94a3b8 trên nền trắng chỉ 2.56:1 — dòng này nói cách xin tài khoản, không phải chữ trang trí */
+  margin-top:auto;padding-top:18px;font-size:13px;line-height:1.5;color:#64748b;text-align:center;
+}
+@media (max-width:860px){
+  .login-overlay{padding:0;align-items:stretch;}
+  .login-box{grid-template-columns:1fr;max-width:520px;border-radius:0;min-height:100%;box-shadow:none;}
+  /* Điện thoại: phần giới thiệu gọn lại còn logo + tên + một câu; bỏ gạch đầu dòng và dòng pháp
+     lý (đã có trong ô cam kết ngay dưới) để ô nhập không bị đẩy xuống dưới màn hình. */
+  .lg-brand{padding:24px 22px 22px;gap:14px;}
+  .lg-points, .lg-legal{display:none;}
+  .login-what{font-size:14.5px;}
+  .lg-form{padding:24px 22px 26px;}
+  .lg-h{font-size:23px;}
+}
+@media (max-width:860px) and (min-height:900px){
+  /* Chỉ màn thật cao (máy tính bảng) mới hiện lại gạch đầu dòng. Điện thoại phổ thông cao
+     ~800–850px: hiện ra là nút Đăng nhập bị đẩy xuống dưới mép màn, phải cuộn mới bấm được. */
+  .lg-points{display:flex;}
+}
 .user-bar{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--t2);}
 .user-bar .user-email{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .btn-logout{background:none;border:1px solid var(--bd);border-radius:6px;padding:2px 8px;font-size:14px;cursor:pointer;color:var(--t3);font-family:inherit;}
@@ -1419,16 +1502,6 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 .user-bar .user-email{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;color:rgba(255,255,255,.75);}
 .btn-logout{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:7px;padding:4px 11px;font-size:14px;font-weight:600;cursor:pointer;color:rgba(255,255,255,.9);font-family:inherit;transition:all .15s;}
 .btn-logout:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.4);}
-
-/* ══ LOGIN POLISH ══ */
-.login-box{background:#fff;border-radius:20px;padding:44px 38px 36px;width:90%;max-width:400px;box-shadow:0 24px 72px rgba(0,0,0,.35);text-align:center;}
-.login-title{font-size:25px;font-weight:800;color:#0f2d6b;margin-bottom:4px;letter-spacing:-.3px;}
-.login-sub{font-size:16px;color:#94a3b8;margin-bottom:28px;}
-.login-input{width:100%;padding:13px 15px;border:1.5px solid #e2e8f0;border-radius:11px;font-size:17px;font-family:inherit;margin-bottom:12px;box-sizing:border-box;transition:all .2s;background:#f8fafc;}
-.login-input:focus{outline:none;border-color:#f07020;background:#fff;box-shadow:0 0 0 3px rgba(240,112,32,.12);}
-.login-btn-primary{background:linear-gradient(135deg,#f07020,#e05a10);color:#fff;margin-bottom:10px;letter-spacing:.2px;}
-.login-btn-primary:hover{background:linear-gradient(135deg,#e05a10,#c84a00);transform:translateY(-1px);box-shadow:0 4px 14px rgba(240,112,32,.4);}
-.login-footer{font-size:14px;color:#94a3b8;margin-top:20px;}
 
 /* ══ DASS MODAL ══ */
 .btn-dass { background:linear-gradient(135deg,#6d28d9,#5b21b6) !important; color:#fff !important; border:none !important; font-weight:700 !important; }
