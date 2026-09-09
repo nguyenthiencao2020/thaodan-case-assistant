@@ -2537,7 +2537,7 @@ function renderTodo() {
   if (!box) return;
   // Vùng phải dùng chung: đang xem chi tiết một ca thì khối việc nhường chỗ hẳn, không chen
   // lên trên đầu khung chi tiết.
-  if (_caseDetailOpen) { box.hidden = true; return; }
+  if (_caseDetailOpen) { box.hidden = true; _syncCaseDetailSlim(); return; }
   const today = _dayStart(new Date());
   const in7 = new Date(today); in7.setDate(in7.getDate() + 7);
   const all = _collectTasks();
@@ -2553,6 +2553,10 @@ function renderTodo() {
       box.innerHTML = '<div class="todo-hd"><span class="todo-ttl">✅ Việc cần làm</span>'
         + '<span class="todo-sub">Không có việc nào tới hạn trong 7 ngày · còn ' + sau + ' việc ở xa hơn</span></div>';
     }
+    // Phải đồng bộ ở CẢ đường ra sớm: làm xong việc cuối cùng (hoặc xóa ca cuối cùng) mà không
+    // gọi thì vùng phải giữ nguyên trạng "đang có danh sách việc" — lời mời chọn ca còn một
+    // dòng chữ nhỏ trong khoảng trống lớn, và trên điện thoại thứ tự hai cột vẫn bị đảo.
+    _syncCaseDetailSlim();
     return;
   }
   box.hidden = false;
