@@ -259,8 +259,11 @@ async function logoutUser() {
   const fecMsgs = document.getElementById('fec-msgs');
   if (fecMsgs) fecMsgs.innerHTML = '<div class="fec-hint">VD: "sửa họ tên thành Nguyễn Văn A" · "bổ sung địa chỉ 123 Q.1"</div>';
   const _cs = document.getElementById('chat-suggestions'); if (_cs) { _cs.hidden = true; _cs._sugOpen = false; }
-  // Stage / banners
-  document.getElementById('closed-banner')?.classList.remove('show');
+  // Stage / banners — gọi applyClosedCaseUI() thay vì tự xoá một dải: nó dọn cả dải "Ca đã đóng",
+  // dải "chỉ đọc", ô nhập và hai nút Lưu / Hoàn thành GĐ. Trước đây chỉ xoá dải đóng ca, nên xem
+  // ca của người khác rồi đăng xuất là dải "chỉ đọc" còn nguyên và nút Lưu KẸT Ở TRẠNG THÁI MỜ —
+  // người sau đăng nhập vào máy đó không lưu được gì mà không hiểu vì sao.
+  applyClosedCaseUI();
   updateStageUI();
   // Show login
   const lo = document.getElementById('login-overlay');
@@ -277,6 +280,11 @@ async function logoutUser() {
 }
 
 function _onLogin(user) {
+  // Người đăng nhập lần này có thể KHÁC người của phiên trước: máy dùng chung ở văn phòng, hết
+  // phiên 30 phút rồi người khác đăng nhập, hoặc trình duyệt gọi lại onAuthStateChange. Nhớ lại
+  // để bên dưới quyết định có được giữ lại việc đang làm trên màn hình hay không.
+  const _nguoiTruoc = _currentUser && _currentUser.email;
+  const _doiNguoi = !!_nguoiTruoc && _nguoiTruoc !== user.email;
   _currentUser = user;
   window._sessionReset?.();
   document.getElementById('login-overlay').style.display = 'none';
@@ -292,8 +300,16 @@ function _onLogin(user) {
     if (isAdmin()) showNotif('👑 Chế độ Admin — hiển thị ' + Object.keys(_cases).length + ' ca toàn hệ thống', 'info');
     // Nếu initStorage() chạy lâu (mạng chậm) và trong lúc đó NVXH đã mở/tạo ca hoặc
     // đã gõ ghi chép rồi — KHÔNG reset dashboard, tránh xóa mất công việc đang làm.
+    // Chỉ giữ lại việc đang làm khi CÙNG một người, và ca đang mở là ca của chính họ. Điều kiện
+    // cũ chỉ hỏi "có curCaseId không" — nên xem ca của người khác rồi đăng nhập lại (hoặc người
+    // khác đăng nhập vào cùng máy) là bỏ qua cả đoạn dọn màn hình: dải "chỉ đọc" còn nguyên, nút
+    // Lưu kẹt ở trạng thái mờ, và tệ hơn cả là hồ sơ của người trước còn hiển thị cho người sau.
     const notesEl = document.getElementById('dash-notes');
-    if (curCaseId || (notesEl && notesEl.value.trim())) return;
+    const _coChuDangGo = !!(notesEl && notesEl.value.trim());
+    const _caDangMo = curCaseId ? _cases[curCaseId] : null;
+    const _giuViecDangLam = !_doiNguoi
+      && (_caDangMo ? !_isOthersCase(_caDangMo) : _coChuDangGo);
+    if (_giuViecDangLam) return;
     // Reset dashboard về trạng thái sạch (không auto-load ca cũ)
     D = null; curCaseId = null; currentStage = 1; chatHistory = []; _editingEntryIdx = null;
     document.getElementById('dash-notes').value = '';
@@ -307,10 +323,17 @@ function _onLogin(user) {
     const dl = document.getElementById('dash-case-label'); if (dl) dl.textContent = '';
     const fp = document.getElementById('form-preview');
     if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:50px;margin-bottom:14px;opacity:.3;">📋</div><div style="font-weight:800;font-size:18px;margin-bottom:6px;color:var(--t2)">Chưa có dữ liệu</div><div style="font-size:15px;">Phân tích ghi chép trong tab <strong>Dashboard</strong> để điền form</div></div></div>';
-    document.getElementById('closed-banner')?.classList.remove('show');
+    applyClosedCaseUI();   // dọn mọi dải trạng thái + mở lại nút Lưu (xem ghi chú ở logoutUser)
     updateStageUI();
     renderEntriesPanel();
     setTimeout(() => { checkStaleCases(); showNotifications(); }, 2000);
+    // Đăng nhập xong thì đưa về chỗ có việc để làm. Người đã có ca mà mở ra thấy màn Dashboard
+    // trắng ("Chọn ca từ tab Danh sách ca...") thì bước đầu tiên luôn là tự đi tìm tab khác —
+    // trong khi tab Danh sách ca đã có sẵn "Việc cần làm" hôm nay và danh sách ca của họ.
+    // Người chưa có ca nào thì để nguyên ở Dashboard, vì việc đầu tiên của họ là bấm "+ Ca mới".
+    // Chọn tab một cách dứt khoát cho CẢ HAI trường hợp: không thì người sau đăng nhập vào máy
+    // dùng chung lại đứng ở đúng cái tab người trước để lại.
+    switchMain(Object.keys(_cases).length ? 'cases' : 'dash');
     // Hỏi khôi phục ghi chép dang dở của phiên trước. PHẢI gọi sau khi đăng nhập — gọi lúc
     // khởi động thì hộp thoại nằm dưới lớp login (z-index 99999), NVXH không bấm được.
     setTimeout(_offerRestoreDraft, 600);
@@ -1460,7 +1483,7 @@ function completeStage() {
         document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:31px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
         setHdrCase('', '');
         const dl = document.getElementById('dash-case-label'); if (dl) dl.textContent = '';
-        document.getElementById('closed-banner')?.classList.remove('show');
+        applyClosedCaseUI();   // dọn mọi dải trạng thái + mở lại nút Lưu, xem ghi chú ở logoutUser
         const fp = document.getElementById('form-preview');
         if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:50px;margin-bottom:14px;opacity:.3;">✅</div><div style="font-weight:800;font-size:18px;margin-bottom:6px;color:var(--t2)">Ca đã đóng</div><div style="font-size:15px;">Chọn ca khác từ <strong>Danh sách ca</strong></div></div></div>';
         renderCaseList(); updateCasesCount(); updateStageUI(); renderEntriesPanel();
@@ -4461,9 +4484,8 @@ function newCase() {
   if (_ab) { _ab.style.display = 'flex'; }
   if (_ci) { _ci.disabled = false; }
   if (_bs) { _bs.disabled = false; }
-  document.getElementById('closed-banner')?.classList.remove('show');
   updateStageUI();
-  applyClosedCaseUI();
+  applyClosedCaseUI();   // dọn mọi dải trạng thái + mở lại nút Lưu, xem ghi chú ở logoutUser
   renderStageHistory();
   switchMain('dash');
   showNotif('✅ Đã tạo ca mới');
@@ -5306,7 +5328,7 @@ function _closeCaseFromList(id) {
         document.getElementById('btn-fill').disabled = true;
         document.getElementById('chat-msgs').innerHTML = '<div class="chat-empty"><div style="font-size:31px;margin-bottom:8px;">✅</div><div style="font-weight:600;margin-bottom:4px;">Đã đóng ca thành công</div><div>Chọn ca khác hoặc nhấn <strong>+ Ca mới</strong> để tiếp tục.</div></div>';
         setHdrCase('', '');
-        document.getElementById('closed-banner')?.classList.remove('show');
+        applyClosedCaseUI();   // dọn mọi dải trạng thái + mở lại nút Lưu, xem ghi chú ở logoutUser
         const fp = document.getElementById('form-preview');
         if (fp) fp.innerHTML = '<div id="fv" class="fv"><div style="padding:60px 40px;text-align:center;color:var(--t3);"><div style="font-size:50px;margin-bottom:14px;opacity:.3;">✅</div><div style="font-weight:800;font-size:18px;margin-bottom:6px;color:var(--t2)">Ca đã đóng</div><div style="font-size:15px;">Chọn ca khác từ <strong>Danh sách ca</strong></div></div></div>';
         updateStageUI();
@@ -5397,7 +5419,9 @@ function transferCase(id) {
         showNotif('🤝 Đã bàn giao ca cho ' + ((data && data.to_email) || email)
           + ' — ca này không còn trong danh sách của bạn', 'ok', 8000);
         // 3) Bỏ ca khỏi danh sách tại máy (không phải xóa dữ liệu — nó đã sang người khác).
-        if (curCaseId === id) { D = null; curCaseId = null; currentStage = 1; updateStageUI(); }
+        if (curCaseId === id) {
+          D = null; curCaseId = null; currentStage = 1; updateStageUI(); applyClosedCaseUI();
+        }
         const cs2 = loadCases(); delete cs2[id]; _cases = cs2;
         renderCaseList(); renderTodo(); updateCasesCount();
         _setCaseDetailHTML('<div class="case-detail-empty"><div>'
@@ -5714,7 +5738,7 @@ function deleteCase(id) {
       delete cases[id];
       saveCases(cases);
       deleteCaseFromDB(id);
-      if (curCaseId===id) { curCaseId=null; D=null; updateHeader(); }
+      if (curCaseId===id) { curCaseId=null; D=null; updateHeader(); applyClosedCaseUI(); }
       renderCaseList(); updateCasesCount();
       _setCaseDetailHTML('<div class="case-detail-empty"><div>Đã xóa</div></div>', false);
       showNotif('✅ Đã xóa ca');

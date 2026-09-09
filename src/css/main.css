@@ -1353,6 +1353,10 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 .ro-banner.show{display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .ro-b-info{display:flex;align-items:flex-start;gap:9px;}
 .ro-b-ic{font-size:20px;line-height:1.2;}
+.ro-b-info{min-width:0;}
+/* Email công tác là một "từ" dài không có chỗ ngắt — không cho phép ngắt thì nó tràn khỏi cột
+   và bị cắt mất phần đuôi, đúng chỗ quan trọng nhất (biết ca của ai). */
+.ro-b-txt{min-width:0; overflow-wrap:anywhere;}
 .ro-b-txt .t1{font-size:15px;font-weight:800;color:#78350f;}
 .ro-b-txt .t2{font-size:13px;color:#92400e;line-height:1.45;margin-top:2px;}
 /* Hai nút này nằm ngoài #action-bar (nút Lưu trên header, nút Hoàn thành GĐ) — khi ca là của
