@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/src/css/main.css?v=43">
+<link rel="stylesheet" href="/src/css/main.css?v=44">
 </head>
 <body>
 
@@ -335,6 +335,11 @@
     <img class="login-logo" src="https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png" alt="Thảo Đàn" onerror="this.style.display='none'" style="width:110px;margin:0 auto 20px;display:block;">
     <div class="login-title">Thảo Đàn AI</div>
     <div class="login-sub">Case Management Assistant · Đăng nhập để tiếp tục</div>
+    <!-- Một câu nói rõ tool này LÀ GÌ, đặt ở đây vì đây là chỗ duy nhất ai cũng đọc trước khi
+         dùng — kể cả người chưa có tài khoản. Nói rõ giới hạn ngay từ câu mô tả, không để người
+         dùng tưởng AI thay được đánh giá của người làm nghề. -->
+    <div class="login-what">Công cụ hỗ trợ NVXH chuyển ghi chép hiện trường thành biểu mẫu quản lý
+    trường hợp — AI trích xuất và gợi ý, còn đánh giá và quyết định can thiệp vẫn là của NVXH.</div>
     <input id="login-email" class="login-input" type="email" placeholder="Email công tác" autocomplete="email">
     <input id="login-pass" class="login-input" type="password" placeholder="Mật khẩu" onkeydown="if(event.key==='Enter')loginEmail()" autocomplete="current-password">
     <label style="display:flex;align-items:flex-start;gap:8px;margin:10px 0 4px;font-size:14px;line-height:1.5;color:#475569;text-align:left;cursor:pointer;">
@@ -469,9 +474,9 @@
   </div>
 </div>
 
-<script src="/src/js/config.js?v=43"></script>
-<script src="/src/js/prompts.js?v=43"></script>
-<script src="/src/js/utils.js?v=43"></script>
-<script src="/src/js/main.js?v=43"></script>
+<script src="/src/js/config.js?v=44"></script>
+<script src="/src/js/prompts.js?v=44"></script>
+<script src="/src/js/utils.js?v=44"></script>
+<script src="/src/js/main.js?v=44"></script>
 </body>
 </html>
