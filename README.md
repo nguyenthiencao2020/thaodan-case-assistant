@@ -367,7 +367,7 @@ Bảng phủ của bộ quy trình + logic:
 | Nhánh phụ | Lùi giai đoạn, mở lại ca, backup/khôi phục (id độc bị vô hiệu), cảnh báo thiếu trường |
 | Truy vết nguồn | 10 ca thử, trong đó bắt đúng 3 giá trị bịa hoàn toàn và không báo động giả với giá trị chuẩn hóa |
 | Dấu BẢN NHÁP | Dấu trên cả 3 đường xuất; xác nhận rồi thì đổi dấu; phân tích lại thì thu hồi |
-| Che danh tính | Địa chỉ (12 câu mẫu: 5 phải che, 7 phải giữ nguyên), nhiều tên với placeholder riêng, SĐT/CCCD/email có đánh số (bộ `pii`) |
+| Che danh tính | Địa chỉ (12 câu mẫu: 5 phải che, 7 phải giữ nguyên), **"thành phố"/"khu phố" không bị coi là tên đường**, tên đường viết thường thì không che nửa vời, nhiều tên với placeholder riêng, SĐT/CCCD/email có đánh số (bộ `pii`) |
 | Chống mất dữ liệu | Mất mạng khi lưu, nháp `localStorage`, chỉ ghi ca thực sự đổi (200 ca: 0 và 1 lệnh ghi) |
 | XSS | Khai thác thật bằng tên ca chứa `<img onerror>` và id độc trong `onclick`; `escAttr()` cho giá trị thuộc tính |
 | In & xuất | Đọc XML file Word xuất ra: số mục La Mã, KHẨN CẤP, chữ ký, số trang, ảnh footer trải trọn khổ giấy, 10 biểu mẫu, công văn chuyển gửi |
@@ -406,5 +406,8 @@ trong code. Nơi nên đọc trước:
 | Thu gọn / mở rộng khu chat | `main.js` gần `setChatView`, `_restoreChatView` |
 | Emoji → icon nét, 3 tông màu báo cáo | `main.js` gần `_SEC_ICON`, `_SEC_TONE`, `_secHead` |
 | Vì sao có `escAttr` riêng | `src/js/utils.js` ngay dưới `esc` |
+| Vì sao `\b` không dùng được với chữ có dấu | `main.js` ngay trên `_CB_KIN` (và `_WB` ở phần che tên thật) — `\bbố\b` KHÔNG khớp chữ "bố" |
+| "thành phố" vs "phố" (tên đường) | `main.js` gần `_ADDR_PHO_ADMIN` |
+| "ba mẹ" mà không tích ô "Cha mẹ" | `main.js` gần `_CB_KIN` — bỏ dấu thì "ba" trùng "bà" |
 | Bảng quy đổi cỡ chữ, vùng bấm tối thiểu | `src/css/main.css` — khối `VÙNG BẤM TỐI THIỂU` và các comment trong `@media` |
 | Biến CSS từng bị dùng mà chưa khai báo | `src/css/main.css` trong khối `:root` (`--bg`, `--bg2`, `--t1`, `--bd2`, `--navy-tint`) |
