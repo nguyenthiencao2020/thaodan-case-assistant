@@ -1,5 +1,11 @@
 {
   "framework": null,
   "outputDirectory": ".",
-  "buildCommand": "npm install"
+  "buildCommand": "npm install",
+  "rewrites": [
+    {
+      "source": "/huong-dan",
+      "destination": "/docs/huong-dan-su-dung.html"
+    }
+  ]
 }
