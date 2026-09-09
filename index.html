@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/src/css/main.css?v=41">
+<link rel="stylesheet" href="/src/css/main.css?v=42">
 </head>
 <body>
 
@@ -343,6 +343,12 @@
     </label>
     <button class="login-btn login-btn-primary" id="login-btn" onclick="loginEmail()" disabled>Đăng nhập</button>
     <div id="login-err" class="login-err"></div>
+    <!-- Sổ tay đặt NGAY TRÊN màn đăng nhập: người mới được cấp tài khoản cần đọc trước khi vào,
+         mà lúc đó họ chưa đăng nhập được. Trang này là tài liệu công khai, chỉ chứa ảnh minh hoạ
+         dữ liệu hư cấu — xem docs/huong-dan-su-dung.README.md. -->
+    <a class="login-guide" href="/docs/huong-dan-su-dung.html" target="_blank" rel="noopener">
+      📘 Chưa dùng bao giờ? Đọc sổ tay hướng dẫn
+    </a>
     <div class="login-footer">🔒 Dữ liệu được mã hóa và bảo mật · Liên hệ quản trị viên nếu chưa có tài khoản</div>
   </div>
 </div>
@@ -379,6 +385,7 @@
   <button onclick="showNotifications();closeHdrMore()">Thông báo <span id="hdr-more-badge" class="hdr-more-badge" hidden></span></button>
   <button id="hdr-more-eval" onclick="switchMain('analysis');closeHdrMore()">Đánh giá tổng hợp (giám sát)</button>
   <button id="hdr-more-admin" hidden onclick="openAdminPanel();closeHdrMore()">Gán vai trò &amp; nhóm (quản trị)</button>
+  <button onclick="window.open('/docs/huong-dan-su-dung.html','_blank','noopener');closeHdrMore()">Sổ tay hướng dẫn sử dụng</button>
   <button onclick="exportCaseJSON();closeHdrMore()">Xuất hồ sơ JSON (sao lưu)</button>
   <button onclick="importCaseJSON();closeHdrMore()">Nhập hồ sơ JSON</button>
   <div class="hdr-more-email" id="hdr-more-email"></div>
@@ -462,9 +469,9 @@
   </div>
 </div>
 
-<script src="/src/js/config.js?v=41"></script>
-<script src="/src/js/prompts.js?v=41"></script>
-<script src="/src/js/utils.js?v=41"></script>
-<script src="/src/js/main.js?v=41"></script>
+<script src="/src/js/config.js?v=42"></script>
+<script src="/src/js/prompts.js?v=42"></script>
+<script src="/src/js/utils.js?v=42"></script>
+<script src="/src/js/main.js?v=42"></script>
 </body>
 </html>
