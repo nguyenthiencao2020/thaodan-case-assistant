@@ -1,0 +1,743 @@
+<title>Sổ tay dùng Thảo Đàn AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+
+<style>
+/* ── Bảng màu: lấy từ chính app (navy #0f2d6b, cam #f07020) nhưng hạ độ chói cho trang đọc dài.
+   Xám ngả xanh nhẹ để ăn với navy, không dùng xám trung tính. ───────────────────────────── */
+:root {
+  --paper:#fbfaf7; --card:#ffffff; --card-2:#f4f5f8;
+  --ink:#151a24; --ink-2:#48536a; --ink-3:#727d92;
+  --navy:#0f2d6b; --navy-2:#2b4d92; --navy-soft:#e9eef8;
+  --org:#c9560f; --org-soft:#fdf1e7;
+  --line:#e3e1dc; --line-2:#cdd3de;
+  --warn-bg:#fdf6e4; --warn-ink:#7a4a10; --warn-line:#e6c78a;
+  --good-bg:#edf6f0; --good-ink:#1c5c3d; --good-line:#b2d7c0;
+  --stop-bg:#fdeeed; --stop-ink:#8d2320; --stop-line:#e6b3b1;
+  --shadow:0 1px 2px rgba(16,24,40,.05), 0 8px 24px -12px rgba(16,24,40,.18);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:#11141a; --card:#181c24; --card-2:#20252f;
+    --ink:#e9e7e2; --ink-2:#b3bccd; --ink-3:#8b95a6;
+    --navy:#9db8ee; --navy-2:#c3d4f5; --navy-soft:#1b2436;
+    --org:#f0a06a; --org-soft:#2a1e16;
+    --line:#2a2f3a; --line-2:#39404d;
+    --warn-bg:#2a2113; --warn-ink:#f0cf90; --warn-line:#5c4720;
+    --good-bg:#152420; --good-ink:#8fd3ae; --good-line:#2c503f;
+    --stop-bg:#2a1717; --stop-ink:#f0aaa6; --stop-line:#5c2b28;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:#11141a; --card:#181c24; --card-2:#20252f;
+  --ink:#e9e7e2; --ink-2:#b3bccd; --ink-3:#8b95a6;
+  --navy:#9db8ee; --navy-2:#c3d4f5; --navy-soft:#1b2436;
+  --org:#f0a06a; --org-soft:#2a1e16;
+  --line:#2a2f3a; --line-2:#39404d;
+  --warn-bg:#2a2113; --warn-ink:#f0cf90; --warn-line:#5c4720;
+  --good-bg:#152420; --good-ink:#8fd3ae; --good-line:#2c503f;
+  --stop-bg:#2a1717; --stop-ink:#f0aaa6; --stop-line:#5c2b28;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+
+*, *::before, *::after { box-sizing:border-box; }
+body {
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size:16.5px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+:focus-visible { outline:2.5px solid var(--org); outline-offset:2px; border-radius:3px; }
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; transition:none !important; } }
+
+/* ── Khung trang: dải mục lục dính bên trái, nội dung một cột hẹp để đọc ─────────────────── */
+.wrap { max-width:1140px; margin:0 auto; padding:0 22px 90px; }
+.layout { display:grid; grid-template-columns:224px minmax(0,1fr); gap:44px; align-items:start; }
+@media (max-width:900px) { .layout { grid-template-columns:1fr; gap:0; } }
+
+/* ── Đầu trang ───────────────────────────────────────────────────────────────────────────── */
+.masthead { border-bottom:2px solid var(--navy); padding:38px 0 22px; margin-bottom:34px; }
+.eyebrow {
+  font-family:'JetBrains Mono', ui-monospace, monospace; font-size:12px; font-weight:700;
+  letter-spacing:1.6px; text-transform:uppercase; color:var(--org); margin:0 0 12px;
+}
+h1 {
+  font-family:Lora, Georgia, serif; font-weight:600; font-size:clamp(34px, 5.2vw, 50px);
+  line-height:1.1; letter-spacing:-.5px; margin:0 0 14px; text-wrap:balance; color:var(--ink);
+}
+.lede { font-size:19px; line-height:1.55; color:var(--ink-2); max-width:60ch; margin:0; }
+.masthead-meta {
+  display:flex; flex-wrap:wrap; gap:8px 26px; margin-top:22px;
+  font-size:14px; color:var(--ink-3);
+}
+.masthead-meta b { color:var(--ink-2); font-weight:600; }
+
+/* ── Mục lục ─────────────────────────────────────────────────────────────────────────────── */
+nav.toc { position:sticky; top:22px; font-size:14.5px; }
+nav.toc .toc-hd {
+  font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:700; letter-spacing:1.4px;
+  text-transform:uppercase; color:var(--ink-3); padding-bottom:9px; margin-bottom:9px;
+  border-bottom:1px solid var(--line);
+}
+nav.toc ol { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px; }
+nav.toc a {
+  display:flex; gap:9px; padding:5px 8px; border-radius:6px;
+  color:var(--ink-2); text-decoration:none; line-height:1.35;
+}
+nav.toc a:hover { background:var(--navy-soft); color:var(--navy); }
+nav.toc .n {
+  font-family:'JetBrains Mono', monospace; font-size:11.5px; font-weight:700;
+  color:var(--ink-3); padding-top:2px; font-variant-numeric:tabular-nums;
+}
+@media (max-width:900px) {
+  nav.toc { position:static; margin-bottom:34px; padding:16px 18px; background:var(--card);
+            border:1px solid var(--line); border-radius:10px; }
+  /* min(...) để trên điện thoại hẹp cột không bị đòi 210px rồi tràn ra ngoài mép trang */
+  nav.toc ol { display:grid; gap:2px 14px;
+               grid-template-columns:repeat(auto-fill,minmax(min(200px,100%),1fr)); }
+}
+
+/* ── Mục nội dung ────────────────────────────────────────────────────────────────────────── */
+section { scroll-margin-top:20px; padding-top:8px; }
+section + section { margin-top:54px; }
+h2 {
+  font-family:Lora, Georgia, serif; font-weight:600; font-size:28px; line-height:1.2;
+  margin:0 0 6px; color:var(--ink); text-wrap:balance;
+  display:flex; align-items:baseline; gap:12px;
+}
+h2 .h2n {
+  font-family:'JetBrains Mono', monospace; font-size:14px; font-weight:700; color:var(--org);
+  flex:0 0 auto; font-variant-numeric:tabular-nums;
+}
+h3 { font-size:17.5px; font-weight:700; margin:28px 0 8px; color:var(--ink); }
+.sub { color:var(--ink-3); font-size:15px; margin:0 0 20px 34px; }
+@media (max-width:560px) { .sub { margin-left:0; } }
+p { margin:0 0 14px; max-width:66ch; }
+ul, ol.plain { margin:0 0 16px; padding-left:22px; max-width:66ch; }
+li { margin-bottom:6px; }
+strong { font-weight:600; }
+a { color:var(--navy); text-decoration-thickness:1px; text-underline-offset:2px; }
+
+/* ── Tên nút trong app: gõ đúng như trên màn hình ────────────────────────────────────────── */
+.b {
+  font-family:'JetBrains Mono', ui-monospace, monospace; font-size:.86em; font-weight:700;
+  background:var(--navy-soft); color:var(--navy); border:1px solid var(--line-2);
+  padding:1.5px 6px; border-radius:5px; white-space:nowrap;
+}
+.b-org { background:var(--org-soft); color:var(--org); }
+
+/* ── Các bước ────────────────────────────────────────────────────────────────────────────── */
+.steps { display:flex; flex-direction:column; gap:2px; margin:20px 0 8px; counter-reset:s; }
+.step {
+  display:grid; grid-template-columns:46px minmax(0,1fr); gap:16px;
+  padding:16px 0; border-top:1px solid var(--line);
+}
+.step:last-child { border-bottom:1px solid var(--line); }
+.step-n {
+  font-family:Lora, Georgia, serif; font-size:30px; font-weight:600; line-height:1;
+  color:var(--org); font-variant-numeric:tabular-nums; padding-top:2px;
+}
+.step-b { min-width:0; }
+.step-t { font-size:17.5px; font-weight:700; margin:0 0 5px; line-height:1.35; }
+.step-b p:last-child { margin-bottom:0; }
+
+/* ── Ảnh màn hình: đóng khung như một cửa sổ, kèm nhãn nói ảnh này ở đâu ─────────────────── */
+figure {
+  margin:22px 0 26px; background:var(--card); border:1px solid var(--line-2);
+  border-radius:10px; overflow:hidden; box-shadow:var(--shadow);
+}
+figure .fbar {
+  display:flex; align-items:center; gap:9px; padding:8px 13px;
+  background:var(--card-2); border-bottom:1px solid var(--line);
+  font-family:'JetBrains Mono', monospace; font-size:11.5px; font-weight:700;
+  letter-spacing:.7px; text-transform:uppercase; color:var(--ink-3);
+}
+figure .fbar::before {
+  content:''; width:8px; height:8px; border-radius:50%; background:var(--line-2); flex:0 0 auto;
+}
+figure img { display:block; width:100%; height:auto; background:var(--card); }
+figcaption { padding:11px 15px 13px; font-size:14.5px; line-height:1.5; color:var(--ink-2);
+             border-top:1px solid var(--line); }
+figcaption b { color:var(--ink); font-weight:600; }
+figure.narrow { max-width:420px; }
+figure.phone { max-width:330px; }
+
+/* ── Dải lưu ý ───────────────────────────────────────────────────────────────────────────── */
+.note {
+  display:grid; grid-template-columns:26px minmax(0,1fr); gap:11px;
+  padding:14px 16px; border-radius:9px; margin:18px 0; font-size:15.5px; line-height:1.55;
+  border:1px solid var(--line-2); background:var(--card-2); color:var(--ink-2);
+}
+.note b { display:block; color:var(--ink); margin-bottom:2px; }
+.note .ic { font-size:17px; line-height:1.4; }
+.note p { max-width:none; margin:0 0 8px; }
+.note p:last-child { margin-bottom:0; }
+.note-warn { background:var(--warn-bg); border-color:var(--warn-line); color:var(--warn-ink); }
+.note-warn b { color:var(--warn-ink); }
+.note-stop { background:var(--stop-bg); border-color:var(--stop-line); color:var(--stop-ink); }
+.note-stop b { color:var(--stop-ink); }
+.note-good { background:var(--good-bg); border-color:var(--good-line); color:var(--good-ink); }
+.note-good b { color:var(--good-ink); }
+
+/* ── Sơ đồ 5 giai đoạn: thứ tự có thật trong quy trình nên mới đánh số ───────────────────── */
+.flow { display:flex; flex-direction:column; gap:9px; margin:22px 0 8px; }
+.fstage {
+  display:grid; grid-template-columns:38px minmax(0,1fr) auto; gap:14px; align-items:center;
+  padding:13px 15px; background:var(--card); border:1px solid var(--line);
+  border-left:4px solid var(--navy-2); border-radius:9px;
+}
+.fstage.loop { border-left-color:var(--org); }
+.fs-n {
+  font-family:'JetBrains Mono', monospace; font-size:15px; font-weight:700; text-align:center;
+  color:var(--navy); background:var(--navy-soft); border-radius:7px; padding:6px 0;
+}
+.fstage.loop .fs-n { color:var(--org); background:var(--org-soft); }
+.fs-t { font-weight:700; font-size:16px; line-height:1.3; }
+.fs-d { font-size:14.5px; color:var(--ink-3); line-height:1.45; margin-top:2px; }
+.fs-tag {
+  font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:700; letter-spacing:.6px;
+  text-transform:uppercase; color:var(--org); background:var(--org-soft);
+  border:1px solid var(--org); border-radius:999px; padding:4px 9px; white-space:nowrap;
+}
+@media (max-width:560px) {
+  .fstage { grid-template-columns:38px minmax(0,1fr); }
+  .fs-tag { grid-column:2; justify-self:start; }
+}
+
+/* ── Bảng ────────────────────────────────────────────────────────────────────────────────── */
+.tbl-wrap { overflow-x:auto; margin:20px 0 24px; border:1px solid var(--line);
+            border-radius:10px; background:var(--card); }
+table { width:100%; border-collapse:collapse; font-size:15px; min-width:520px; }
+th, td { text-align:left; padding:11px 15px; vertical-align:top; line-height:1.5;
+         border-bottom:1px solid var(--line); }
+th {
+  font-family:'JetBrains Mono', monospace; font-size:11.5px; font-weight:700; letter-spacing:.9px;
+  text-transform:uppercase; color:var(--ink-3); background:var(--card-2); white-space:nowrap;
+}
+tr:last-child td { border-bottom:none; }
+td:first-child { font-weight:600; color:var(--ink); }
+
+/* ── Chân trang ──────────────────────────────────────────────────────────────────────────── */
+footer {
+  margin-top:66px; padding-top:22px; border-top:2px solid var(--navy);
+  font-size:14.5px; color:var(--ink-3);
+}
+footer p { max-width:66ch; }
+
+/* ── In ra giấy ──────────────────────────────────────────────────────────────────────────── */
+@media print {
+  body { background:#fff; color:#000; font-size:11.5pt; }
+  .layout { grid-template-columns:1fr; }
+  nav.toc { display:none; }
+  figure, .note, .fstage, .tbl-wrap { break-inside:avoid; page-break-inside:avoid; }
+  section { break-before:auto; }
+  h2 { break-after:avoid; }
+  figure { box-shadow:none; }
+}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Thảo Đàn SSC · Sổ tay người dùng</p>
+  <h1>Dùng Thảo Đàn AI Case Assistant</h1>
+  <p class="lede">Từ lúc mở máy tới lúc có phúc trình in ra giấy. Mỗi bước một ảnh chụp đúng như
+  màn hình bạn sẽ thấy — không cần biết gì về máy tính ngoài việc gõ và bấm.</p>
+  <div class="masthead-meta">
+    <span><b>Dành cho</b> cán bộ xã hội (CBXH) và quản lý ca</span>
+    <span><b>Đọc lần đầu</b> khoảng 15 phút</span>
+    <span><b>Cập nhật</b> 09/2026</span>
+  </div>
+</header>
+
+<div class="layout">
+
+<nav class="toc" aria-label="Mục lục">
+  <div class="toc-hd">Nội dung</div>
+  <ol>
+    <li><a href="#s1"><span class="n">01</span><span>Đăng nhập lần đầu</span></a></li>
+    <li><a href="#s2"><span class="n">02</span><span>Ba tab, mỗi tab một việc</span></a></li>
+    <li><a href="#s3"><span class="n">03</span><span>Năm giai đoạn của một ca</span></a></li>
+    <li><a href="#s4"><span class="n">04</span><span>Làm một ca, từng bước</span></a></li>
+    <li><a href="#s5"><span class="n">05</span><span>Vãng gia nhiều buổi</span></a></li>
+    <li><a href="#s6"><span class="n">06</span><span>Việc cần làm hôm nay</span></a></li>
+    <li><a href="#s7"><span class="n">07</span><span>Xem lại &amp; in lại bản cũ</span></a></li>
+    <li><a href="#s8"><span class="n">08</span><span>Đóng ca, mở lại ca</span></a></li>
+    <li><a href="#s9"><span class="n">09</span><span>Bàn giao ca</span></a></li>
+    <li><a href="#s10"><span class="n">10</span><span>Ra hiện trường: phiếu trắng &amp; danh bạ</span></a></li>
+    <li><a href="#s11"><span class="n">11</span><span>Ai thấy được ca nào</span></a></li>
+    <li><a href="#s12"><span class="n">12</span><span>Bảo mật thông tin trẻ</span></a></li>
+    <li><a href="#s13"><span class="n">13</span><span>Dùng trên điện thoại</span></a></li>
+    <li><a href="#s14"><span class="n">14</span><span>Khi có gì không ổn</span></a></li>
+    <li><a href="#s15"><span class="n">15</span><span>Bốn điều phải nhớ</span></a></li>
+  </ol>
+</nav>
+
+<main>
+
+<section id="s1">
+  <h2><span class="h2n">01</span>Đăng nhập lần đầu</h2>
+  <p class="sub">Tài khoản do quản trị viên tạo sẵn — không có mục tự đăng ký.</p>
+
+  <figure class="narrow">
+    <div class="fbar">Màn hình đăng nhập</div>
+    <img src="__IMG_01__" alt="Màn hình đăng nhập: ô email công tác, ô mật khẩu, ô tick cam kết, nút Đăng nhập">
+    <figcaption>Nhập <b>email công tác</b> và mật khẩu, <b>tick ô cam kết</b> rồi bấm
+    <span class="b b-org">Đăng nhập</span>. Chưa tick thì nút chưa ăn.</figcaption>
+  </figure>
+
+  <p>Ô tick không phải hình thức: bạn đang xác nhận sẽ làm theo <strong>Luật Trẻ em 2016</strong> và
+  <strong>Nghị định 56/2017/NĐ-CP</strong>. Mọi thao tác trên hồ sơ đều được ghi lại kèm tên người làm.</p>
+
+  <div class="note note-warn">
+    <span class="ic" aria-hidden="true">⚠</span>
+    <div><b>Quên mật khẩu, hoặc chưa có tài khoản?</b>
+    Liên hệ quản trị viên của Thảo Đàn. Người dùng không tự tạo được tài khoản, và cũng không nên
+    dùng chung một tài khoản — vì hồ sơ ghi lại ai làm gì, dùng chung là mất dấu.</div>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="h2n">02</span>Ba tab, mỗi tab một việc</h2>
+  <p class="sub">Cả app chỉ có ba tab. Nhớ ba dòng dưới đây là biết mình đang ở đâu.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Tab</th><th>Dùng để</th><th>Bạn làm gì ở đây</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Dashboard &amp; AI</td>
+          <td>Nơi làm việc chính</td>
+          <td>Gõ hoặc dán ghi chép, bấm Phân tích, chuyển giai đoạn, hỏi chuyên gia CTXH</td>
+        </tr>
+        <tr>
+          <td>Biểu mẫu QLTH</td>
+          <td>Xem và in 11 biểu mẫu</td>
+          <td>Đọc lại từng ô AI đã điền, sửa tay chỗ sai, tải bản Word để in và lưu hồ sơ</td>
+        </tr>
+        <tr>
+          <td>Danh sách ca</td>
+          <td>Toàn bộ ca của bạn</td>
+          <td>Xem việc cần làm hôm nay, mở ca cũ, xem ghi chép cũ, đóng ca, bàn giao ca</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Ba nút luôn nằm góc phải trên cùng, dùng ở tab nào cũng được:
+  <span class="b">⋯</span> (thêm thao tác) &nbsp;·&nbsp;
+  <span class="b">＋ Ca mới</span> &nbsp;·&nbsp;
+  <span class="b b-org">💾 Lưu</span>.</p>
+
+  <div class="note note-good">
+    <span class="ic" aria-hidden="true">✓</span>
+    <div><b>Bấm Lưu thường xuyên.</b>
+    Ghi chép đang gõ dở được máy giữ tạm, nhưng chỉ khi bấm <span class="b b-org">💾 Lưu</span> và
+    thấy dòng <em>“Đã lưu”</em> thì hồ sơ mới thật sự nằm trên hệ thống. Nếu hiện dòng
+    <em>“CHƯA lưu được lên máy chủ”</em> thì <strong>đừng đóng tab</strong> — xem mục 14.</div>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="h2n">03</span>Năm giai đoạn của một ca</h2>
+  <p class="sub">Đúng quy trình quản lý trường hợp. Hai giai đoạn có vòng lặp — đó là chỗ hay bị làm sai nhất.</p>
+
+  <div class="flow">
+    <div class="fstage">
+      <div class="fs-n">1</div>
+      <div><div class="fs-t">Tiếp cận</div>
+        <div class="fs-d">Lần gặp đầu tiên. Ra Form 0 (Hồ sơ thông tin trẻ) và Form 1 (Phiếu tiếp cận).</div></div>
+    </div>
+    <div class="fstage loop">
+      <div class="fs-n">2</div>
+      <div><div class="fs-t">Vãng gia &amp; Đánh giá</div>
+        <div class="fs-d">Mỗi buổi vãng gia một phúc trình riêng. Ra Form 2, Form 3a, Form 3b.</div></div>
+      <div class="fs-tag">↻ lặp mỗi buổi</div>
+    </div>
+    <div class="fstage">
+      <div class="fs-n">3</div>
+      <div><div class="fs-t">Kế hoạch can thiệp</div>
+        <div class="fs-d">Họp lập kế hoạch với gia đình. Ra Form 4 — mục tiêu, hoạt động, ai làm, hạn nào.</div></div>
+    </div>
+    <div class="fstage loop">
+      <div class="fs-n">4</div>
+      <div><div class="fs-t">Tiến trình</div>
+        <div class="fs-d">Mỗi buổi theo dõi được <strong>thêm vào</strong> Form 5, 6, 7 — không ghi đè buổi trước.</div></div>
+      <div class="fs-tag">↻ lặp mỗi buổi</div>
+    </div>
+    <div class="fstage">
+      <div class="fs-n">5</div>
+      <div><div class="fs-t">Kết thúc ca</div>
+        <div class="fs-d">Ra Form 8 (Chuyển gửi), Form 9 (Kết thúc ca), Form 10 (Báo cáo QLTH).</div></div>
+    </div>
+  </div>
+
+  <div class="note note-warn">
+    <span class="ic" aria-hidden="true">↻</span>
+    <div><b>Giai đoạn 2 và 4 lặp lại, đừng vội chuyển tiếp.</b>
+    Vãng gia lần hai, lần ba thì <strong>vẫn ở giai đoạn 2</strong> và bấm Phân tích lại — mỗi lần
+    thành một phúc trình riêng. Chỉ bấm <span class="b">✓ Hoàn thành GĐ</span> khi giai đoạn đó
+    thật sự xong. Bấm sớm vẫn lùi lại được, nhưng làm đúng thứ tự thì hồ sơ sạch hơn.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="h2n">04</span>Làm một ca, từng bước</h2>
+  <p class="sub">Sáu bước này giống nhau ở mọi giai đoạn. Làm quen một lần là dùng được cả năm.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-n">1</div>
+      <div class="step-b">
+        <p class="step-t">Mở ca</p>
+        <p>Ca mới thì bấm <span class="b">＋ Ca mới</span>. Ca đang làm thì vào tab
+        <strong>Danh sách ca</strong>, bấm vào tên ca rồi bấm <span class="b">🔬 Mở</span>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">2</div>
+      <div class="step-b">
+        <p class="step-t">Gõ hoặc dán ghi chép của bạn</p>
+        <p>Viết bình thường như viết sổ tay — không cần theo mẫu, không cần gạch đầu dòng. Càng
+        cụ thể (ngày, giờ, con số, lời trẻ nói) thì biểu mẫu càng đầy. Cần ít nhất 30 ký tự mới
+        phân tích được.</p>
+        <p>Có nút <span class="b">🎤 Đọc</span> nếu bạn muốn đọc bằng giọng nói thay vì gõ.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">3</div>
+      <div class="step-b">
+        <p class="step-t">Nếu ghi chép có tên thật, khai vào ô riêng phía trên</p>
+        <p>Ô <span class="b">🔒 Tên thật của trẻ và người thân</span> — cách nhau bằng dấu phẩy.
+        Hệ thống sẽ <strong>tự thay tên thật bằng mã</strong> trước khi gửi cho AI, rồi trả tên
+        thật lại vào biểu mẫu. Hồ sơ của bạn vẫn có tên thật; chỗ bên ngoài thì không.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">4</div>
+      <div class="step-b">
+        <p class="step-t">Bấm Phân tích</p>
+        <p>Nút màu xanh dưới ô ghi chép, tên đổi theo giai đoạn — ví dụ
+        <span class="b">🔬 Phân tích Tiếp cận</span>. Chờ vài giây tới vài chục giây.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">5</div>
+      <div class="step-b">
+        <p class="step-t">Sang tab Biểu mẫu và đọc lại từng ô</p>
+        <p>Đây là bước <strong>không được bỏ</strong>. AI đọc ghi chép rồi điền, nó có thể hiểu sai
+        hoặc để trống. Sai chỗ nào thì bấm <span class="b">✏️ Chỉnh sửa</span>, sửa tay, rồi
+        <span class="b">💾 Lưu ca</span>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">6</div>
+      <div class="step-b">
+        <p class="step-t">Tải bản in, rồi hoàn thành giai đoạn</p>
+        <p><span class="b b-org">📄 Tải bản in</span> cho ra file Word có bìa logo Thảo Đàn và
+        chân trang từng tờ — đây là bản để in ra giấy và lưu hồ sơ. Xong giai đoạn thì quay lại
+        tab làm việc, bấm <span class="b">✓ Hoàn thành GĐ</span>.</p>
+      </div>
+    </div>
+  </div>
+
+  <figure>
+    <div class="fbar">Tab Dashboard &amp; AI — cột làm việc bên trái</div>
+    <img src="__IMG_02__" alt="Cột làm việc: năm thẻ giai đoạn ở trên, ô tên thật, ô ghi chép đã dán nội dung, nút Phân tích Tiếp cận ở dưới">
+    <figcaption>Trên xuống dưới: <b>năm thẻ giai đoạn</b> (thẻ có ổ khoá là chưa tới lượt) —
+    <b>ô tên thật</b> — <b>ô ghi chép</b> — <b>nút Phân tích</b>. Bấm vào thẻ giai đoạn đã xong để
+    quay lại xem ghi chép của giai đoạn đó.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="fbar">Tab Biểu mẫu QLTH — Form 1 sau khi phân tích</div>
+    <img src="__IMG_03__" alt="Tab biểu mẫu: danh sách 11 form bên trái, nội dung Phiếu tiếp cận bên phải với dải Bản nháp màu vàng">
+    <figcaption>Danh sách <b>11 biểu mẫu</b> bên trái, nhóm theo giai đoạn. Dấu tròn màu cam là
+    form đã có dữ liệu. Dải vàng <b>“BẢN NHÁP — AI trích xuất, chưa kiểm chứng”</b> nằm trên mọi
+    form mới; đọc xong và thấy đúng thì bấm <b>✓ Tôi đã kiểm chứng</b> để dải đó biến mất.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="fbar">Thanh công cụ trên mỗi biểu mẫu</div>
+    <img src="__IMG_04__" alt="Thanh công cụ biểu mẫu: Chỉnh sửa, Lưu ca, Tải bản in, Bản thô, Phiếu trắng, Danh bạ">
+    <figcaption><b>Tải bản in</b> là bản chính thức có bìa và chân trang — dùng cái này để in.
+    <b>Bản thô</b> chỉ dùng khi cần cắt dán nội dung sang tài liệu khác.
+    <b>Phiếu trắng</b> và <b>Danh bạ</b> xem mục 10.</figcaption>
+  </figure>
+
+  <div class="note note-stop">
+    <span class="ic" aria-hidden="true">!</span>
+    <div><b>Đừng in bản chưa đọc lại.</b>
+    Biểu mẫu ra từ AI là <em>bản nháp</em>. Phúc trình mang tên bạn, nộp cho phường, lưu vào hồ sơ
+    trẻ — nên trách nhiệm nội dung là của bạn, không phải của máy. Đọc lại từng ô, sửa chỗ sai,
+    rồi mới in.</div>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="h2n">05</span>Vãng gia nhiều buổi</h2>
+  <p class="sub">Một ca thường vãng gia ba, bốn, năm lần. Mỗi lần phải có phúc trình riêng.</p>
+
+  <p>Cách làm: <strong>ở lại giai đoạn 2</strong>, mỗi buổi về thì dán ghi chép của buổi đó rồi bấm
+  Phân tích lại. Hệ thống tạo một phúc trình mới, <strong>buổi trước không bị ghi đè</strong>.</p>
+
+  <p>Khi cần in lại một buổi cũ: vào tab <strong>Biểu mẫu</strong>, mở <strong>Form 2 — Phúc trình
+  vãng gia</strong>, chọn buổi ở ô ngay trên thanh công cụ, rồi bấm
+  <span class="b b-org">📄 Tải bản in</span>. Đi tới buổi thứ tư vẫn in lại được buổi một.</p>
+
+  <div class="note note-warn">
+    <span class="ic" aria-hidden="true">⚠</span>
+    <div><b>Mỗi lần dán ghi chép của MỘT buổi.</b>
+    Đừng dồn ghi chép ba buổi vào một lần phân tích — hệ thống sẽ hiểu là một buổi, và bạn mất
+    phúc trình riêng của hai buổi kia.</div>
+  </div>
+</section>
+
+<section id="s6">
+  <h2><span class="h2n">06</span>Việc cần làm hôm nay</h2>
+  <p class="sub">Tự dựng từ ngày tháng trong kế hoạch can thiệp — bạn không phải nhập lịch lần nữa.</p>
+
+  <figure>
+    <div class="fbar">Tab Danh sách ca</div>
+    <img src="__IMG_05__" alt="Tab Danh sách ca: danh sách ca bên trái, khối Việc cần làm bên phải với các thẻ hạn Trễ 3 ngày, Còn 2 ngày">
+    <figcaption>Mỗi dòng một việc, kèm <b>thẻ hạn</b> có màu: đỏ là trễ, cam là hôm nay, xanh là
+    sắp tới. Bấm <b>ô tròn bên trái</b> để đánh dấu đã làm xong; bấm <b>mũi nhọn bên phải</b> để mở
+    ca đó ra làm. Nhiều việc quá thì bấm <b>Thu gọn</b>.</figcaption>
+  </figure>
+
+  <p>Việc trong danh sách này đến từ ba nguồn, tất cả đều là ngày tháng bạn đã ghi trong hồ sơ:</p>
+  <ul>
+    <li><strong>Hoạt động trong kế hoạch can thiệp</strong> (Form 4) — đúng những việc bạn đã cam kết với gia đình.</li>
+    <li><strong>Mốc xem xét lại kế hoạch</strong> — nhắc bạn ngồi lại đánh giá, không để kế hoạch nằm im.</li>
+    <li><strong>Lịch theo dõi sau đóng ca</strong> — mốc 1, 3 và 6 tháng, hệ thống tự sinh lúc bạn đóng ca.</li>
+  </ul>
+
+  <p>Hoạt động ghi hạn kiểu <em>“hàng tháng”</em> hay <em>“2 tuần/lần”</em> sẽ không hiện ở đây, vì
+  không phải một ngày cụ thể. Muốn nó nhắc bạn thì ghi hạn thành ngày, ví dụ <em>15/10/2026</em>.</p>
+</section>
+
+<section id="s7">
+  <h2><span class="h2n">07</span>Xem lại &amp; in lại bản cũ</h2>
+  <p class="sub">Mỗi lần bấm Phân tích là một mốc được lưu lại. Không mốc nào mất.</p>
+
+  <figure>
+    <div class="fbar">Danh sách ca → chọn ca → tab Ghi chép</div>
+    <img src="__IMG_06__" alt="Chi tiết ca, tab Ghi chép: các mốc ghi chép kèm nút Xem lại và In lại">
+    <figcaption><b>👁 Xem lại</b> mở biểu mẫu đúng như đã lưu ở mốc đó (chỉ đọc).
+    <b>🖨 In lại</b> tải file Word đúng nội dung mốc đó — không phải nội dung hôm nay.</figcaption>
+  </figure>
+
+  <p>Trong lúc xem bản cũ, cuối màn hình có dải nâu <em>“Đang xem bản lưu … chỉ đọc”</em>. Bấm
+  <span class="b">↩ Trở lại dữ liệu hiện tại</span> để về hồ sơ đang làm. Đang xem bản cũ thì
+  không sửa và không lưu được — cố tình để vậy, để không ai lỡ tay lấy bản cũ đè lên bản mới.</p>
+</section>
+
+<section id="s8">
+  <h2><span class="h2n">08</span>Đóng ca, mở lại ca</h2>
+  <p class="sub">Cả hai đều bắt ghi lý do. Không phải thủ tục — đó là căn cứ khi có người hỏi lại sau này.</p>
+
+  <figure class="narrow">
+    <div class="fbar">Hộp thoại đóng ca</div>
+    <img src="__IMG_07__" alt="Hộp thoại Đóng ca với ô nhập lý do bắt buộc">
+    <figcaption>Chưa ghi lý do (hoặc ghi quá ngắn) thì nút xác nhận chưa ăn. Lý do được lưu vào
+    hồ sơ kèm ngày và tên người làm, xem lại được trong chi tiết ca.</figcaption>
+  </figure>
+
+  <p>Đóng ca xong, hệ thống <strong>tự tạo lịch theo dõi 1, 3 và 6 tháng</strong>, và các mốc đó sẽ
+  hiện trong “Việc cần làm” khi tới gần hạn. Ca đã đóng nằm lại trong danh sách với nhãn
+  <span class="b">Đóng</span> — không bị xoá đi.</p>
+
+  <p>Mở lại ca cũng cần lý do, và ca sẽ về trạng thái đang mở ở giai đoạn 5.</p>
+</section>
+
+<section id="s9">
+  <h2><span class="h2n">09</span>Bàn giao ca</h2>
+  <p class="sub">Khi bạn nghỉ, chuyển địa bàn, hoặc ca cần người khác tiếp.</p>
+
+  <p>Vào <strong>Danh sách ca</strong>, chọn ca, bấm <span class="b">🤝 Bàn giao</span>. Nhập
+  <strong>email công tác của người nhận</strong> và <strong>lý do bàn giao</strong>. Sau khi bàn
+  giao, ca thuộc về người đó: họ sửa được, bạn thì không.</p>
+
+  <div class="note">
+    <span class="ic" aria-hidden="true">📋</span>
+    <div><b>Việc bàn giao được ghi sổ trước khi ca chuyển đi.</b>
+    Nên dù mạng có lỗi giữa đường thì vẫn tra được ai giao cho ai, ngày nào, vì sao.</div>
+  </div>
+</section>
+
+<section id="s10">
+  <h2><span class="h2n">10</span>Ra hiện trường: phiếu trắng &amp; danh bạ</h2>
+  <p class="sub">Hai nút nhỏ trên thanh công cụ biểu mẫu, dành cho lúc không có máy hoặc không có mạng.</p>
+
+  <h3>Phiếu trắng</h3>
+  <p><span class="b">Phiếu trắng</span> tải về đúng biểu mẫu đó nhưng để trống, có dòng kẻ để viết
+  tay. In ra giấy mang đi vãng gia, ghi tại nhà trẻ, về nhập lại vào app. Nhà không có điện,
+  không có mạng, hoặc mở laptop ra thì gia đình e dè — đều dùng cách này.</p>
+
+  <h3>Danh bạ nguồn lực</h3>
+  <p><span class="b">📞 Danh bạ</span> mở ngay danh bạ đầu mối: UBND phường, Hội Phụ nữ, trạm y tế,
+  Tổng đài 111… Có ô tìm và nút sao chép, dùng được ngay lúc đang điền mục “Nguồn lực kết nối”.</p>
+
+  <div class="note note-stop">
+    <span class="ic" aria-hidden="true">!</span>
+    <div><b>Danh bạ chỉ ghi đầu mối dịch vụ công khai.</b>
+    Tuyệt đối không ghi tên, số điện thoại, địa chỉ của trẻ hay gia đình vào đó — ai mở app cũng
+    tải được danh bạ này.</div>
+  </div>
+</section>
+
+<section id="s11">
+  <h2><span class="h2n">11</span>Ai thấy được ca nào</h2>
+  <p class="sub">Hai mức quyền, đơn giản và cố tình để đơn giản.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Vai trò</th><th>Xem được</th><th>Sửa được</th></tr></thead>
+      <tbody>
+        <tr><td>CBXH</td><td>Ca của chính mình</td><td>Ca của chính mình</td></tr>
+        <tr><td>Quản lý</td><td>Tất cả ca của tổ chức</td><td>Chỉ ca của chính mình</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <figure>
+    <div class="fbar">Quản lý mở ca của CBXH khác</div>
+    <img src="__IMG_09__" alt="Dải màu vàng: Ca này của cbxh1@thaodancenter.org.vn — chỉ đọc">
+    <figcaption>Dải này hiện ngay đầu cột làm việc, ô ghi chép bị khoá, nút Lưu mờ đi. Quản lý cần
+    sửa thì nhờ người phụ trách <b>bàn giao ca</b> cho mình.</figcaption>
+  </figure>
+
+  <p>Đổi vai trò cho ai đó: quản lý bấm <span class="b">⋯</span> →
+  <span class="b">Gán vai trò &amp; nhóm</span>, nhập email và chọn vai trò. Có hiệu lực ngay khi
+  người đó tải lại trang.</p>
+
+  <figure class="narrow">
+    <div class="fbar">Menu ⋯</div>
+    <img src="__IMG_08__" alt="Menu ⋯ với các mục Thống kê ca, Thông báo, Gán vai trò và nhóm, Xuất hồ sơ JSON, Nhập hồ sơ JSON, Đăng xuất">
+    <figcaption>Mục <b>Gán vai trò &amp; nhóm</b> chỉ hiện với quản lý. Ở cuối menu là email bạn
+    đang đăng nhập và nút Đăng xuất.</figcaption>
+  </figure>
+</section>
+
+<section id="s12">
+  <h2><span class="h2n">12</span>Bảo mật thông tin trẻ</h2>
+  <p class="sub">Ba điều nên biết, vì hồ sơ bảo vệ trẻ em không có chỗ cho rủi ro.</p>
+
+  <h3>1. Tên thật, số điện thoại, CCCD được ẩn trước khi gửi AI</h3>
+  <p>Hệ thống thay chúng bằng mã (<em>[SDT_1]</em>, <em>[DIA_CHI_2]</em>…) rồi mới gửi đi, và trả
+  giá trị thật lại vào biểu mẫu của bạn. Muốn tên trẻ cũng được ẩn thì phải <strong>khai vào ô “Tên
+  thật”</strong> ở bước 3 — hệ thống không tự đoán được tên nào là tên thật giữa một đoạn văn.</p>
+
+  <h3>2. Dữ liệu lưu trên hệ thống đã được mã hoá</h3>
+  <p>Hồ sơ nằm trong cơ sở dữ liệu có mã hoá và có phân quyền theo từng người. Chỉ cần bạn không
+  dùng chung tài khoản và không để máy mở khi rời chỗ.</p>
+
+  <h3>3. Xuất hồ sơ JSON là một file KHÔNG mã hoá</h3>
+  <div class="note note-stop">
+    <span class="ic" aria-hidden="true">!</span>
+    <div><b>Chỉ xuất JSON khi thật cần sao lưu, và xoá ngay sau khi dùng.</b>
+    File đó nằm trong thư mục Tải về của máy bạn, ai mở máy cũng đọc được toàn bộ hồ sơ trẻ. Không
+    gửi qua Zalo, email cá nhân hay USB không khoá.</div>
+  </div>
+</section>
+
+<section id="s13">
+  <h2><span class="h2n">13</span>Dùng trên điện thoại</h2>
+  <p class="sub">Cùng một địa chỉ web, không cần cài gì. Đủ để xem và ghi nhanh tại hiện trường.</p>
+
+  <figure class="phone">
+    <div class="fbar">Trên điện thoại</div>
+    <img src="__IMG_10__" alt="Giao diện trên điện thoại: khối Việc cần làm xếp dọc, chữ và nút to">
+    <figcaption>Việc cần làm hiện <b>trước</b> danh sách ca, chữ và nút to hơn để bấm bằng ngón
+    tay. Cùng dữ liệu với máy tính.</figcaption>
+  </figure>
+
+  <p>Kinh nghiệm dùng thật: <strong>ghi chép dài thì gõ trên máy tính</strong> — nhanh hơn và đỡ
+  sai. Điện thoại dùng để xem việc cần làm, xem lại hồ sơ khi đang ở nhà trẻ, và ghi vài dòng nóng.</p>
+</section>
+
+<section id="s14">
+  <h2><span class="h2n">14</span>Khi có gì không ổn</h2>
+  <p class="sub">Sáu tình huống hay gặp nhất và cách xử lý.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Bạn thấy</th><th>Nghĩa là</th><th>Làm gì</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>“CHƯA lưu được lên máy chủ”</td>
+          <td>Mất mạng hoặc hết phiên đăng nhập</td>
+          <td><strong>Đừng đóng tab.</strong> Nội dung còn trên máy. Kiểm tra mạng rồi bấm
+          <span class="b">Thử lại</span></td>
+        </tr>
+        <tr>
+          <td>Biểu mẫu trống trơn sau khi phân tích</td>
+          <td>Ghi chép quá ngắn hoặc thiếu thông tin</td>
+          <td>Bổ sung ghi chép cụ thể hơn (ngày, tuổi, quan hệ, con số) rồi phân tích lại</td>
+        </tr>
+        <tr>
+          <td>Một số ô sai hoặc để trống</td>
+          <td>AI hiểu sai — chuyện bình thường</td>
+          <td><span class="b">✏️ Chỉnh sửa</span>, sửa tay, rồi <span class="b">💾 Lưu ca</span></td>
+        </tr>
+        <tr>
+          <td>Dải vàng “Ca này của … — chỉ đọc”</td>
+          <td>Ca thuộc CBXH khác</td>
+          <td>Nhờ người phụ trách bàn giao ca cho bạn (mục 9)</td>
+        </tr>
+        <tr>
+          <td>Dải nâu “Đang xem bản lưu … chỉ đọc”</td>
+          <td>Bạn đang xem một mốc cũ</td>
+          <td>Bấm <span class="b">↩ Trở lại dữ liệu hiện tại</span></td>
+        </tr>
+        <tr>
+          <td>Không thấy ca mình vừa làm</td>
+          <td>Đang lọc, hoặc đăng nhập bằng tài khoản khác</td>
+          <td>Đặt hai ô lọc về <span class="b">Tất cả</span> và <span class="b">Mọi GĐ</span>;
+          kiểm tra email ở cuối menu <span class="b">⋯</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Còn vướng thì chụp lại màn hình (kèm dòng thông báo lỗi nếu có) và gửi cho quản trị viên —
+  đừng gõ lại từ đầu, vì nội dung thường vẫn còn trên máy.</p>
+</section>
+
+<section id="s15">
+  <h2><span class="h2n">15</span>Bốn điều phải nhớ</h2>
+  <p class="sub">Nếu chỉ đọc được một mục trong sổ tay này, đọc mục này.</p>
+
+  <div class="note note-good">
+    <span class="ic" aria-hidden="true">1</span>
+    <div><b>AI chỉ gợi ý, bạn quyết định.</b>
+    Nó giúp bạn khỏi gõ lại biểu mẫu, không thay bạn đánh giá mức độ rủi ro hay quyết định can thiệp.</div>
+  </div>
+  <div class="note note-good">
+    <span class="ic" aria-hidden="true">2</span>
+    <div><b>Đọc lại biểu mẫu trước khi in.</b>
+    Dải vàng “BẢN NHÁP” còn đó nghĩa là chưa ai kiểm chứng. Phúc trình mang tên bạn.</div>
+  </div>
+  <div class="note note-good">
+    <span class="ic" aria-hidden="true">3</span>
+    <div><b>Mỗi buổi vãng gia một lần phân tích.</b>
+    Ở lại giai đoạn 2 và phân tích lại, đừng dồn nhiều buổi vào một lần.</div>
+  </div>
+  <div class="note note-good">
+    <span class="ic" aria-hidden="true">4</span>
+    <div><b>Bấm Lưu và thấy chữ “Đã lưu”.</b>
+    Thấy dòng cảnh báo chưa lưu được thì đừng đóng tab.</div>
+  </div>
+</section>
+
+<footer>
+  <p><strong>Thảo Đàn AI Case Assistant</strong> — công cụ nội bộ của Thảo Đàn SSC, hỗ trợ cán bộ xã
+  hội làm biểu mẫu quản lý trường hợp theo Luật Trẻ em 2016 và Nghị định 56/2017/NĐ-CP.</p>
+  <p>Ảnh minh hoạ trong tài liệu này dùng <strong>dữ liệu hư cấu hoàn toàn</strong>: tên trẻ, gia
+  đình, địa chỉ và email đều là ví dụ, không phải ca thật.</p>
+</footer>
+
+</main>
+</div>
+</div>
