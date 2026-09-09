@@ -330,31 +330,62 @@
   </div>
 </div>
 
+<!-- ══ MÀN ĐĂNG NHẬP ══
+     Hai nửa: nửa navy nói tool này là gì (người mới đọc trước khi vào), nửa trắng là biểu mẫu.
+     Bản trước dồn tất cả vào một cột hẹp căn giữa nên đoạn cam kết pháp lý dài đọc rất mệt, và
+     trên màn rộng thì cái khung nhỏ trôi giữa nền xanh mênh mông. Giữ nguyên mọi id (login-email,
+     login-pass, login-commit, login-btn, login-err) để không đụng tới JS. -->
 <div id="login-overlay" class="login-overlay">
   <div class="login-box">
-    <img class="login-logo" src="https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png" alt="Thảo Đàn" onerror="this.style.display='none'" style="width:110px;margin:0 auto 20px;display:block;">
-    <div class="login-title">Thảo Đàn AI</div>
-    <div class="login-sub">Case Management Assistant · Đăng nhập để tiếp tục</div>
-    <!-- Một câu nói rõ tool này LÀ GÌ, đặt ở đây vì đây là chỗ duy nhất ai cũng đọc trước khi
-         dùng — kể cả người chưa có tài khoản. Nói rõ giới hạn ngay từ câu mô tả, không để người
-         dùng tưởng AI thay được đánh giá của người làm nghề. -->
-    <div class="login-what">Công cụ hỗ trợ NVXH chuyển ghi chép hiện trường thành biểu mẫu quản lý
-    trường hợp — AI trích xuất và gợi ý, còn đánh giá và quyết định can thiệp vẫn là của NVXH.</div>
-    <input id="login-email" class="login-input" type="email" placeholder="Email công tác" autocomplete="email">
-    <input id="login-pass" class="login-input" type="password" placeholder="Mật khẩu" onkeydown="if(event.key==='Enter')loginEmail()" autocomplete="current-password">
-    <label style="display:flex;align-items:flex-start;gap:8px;margin:10px 0 4px;font-size:14px;line-height:1.5;color:#475569;text-align:left;cursor:pointer;">
-      <input type="checkbox" id="login-commit" style="margin-top:2px;flex-shrink:0;" onchange="document.getElementById('login-btn').disabled=!this.checked">
-      <span>Tôi xác nhận đã đọc và cam kết thực hiện theo <strong>Luật Trẻ em 2016</strong>, <strong>Nghị định 56/2017/NĐ-CP</strong>. Mọi thông tin được bảo mật và chỉ sử dụng cho mục đích can thiệp công tác xã hội.</span>
-    </label>
-    <button class="login-btn login-btn-primary" id="login-btn" onclick="loginEmail()" disabled>Đăng nhập</button>
-    <div id="login-err" class="login-err"></div>
-    <!-- Sổ tay đặt NGAY TRÊN màn đăng nhập: người mới được cấp tài khoản cần đọc trước khi vào,
-         mà lúc đó họ chưa đăng nhập được. File nằm ở huong-dan/index.html (thư mục gốc), KHÔNG
-         phải trong docs/ — .vercelignore loại docs/ khỏi bản deploy nên đặt trong đó là 404. -->
-    <a class="login-guide" href="/huong-dan/" target="_blank" rel="noopener">
-      📘 Đọc sổ tay hướng dẫn
-    </a>
-    <div class="login-footer">🔒 Dữ liệu được mã hóa và bảo mật · Liên hệ quản trị viên nếu chưa có tài khoản</div>
+
+    <aside class="lg-brand">
+      <div class="lg-brand-top">
+        <img class="lg-logo" src="https://raw.githubusercontent.com/nguyenthiencao2020/001_Case_Management_AI_v2/main/ThaoDanSSC_Digital-01.png" alt="Thảo Đàn SSC" onerror="this.style.display='none'">
+        <div>
+          <div class="lg-name">Thảo Đàn AI</div>
+          <div class="lg-role">Case Management Assistant</div>
+        </div>
+      </div>
+      <p class="login-what">Công cụ hỗ trợ NVXH chuyển ghi chép hiện trường thành biểu mẫu quản lý
+      trường hợp — <strong>AI trích xuất và gợi ý</strong>, còn đánh giá và quyết định can thiệp
+      vẫn là của NVXH.</p>
+      <ul class="lg-points">
+        <li>Ghi chép của bạn thành 11 biểu mẫu QLTH, tải bản Word về in và lưu hồ sơ</li>
+        <li>Nhắc việc theo đúng kế hoạch can thiệp đã lập cùng gia đình</li>
+        <li>Hồ sơ được mã hoá; mỗi cán bộ chỉ thấy ca của mình</li>
+      </ul>
+      <div class="lg-legal">Vận hành theo <strong>Luật Trẻ em 2016</strong> và
+      <strong>Nghị định 56/2017/NĐ-CP</strong></div>
+    </aside>
+
+    <div class="lg-form">
+      <h1 class="lg-h">Đăng nhập</h1>
+      <p class="lg-h-sub">Dùng email công tác đã được quản trị viên cấp.</p>
+
+      <label class="lg-lbl" for="login-email">Email công tác</label>
+      <input id="login-email" class="login-input" type="email" placeholder="ten.ho@thaodancenter.org.vn" autocomplete="email">
+
+      <label class="lg-lbl" for="login-pass">Mật khẩu</label>
+      <input id="login-pass" class="login-input" type="password" placeholder="Nhập mật khẩu" onkeydown="if(event.key==='Enter')loginEmail()" autocomplete="current-password">
+
+      <label class="lg-commit">
+        <input type="checkbox" id="login-commit" onchange="document.getElementById('login-btn').disabled=!this.checked">
+        <span>Tôi xác nhận đã đọc và cam kết thực hiện theo <strong>Luật Trẻ em 2016</strong> và
+        <strong>Nghị định 56/2017/NĐ-CP</strong>. Mọi thông tin chỉ dùng cho mục đích can thiệp
+        công tác xã hội.</span>
+      </label>
+
+      <button class="login-btn login-btn-primary" id="login-btn" onclick="loginEmail()" disabled>Đăng nhập</button>
+      <div id="login-err" class="login-err"></div>
+
+      <!-- Sổ tay đọc được TRƯỚC khi đăng nhập: người mới được cấp tài khoản cần đọc lúc còn chưa
+           vào được. File ở huong-dan/index.html (thư mục gốc), KHÔNG phải trong docs/ —
+           .vercelignore loại docs/ khỏi bản deploy nên đặt trong đó là 404. -->
+      <a class="login-guide" href="/huong-dan/" target="_blank" rel="noopener">📘 Đọc sổ tay hướng dẫn</a>
+
+      <div class="login-footer">🔒 Dữ liệu được mã hoá và bảo mật · Chưa có tài khoản? Liên hệ quản trị viên</div>
+    </div>
+
   </div>
 </div>
 
