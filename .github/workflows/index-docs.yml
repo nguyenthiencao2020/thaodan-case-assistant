@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      # Danh bạ nguồn lực nằm ngoài docs/ (xem ghi chú trong scripts/index-docs.js) — thiếu dòng
+      # này thì sửa danh bạ không kích hoạt nạp lại kho tri thức.
+      - 'nguon-luc/**'
 
 jobs:
   index:

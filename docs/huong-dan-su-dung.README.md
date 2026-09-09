@@ -1,3 +1,5 @@
+<!-- SKIP-INDEX --> <!-- ghi chú kỹ thuật cho người bảo trì, không phải tri thức CTXH -->
+
 # Sổ tay người dùng — nguồn và cách sửa
 
 Bản người dùng đọc là **`/huong-dan/index.html` ở thư mục gốc của repo** — đừng
