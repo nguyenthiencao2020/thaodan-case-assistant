@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/src/css/main.css?v=39">
+<link rel="stylesheet" href="/src/css/main.css?v=40">
 </head>
 <body>
 
@@ -108,7 +108,7 @@
     </div>
     <button class="btn-hdr btn-hdr-more" id="btn-hdr-more" onclick="toggleHdrMore()" title="Thêm" aria-label="Thêm thao tác">⋯</button>
     <button class="btn-hdr" onclick="newCase()">＋ Ca mới</button>
-    <button class="btn-hdr btn-hdr-primary" onclick="saveCaseNow()">💾 Lưu</button>
+    <button class="btn-hdr btn-hdr-primary" id="btn-hdr-save" onclick="saveCaseNow()">💾 Lưu</button>
   </div>
 </div>
 
@@ -128,6 +128,16 @@
 <div class="tab-panel active" id="panel-dash">
   <div class="dash">
     <div class="dash-left">
+      <!-- ══ DẢI CHỈ ĐỌC ══
+           Quản lý (role admin) xem được ca của mọi người nhưng chỉ sửa được ca của mình. Trước
+           đây app không nói gì, để họ gõ xong rồi lặng lẽ không lưu — xem _applyRoCaseUI trong
+           main.js. Đặt ở ĐẦU cột: người dùng phải thấy TRƯỚC khi gõ, không phải sau khi cuộn. -->
+      <div class="ro-banner" id="ro-banner">
+        <div class="ro-b-info"><div class="ro-b-ic">👁</div>
+          <div class="ro-b-txt"><div class="t1">Ca này của <span id="ro-b-owner">CBXH khác</span> — chỉ đọc</div>
+          <div class="t2">Bạn xem được toàn bộ hồ sơ và in được, nhưng không lưu được thay đổi. Muốn sửa thì nhờ người phụ trách bấm “Bàn giao ca” cho bạn.</div></div>
+        </div>
+      </div>
       <div class="stage-header-card" id="stage-header-card">
         <div class="stage-progress-row" id="stage-progress-row" title="Click vào mốc giai đoạn để quay lại & xem ghi chép">
           <div class="sp-step active" id="sp-1" data-stage="1"><span class="sp-num">1</span><span class="sp-lbl">Tiếp cận</span></div>
@@ -452,9 +462,9 @@
   </div>
 </div>
 
-<script src="/src/js/config.js?v=39"></script>
-<script src="/src/js/prompts.js?v=39"></script>
-<script src="/src/js/utils.js?v=39"></script>
-<script src="/src/js/main.js?v=39"></script>
+<script src="/src/js/config.js?v=40"></script>
+<script src="/src/js/prompts.js?v=40"></script>
+<script src="/src/js/utils.js?v=40"></script>
+<script src="/src/js/main.js?v=40"></script>
 </body>
 </html>

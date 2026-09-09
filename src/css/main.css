@@ -860,7 +860,7 @@ svg.ic-sm { width:13px; height:13px; }
 .cases-detail.cd-slim { flex:0 0 auto; }
 .cd-slim .case-detail-empty { height:auto; padding:14px 16px 4px; }
 .cd-slim .cde-ic { display:none; }
-.cd-slim .cde-t { font-size:14px; font-weight:600; }
+.cd-slim .cde-t { font-size:14px; font-weight:600; color:var(--t2); }
 .case-detail-hd {
   padding:14px 18px; border-bottom:1px solid var(--bd); background:#fff;
   display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;
@@ -1347,6 +1347,18 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 .eval-section-head:first-child{margin-top:0;}
 
 /* ══ CLOSED CASE BANNER ══ */
+/* Dải chỉ đọc — ca của CBXH khác. Dùng màu hổ phách (cảnh báo) chứ không phải xanh như dải
+   "Ca đã đóng": đây là điều người dùng cần biết TRƯỚC khi gõ, không phải thông tin trung tính. */
+.ro-banner{display:none;margin:0;padding:10px 16px;background:linear-gradient(90deg,#fffbeb,#fef3c7);border-bottom:2px solid #fbbf24;flex-shrink:0;}
+.ro-banner.show{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.ro-b-info{display:flex;align-items:flex-start;gap:9px;}
+.ro-b-ic{font-size:20px;line-height:1.2;}
+.ro-b-txt .t1{font-size:15px;font-weight:800;color:#78350f;}
+.ro-b-txt .t2{font-size:13px;color:#92400e;line-height:1.45;margin-top:2px;}
+/* Hai nút này nằm ngoài #action-bar (nút Lưu trên header, nút Hoàn thành GĐ) — khi ca là của
+   người khác thì chúng bị vô hiệu hoá, cần TRÔNG như bị vô hiệu hoá, không thì người dùng cứ
+   bấm mà không hiểu vì sao không ăn. */
+.btn-hdr:disabled, .btn-complete-stage:disabled { opacity:.42; cursor:not-allowed; box-shadow:none; }
 .closed-banner{display:none;margin:0;padding:10px 16px;background:linear-gradient(90deg,#ecfdf5,#d1fae5);border-bottom:2px solid #6ee7b7;flex-shrink:0;}
 .closed-banner.show{display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .closed-banner-info{display:flex;align-items:center;gap:8px;}
@@ -1702,7 +1714,7 @@ body.hist-mode { padding-bottom:64px; }
 }
 .todo-box.todo-folded .todo-hd { border-bottom:none; }
 .todo-ttl { font-size:14.5px; font-weight:800; color:var(--t1); letter-spacing:.2px; }
-.todo-sub { font-size:13.5px; color:var(--t3); }
+.todo-sub { font-size:13.5px; color:var(--t2); }
 .todo-pills { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .todo-pill {
   font-size:12.5px; font-weight:700; line-height:1; padding:5px 9px; border-radius:999px;
@@ -1745,7 +1757,9 @@ body.hist-mode { padding-bottom:64px; }
 .todo-main { flex:1 1 auto; min-width:0; }
 .todo-what { font-size:14.5px; font-weight:700; color:var(--t1); line-height:1.4; }
 .todo-meta {
-  font-size:13px; color:var(--t3); line-height:1.45; margin-top:1px;
+  /* --t3 (#8896a5) trên nền trắng chỉ được 3.02:1, dưới ngưỡng 4.5 của chữ 13px — mà đây là
+     dòng cho biết việc này thuộc ca nào và hạn ngày nào, không phải chữ trang trí. Dùng --t2. */
+  font-size:13px; color:var(--t2); line-height:1.45; margin-top:1px;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .todo-tick, .todo-open {
@@ -1767,7 +1781,7 @@ body.hist-mode { padding-bottom:64px; }
 .todo-row:hover .todo-open { color:var(--navy); border-color:var(--bd2); background:var(--white); }
 .todo-open:hover { background:var(--navy) !important; color:#fff !important; border-color:var(--navy) !important; }
 .todo-foot {
-  flex:0 0 auto; padding:7px 12px 9px; font-size:12.5px; color:var(--t3);
+  flex:0 0 auto; padding:7px 12px 9px; font-size:12.5px; color:var(--t2);
   border-top:1px solid var(--bd); background:var(--bg2);
 }
 @media (max-width:640px) {

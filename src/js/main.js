@@ -429,8 +429,32 @@ function _seedSavedSnapshot() {
   Object.values(_cases).forEach(cs => { try { _savedSnapshot.set(cs.id, JSON.stringify(cs)); } catch(e) {} });
 }
 
+// ── Ca của người khác thì CHỈ ĐỌC ──────────────────────────────────────────────────────────
+// Quản lý (role admin) XEM được mọi ca nhưng chỉ SỬA được ca của mình: policy admin_all_cases
+// là FOR SELECT, còn users_own_cases là FOR ALL trên ca của chính mình (migration 0014).
+// Lỗi đã gặp thật: _prepOwner trả false thì saveCases lặng lẽ BỎ QUA ca đó — không lệnh nào
+// thất bại nên res.ok vẫn true, app báo "💾 Đã lưu" rồi xoá luôn bản nháp cục bộ. Quản lý gõ
+// biên bản, thấy "Đã lưu", đóng máy là mất trắng, không còn gì cứu. Nên nay: nói rõ ngay khi
+// MỞ ca (dải chỉ đọc + vô hiệu hoá ô nhập), chặn ở cửa vào mọi thao tác ghi, và saveCases báo
+// riêng danh sách ca bị bỏ qua để không chỗ nào còn báo "đã lưu" khi chưa ghi được gì.
+function _isOthersCase(cs) {
+  return !!(cs && cs._ownerId && _currentUser && cs._ownerId !== _currentUser.id);
+}
+function _roCase(id) {
+  const key = id || curCaseId;
+  return key ? loadCases()[key] : null;
+}
+// Trả true nếu KHÔNG được phép ghi (và đã báo cho người dùng biết vì sao).
+function _blockIfReadOnly(id) {
+  const cs = _roCase(id);
+  if (!_isOthersCase(cs)) return false;
+  showNotif('👁 Ca này của ' + (cs._ownerEmail || 'CBXH khác')
+    + ' — bạn xem được nhưng không sửa được. Muốn sửa thì nhờ họ bàn giao ca cho bạn.', 'warn', 7000);
+  return true;
+}
+
 function _prepOwner(cs) {
-  if (isAdmin() && cs._ownerId && cs._ownerId !== _currentUser.id) return false;
+  if (_isOthersCase(cs)) return false;
   if (!cs._ownerId) { cs._ownerId = _currentUser.id; cs._ownerEmail = _currentUser.email; }
   return true;
 }
@@ -441,8 +465,11 @@ function saveCases(c) {
   updateStaleBadge();
   if (!_currentUser) return Promise.resolve({ ok: true, failed: [] });
   const jobs = [];
+  const skipped = [];
   Object.values(_cases).forEach(cs => {
-    if (!_prepOwner(cs)) return;
+    // Bỏ qua ca của người khác thì phải NÓI RA, không im lặng: chỗ gọi cần biết để đừng báo
+    // "đã lưu" và đừng xoá bản nháp.
+    if (!_prepOwner(cs)) { skipped.push({ id: cs.id, owner: cs._ownerEmail || '' }); return; }
     let sig; try { sig = JSON.stringify(cs); } catch(e) { sig = null; }
     if (sig && _savedSnapshot.get(cs.id) === sig) return; // không đổi → khỏi ghi lại
     jobs.push(_upsertCaseEncrypted(cs).then(r => {
@@ -450,17 +477,22 @@ function saveCases(c) {
       return { id: cs.id, ...r };
     }));
   });
-  return Promise.all(jobs).then(rs => ({ ok: rs.every(r => r.ok), failed: rs.filter(r => !r.ok) }));
+  return Promise.all(jobs).then(rs => ({
+    ok: rs.every(r => r.ok), failed: rs.filter(r => !r.ok), skipped
+  }));
 }
 
 function saveOneCase(caseId) {
   const cs = _cases[caseId];
-  if (!cs || !_currentUser) return Promise.resolve({ ok: true, failed: [] });
-  if (!_prepOwner(cs)) return Promise.resolve({ ok: true, failed: [] });
+  if (!cs || !_currentUser) return Promise.resolve({ ok: true, failed: [], skipped: [] });
+  if (!_prepOwner(cs)) return Promise.resolve({
+    ok: false, skipped: [{ id: caseId, owner: cs._ownerEmail || '' }],
+    failed: [{ id: caseId, error: 'Ca này của ' + (cs._ownerEmail || 'người khác') + ' — bạn không sửa được.' }]
+  });
   let sig; try { sig = JSON.stringify(cs); } catch(e) { sig = null; }
   return _upsertCaseEncrypted(cs).then(r => {
     if (r.ok && sig) _savedSnapshot.set(cs.id, sig); else _savedSnapshot.delete(cs.id);
-    return { ok: r.ok, failed: r.ok ? [] : [{ id: caseId, error: r.error }] };
+    return { ok: r.ok, failed: r.ok ? [] : [{ id: caseId, error: r.error }], skipped: [] };
   });
 }
 
@@ -516,6 +548,9 @@ async function deleteCaseFromDB(caseId) {
 
 async function uploadCaseFile(caseId, file, stage, note) {
   if (!_currentUser) { showNotif('⚠️ Cần đăng nhập','warn'); return null; }
+  // Tài liệu đính vào ca của người khác: policy admin_all_case_files cũng chỉ FOR SELECT, nên
+  // insert sẽ bị chặn — chặn trước để file không nằm lơ lửng trong storage mà không có bản ghi.
+  if (_blockIfReadOnly(caseId)) return null;
   const ext = file.name.split('.').pop();
   const path = `${_currentUser.id}/${caseId}/${Date.now()}.${ext}`;
   const { error } = await _supabase.storage.from('case-files').upload(path, file);
@@ -1390,6 +1425,7 @@ function _getMissingRequiredFields(stage) {
 
 function completeStage() {
   if (isHistMode()) { showNotif('👁 Đang xem bản lưu — thoát chế độ xem trước', 'warn', 5000); return; }
+  if (_blockIfReadOnly()) return;
   if (!D) { showNotif('⚠️ Hãy phân tích ghi chép trước khi hoàn thành giai đoạn', 'warn'); return; }
 
   // ── GĐ 5: Đóng ca ──
@@ -1529,6 +1565,9 @@ function rollbackStage() {
 // ════════════════════════════════════════════════════════════
 async function runAnalysis() {
   if (isHistMode()) { showNotif('👁 Đang xem bản lưu — thoát chế độ xem rồi mới phân tích được', 'warn', 5000); return; }
+  // Phân tích xong là ghi vào hồ sơ ca — ca của người khác thì kết quả không lưu được, chặn
+  // trước khi tốn một lượt gọi AI.
+  if (_blockIfReadOnly()) return;
   const notes = document.getElementById('dash-notes').value.trim();
   if (!notes) { showNotif('⚠️ Nhập ghi chép trước', 'warn'); return; }
   if (notes.length < 30) { showNotif('⚠️ Ghi chép quá ngắn — cần ít nhất 30 ký tự', 'warn'); return; }
@@ -2453,6 +2492,7 @@ function _isTaskDone(c, t) {
 function toggleTask(key) {
   const cases = loadCases();
   const caseId = String(key).split('|')[0];
+  if (_blockIfReadOnly(caseId)) return;   // tick việc của ca người khác cũng không lưu được
   const c = cases[caseId];
   if (!c) return;
   c.doneTasks = Array.isArray(c.doneTasks) ? c.doneTasks : [];
@@ -2537,7 +2577,7 @@ function renderTodo() {
   if (!box) return;
   // Vùng phải dùng chung: đang xem chi tiết một ca thì khối việc nhường chỗ hẳn, không chen
   // lên trên đầu khung chi tiết.
-  if (_caseDetailOpen) { box.hidden = true; return; }
+  if (_caseDetailOpen) { box.hidden = true; _syncCaseDetailSlim(); return; }
   const today = _dayStart(new Date());
   const in7 = new Date(today); in7.setDate(in7.getDate() + 7);
   const all = _collectTasks();
@@ -2553,6 +2593,10 @@ function renderTodo() {
       box.innerHTML = '<div class="todo-hd"><span class="todo-ttl">✅ Việc cần làm</span>'
         + '<span class="todo-sub">Không có việc nào tới hạn trong 7 ngày · còn ' + sau + ' việc ở xa hơn</span></div>';
     }
+    // Phải đồng bộ ở CẢ đường ra sớm: làm xong việc cuối cùng (hoặc xóa ca cuối cùng) mà không
+    // gọi thì vùng phải giữ nguyên trạng "đang có danh sách việc" — lời mời chọn ca còn một
+    // dòng chữ nhỏ trong khoảng trống lớn, và trên điện thoại thứ tự hai cột vẫn bị đảo.
+    _syncCaseDetailSlim();
     return;
   }
   box.hidden = false;
@@ -4448,6 +4492,7 @@ function _logEdit(source, stage) {
 async function saveCaseNow() {
   // Đang xem bản lưu cũ: một lần lưu là bản cũ đè lên dữ liệu hiện tại.
   if (isHistMode()) { showNotif('👁 Đang xem bản lưu — thoát chế độ xem rồi mới lưu được', 'warn', 5000); return; }
+  if (_blockIfReadOnly()) return;   // ca của người khác: chặn ngay, đừng để gõ xong mới biết
   if (!D && !document.getElementById('dash-notes').value.trim()) { showNotif('⚠️ Chưa có dữ liệu','warn'); return; }
   _commitDraft(); // lưu ca draft thành thật nếu chưa lưu
   const cases = loadCases();
@@ -4489,6 +4534,22 @@ async function saveCaseNow() {
   renderEntriesPanel();
   renderStageHistory();
 
+  // Ca của người khác bị bỏ qua: KHÔNG có lệnh nào thất bại nên res.ok vẫn true — phải xét
+  // riêng, không thì lại báo "đã lưu" và xoá bản nháp trong khi DB không nhận gì (lỗi đã gặp).
+  const boQua = (res.skipped || []).find(x => x.id === curCaseId);
+  if (boQua) {
+    showConfirm({
+      icon: '👁',
+      title: 'KHÔNG lưu được — ca này không phải của bạn',
+      body: `Ca "${c.name}" thuộc ${boQua.owner || 'một CBXH khác'}.\n\n`
+          + `Bạn xem được toàn bộ hồ sơ nhưng hệ thống không cho bạn ghi thay đổi lên ca của người khác.\n\n`
+          + `Nội dung bạn vừa gõ VẪN CÒN trên máy này (chưa mất). Muốn sửa được thì nhờ ${boQua.owner || 'người phụ trách'} `
+          + `bấm "Bàn giao ca" cho bạn, rồi lưu lại.`,
+      okText: 'Đã hiểu',
+      okClass: 'cmb-ok-blue'
+    });
+    return;   // giữ bản nháp cục bộ, không báo "đã lưu"
+  }
   if (res.ok) {
     _clearNotesDraft();          // ghi DB xong mới bỏ bản nháp cục bộ
     showNotif('💾 Đã lưu: '+c.name);
@@ -5216,6 +5277,7 @@ function _switchCaseDetailTab(id, key) {
 }
 
 function _closeCaseFromList(id) {
+  if (_blockIfReadOnly(id)) return;
   const c = loadCases()[id];
   showConfirm({
     icon: '✅',
@@ -5639,6 +5701,7 @@ function _checkUrgentPopup(report) {
 }
 
 function deleteCase(id) {
+  if (_blockIfReadOnly(id)) return;
   const c = loadCases()[id];
   showConfirm({
     icon: '🗑',
@@ -7437,10 +7500,44 @@ function applyClosedCaseUI() {
       btnRollback.style.display = currentStage > 1 ? 'inline-flex' : 'none';
     }
   }
+  // Gọi ở CUỐI hàm này, không gọi riêng lẻ: nhánh "ca đang mở" phía trên vừa bật lại ô nhập và
+  // thanh Phân tích, nên phải chạy sau để tắt lại nếu ca là của người khác.
+  _applyRoCaseUI();
+}
+
+// Ca của người khác: nói ra ngay trên màn hình làm việc thay vì để người dùng gõ xong mới biết.
+function _applyRoCaseUI() {
+  const c = curCaseId ? loadCases()[curCaseId] : null;
+  const ro = _isOthersCase(c);
+  const banner = document.getElementById('ro-banner');
+  if (banner) banner.classList.toggle('show', ro);
+  if (ro) {
+    const own = document.getElementById('ro-b-owner');
+    if (own) own.textContent = c._ownerEmail || 'một CBXH khác';
+    const ta = document.getElementById('dash-notes');
+    if (ta) { ta.disabled = true; ta.placeholder = 'Ca của ' + (c._ownerEmail || 'CBXH khác') + ' — chỉ đọc, không lưu được'; }
+    const bar = document.getElementById('action-bar');
+    if (bar) bar.style.display = 'none';
+    const btnRb = document.getElementById('btn-rollback');
+    if (btnRb) btnRb.style.display = 'none';
+  }
+  // Hai nút này nằm ngoài #action-bar nên phải tắt riêng. Vẫn có _blockIfReadOnly chặn ở trong
+  // hàm, nhưng để nút sáng đèn rồi bấm mới báo "không được" là bắt người dùng thử mới biết.
+  const btnDone = document.getElementById('btn-complete-stage');
+  if (btnDone) {
+    btnDone.disabled = ro;
+    btnDone.title = ro ? 'Ca của người khác — bạn không sửa được' : '';
+  }
+  const btnSave = document.getElementById('btn-hdr-save');
+  if (btnSave) {
+    btnSave.disabled = ro;
+    btnSave.title = ro ? 'Ca của người khác — bạn không lưu được thay đổi' : '';
+  }
 }
 
 function reopenCase() {
   if (!curCaseId) return;
+  if (_blockIfReadOnly()) return;
   const cName = loadCases()[curCaseId]?.name || 'ca này';
   showConfirm({
     icon: '🔓',
