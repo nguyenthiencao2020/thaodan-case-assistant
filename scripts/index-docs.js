@@ -5,13 +5,17 @@
 
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
-import { readFileSync, readdirSync, statSync } from 'fs';
-import { join, relative, extname, dirname } from 'path';
+import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
+import { join, relative, extname, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const DOCS_DIR = join(ROOT, 'docs');
+// Danh bạ nguồn lực nằm NGOÀI docs/ (ở nguon-luc/) vì trình duyệt phải tải được nó lúc chạy, mà
+// .vercelignore loại cả thư mục docs/ khỏi bản deploy. Nếu chỉ quét docs/ thì tổ chức điền danh bạ
+// xong mà kho tri thức không bao giờ có nó — lỗ này im lặng, phải khai thẳng ra đây.
+const EXTRA_DIRS = [join(ROOT, 'nguon-luc')];
 
 // --dry-run: chỉ xem tài liệu sẽ được cắt thành những mẩu nào, KHÔNG cần API key,
 // KHÔNG gọi OpenAI, KHÔNG ghi vào database. Dùng để kiểm tra trước khi nạp thật.
@@ -171,8 +175,10 @@ async function indexFile(filePath) {
 }
 
 async function main() {
-  const files = getAllFiles(DOCS_DIR);
-  console.log(`\n📚 ${DRY_RUN ? 'CHẠY THỬ — xem trước cách cắt mẩu' : 'Đang nạp'} ${files.length} tài liệu từ docs/\n`);
+  const dirs = [DOCS_DIR, ...EXTRA_DIRS].filter(d => existsSync(d));
+  const files = dirs.flatMap(d => getAllFiles(d));
+  const tenTM = dirs.map(d => basename(d) + '/').join(' + ');
+  console.log(`\n📚 ${DRY_RUN ? 'CHẠY THỬ — xem trước cách cắt mẩu' : 'Đang nạp'} ${files.length} tài liệu từ ${tenTM}\n`);
   let total = 0;
   for (const f of files) { total += (await indexFile(f)) || 0; }
   console.log(`\n${DRY_RUN ? '✅ Chạy thử xong' : '✅ Đã nạp'} — tổng ${total} mẩu.`);

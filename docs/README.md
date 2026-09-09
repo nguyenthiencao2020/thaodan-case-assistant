@@ -63,12 +63,21 @@ biểu mẫu bắt buộc của Thảo Đàn thay vì kiến thức chung. Khôn
 |---|---|---|
 | `quy-trinh-ctxh-co-ban.md` | Quy trình 5 giai đoạn, triết lý, ma trận rủi ro | ✅ đã có |
 | `sop-quan-ly-ca-ctxh-v1.md` | SOP từng giai đoạn, SLA, RACI, playbook | ✅ đã có |
-| `nguon-luc/danh-ba-nguon-luc.md` | Trường, bệnh viện, quỹ, đầu mối khẩn cấp **có thật** | ⬜ khung mẫu, chờ điền |
+| `../nguon-luc/danh-ba-nguon-luc.md` | Trường, bệnh viện, quỹ, đầu mối khẩn cấp **có thật** | ⬜ khung mẫu, chờ điền |
+| `huong-dan-su-dung.src.html` | Nguồn sửa được của sổ tay người dùng (bản dựng ở `../huong-dan/`) | ✅ đã có, không nạp vào kho (có dấu SKIP-INDEX) |
 | `phap-ly/can-cu-phap-ly.md` | Điều khoản hay viện dẫn, ngưỡng can thiệp | ⬜ khung mẫu, chờ điền |
 | `ca-mau/` | Ca đã đóng, đã ẩn danh, kèm kết quả thật | ⬜ chưa có ca nào |
 
 File nào còn dòng `<!-- SKIP-INDEX -->` sẽ **không** được nạp — để khung mẫu
 chưa điền không làm nhiễu kho tri thức. Điền xong thì xóa dòng đó.
+
+**Danh bạ nguồn lực nay nằm NGOÀI thư mục này**, ở `nguon-luc/` tại gốc repo. Lý do: trình duyệt
+phải tải được nó lúc chạy (nút "📞 Danh bạ" trong app đọc thẳng file .md), mà `.vercelignore` loại
+cả thư mục `docs/` khỏi bản deploy — để trong đây thì danh bạ **404 trên bản deploy** dù chạy máy
+cá nhân vẫn thấy bình thường. Đã gặp lỗi này thật. `scripts/index-docs.js` quét cả hai thư mục và
+GitHub Action cũng chạy khi `nguon-luc/**` đổi, nên việc nạp kho tri thức không bị ảnh hưởng.
+
+Quy tắc chung: **file nào trình duyệt phải tải lúc chạy thì không được nằm trong `docs/`.**
 
 ## Nạp vào kho
 
@@ -86,7 +95,7 @@ node scripts/index-docs.js
 Chạy lại bất cứ lúc nào — mỗi file được xóa và nạp lại theo `source_file`,
 không sinh bản trùng.
 
-## Trạng thái hiện tại (04/09/2026)
+## Trạng thái hiện tại (09/09/2026)
 
 **RAG đang HOÃN** — tổ chức chưa có khóa OpenAI. Đây là quyết định, không phải việc còn dở:
 
@@ -99,8 +108,9 @@ không sinh bản trùng.
 Khi nào có khóa: khai secret rồi Re-run workflow là nạp được ngay **27 mẩu** từ
 `quy-trinh-ctxh-co-ban.md` (8) và `sop-quan-ly-ca-ctxh-v1.md` (19) — không cần chờ danh bạ.
 
-Hai file `nguon-luc/` và `phap-ly/` vẫn bị bỏ qua vì còn dấu `SKIP-INDEX`; điền dữ liệu thật vào
-đó **làm được ngay, không cần khóa OpenAI** — chỉ là chưa nạp lên được thôi.
+Hai file danh bạ (`../nguon-luc/`) và pháp lý (`phap-ly/`) vẫn bị bỏ qua vì còn dấu `SKIP-INDEX`;
+điền dữ liệu thật vào đó **làm được ngay, không cần khóa OpenAI** — chỉ là chưa nạp lên được thôi.
+Riêng danh bạ, điền là **dùng được ngay trong app** qua nút "📞 Danh bạ" (không đi qua RAG).
 
 ## Để tính năng hoạt động trên bản chạy thật
 

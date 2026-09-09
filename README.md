@@ -36,14 +36,16 @@ npm install
 npm run dev
 ```
 
-## Trạng thái triển khai (cập nhật 07/09/2026)
+## Trạng thái triển khai (cập nhật 09/09/2026)
 
 Ghi lại để phiên sau không phải đoán. Cập nhật bảng này mỗi khi cấu hình đổi.
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Code trên `main` | ✅ đầy đủ |
-| 15 migration Supabase `0001`→`0015` | ✅ đã chạy hết (`0014`, `0015` xác nhận trên DB ngày 07/09/2026) |
+| Code | ✅ đầy đủ trên nhánh `claude/qa-tool-main-fkym2m` — **chưa merge vào `main`**, nên bản deploy chưa có các thay đổi từ 08–09/09 |
+| 17 migration Supabase `0001`→`0017` | ✅ đã chạy hết (`0016`, `0017` xác nhận trên DB ngày 09/09/2026) |
+| Phân quyền 6 tài khoản | ✅ 3 quản lý xem tất cả ca (hangcong.nguyen, ngan.lee, thien.nguyen), 3 CBXH chỉ thấy ca của mình; `team_id` để trống — đọc bảng `profiles` là biết ai có quyền gì |
+| Sổ tay người dùng | ✅ `huong-dan/index.html`, 15 mục kèm 10 ảnh chụp; đọc được ở `/huong-dan` **trước khi đăng nhập** |
 | Khóa Vault `case_encryption_key` | ✅ đã tạo — kiểm chứng mã hóa/giải mã vòng tròn OK |
 | Mã hóa ca cũ | ✅ 4/4 ca có `data_enc`, 0 ca còn plaintext |
 | Vercel: `GROQ_KEY_1/2/3`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_ANON_KEY` | ✅ đã khai |
@@ -54,6 +56,7 @@ Ghi lại để phiên sau không phải đoán. Cập nhật bảng này mỗi 
 | `nguon-luc/danh-ba-nguon-luc.md` | ⬜ còn khung mẫu, đang chờ dữ liệu thật từ tổ chức (làm được độc lập, không cần khóa OpenAI) |
 | `docs/phap-ly/can-cu-phap-ly.md` | ⬜ còn khung mẫu |
 | Hồ sơ đánh giá tác động NĐ 13/2023 | ⬜ việc của tổ chức, cần tham vấn pháp lý |
+| Cảnh báo trước khi quản lý sửa ca người khác | ✅ dải "chỉ đọc" + chặn mọi thao tác ghi (09/09/2026) |
 
 ### Hai tính năng đang HOÃN vì chưa có khóa OpenAI
 
@@ -74,9 +77,12 @@ và tên biểu mẫu bắt buộc là đang chạy.
 
 ### Đang chạy đủ, không phụ thuộc khóa OpenAI
 
-Phân tích ca và chat (Groq) · 10 biểu mẫu và bộ hồ sơ Word · truy vết nguồn · dấu BẢN NHÁP và bước
-xác nhận · ẩn danh tên/SĐT/CCCD/email/địa chỉ · tra cứu tiền lệ · nhập bằng giọng nói · xuất
-Word/PDF có chữ ký và số trang · công văn chuyển gửi · mã hóa hồ sơ · audit log.
+Phân tích ca và chat (Groq) · 11 biểu mẫu và bộ hồ sơ Word · truy vết nguồn · dấu BẢN NHÁP và bước
+xác nhận · ẩn danh tên/SĐT/CCCD/email/địa chỉ · nhập bằng giọng nói · xuất Word/PDF có chữ ký và số
+trang · công văn chuyển gửi · mã hóa hồ sơ · audit log · **việc cần làm** dựng từ ngày tháng trong
+kế hoạch · **vãng gia nhiều buổi** mỗi buổi một phúc trình · **xem lại / in lại** từng mốc đã lưu ·
+**đóng / mở lại ca bắt buộc ghi lý do** · **bàn giao ca** · **phiếu trắng** mang đi hiện trường ·
+**danh bạ nguồn lực** tra tại chỗ · **sổ tay hướng dẫn** đọc được trước khi đăng nhập.
 
 Nói cách khác: **giá trị cốt lõi của tool không cần khóa OpenAI.**
 
@@ -282,7 +288,7 @@ phục nguyên văn vào hồ sơ sau khi AI trả kết quả. Ngoại lệ duy
 **Khác:** 5 giai đoạn quản lý ca · chat tư vấn CTXH có RAG · **tra cứu tiền lệ** (tìm ca cũ tương
 tự, chạy cục bộ, không gửi gì cho AI) · popup cảnh báo khi AI thấy rủi ro Cao · mã ca tự sinh
 `CA-YYYY-MM-STT` · xuất Word/PDF có chữ ký và số trang · **soạn công văn chuyển gửi** từ Form 7 ·
-**việc cần làm** (gộp mọi ca, dựng từ ngày tháng đã có trong kế hoạch) · **danh bạ nguồn lực** tra tại chỗ · **in phiếu trắng** mang đi vãng gia · **bàn giao ca** cho NVXH khác · theo dõi sau đóng ca · **đóng ca / mở lại ca bắt buộc ghi lý do** (lưu kèm ngày, người thực hiện
+**việc cần làm** (gộp mọi ca, dựng từ ngày tháng đã có trong kế hoạch) · **danh bạ nguồn lực** tra tại chỗ · **in phiếu trắng** mang đi vãng gia · **bàn giao ca** cho NVXH khác · **sổ tay hướng dẫn 15 mục** đọc được ở `/huong-dan` trước khi đăng nhập · theo dõi sau đóng ca · **đóng ca / mở lại ca bắt buộc ghi lý do** (lưu kèm ngày, người thực hiện
 và giai đoạn; xem lại trong trang chi tiết ca) · **xem lại và in lại bản lưu** của từng mốc lịch
 sử (buổi vãng gia, bản kế hoạch, lần cập nhật tiến trình) · audit log.
 
@@ -297,7 +303,9 @@ sử (buổi vãng gia, bản kế hoạch, lần cập nhật tiến trình) ·
 | Màu | Bảng màu báo cáo từ 65 giá trị còn 28, gom về **4 họ mang nghĩa**: đỏ = rủi ro · vàng = việc NVXH phải làm · xanh = đạt/an toàn · navy = thông tin chuyên môn. Tím, lam lạc tông, lục lam, cam trước đây chỉ để trang trí |
 | Khu chat | Ô nhập và nút gửi gộp thành một composer, textarea tự cao tới 5 dòng; gợi ý còn 3 chip một hàng + nút "n câu khác"; ba lời cảnh báo trùng nhau gộp thành một dòng, toàn văn Điều 45 / Thông tư 35 / chính sách bảo mật nằm trong nút ⓘ. Khung chrome từ 198px còn 114px |
 | Thu gọn / mở rộng | 3 trạng thái, nhớ lựa chọn trên máy người dùng. Mở rộng = báo cáo chiếm cả bề ngang (ẩn cột trái); thu gọn = chat còn thanh 44px, cột trái giãn ra. Trên điện thoại thành "báo cáo cả màn hình" / "ô ghi chép cả màn hình" |
-| Điện thoại | Header một hàng, các thao tác phụ (Thống kê, Thông báo, Xuất/Nhập JSON, Đăng xuất) dồn vào menu **⋯**; dải mã ca dưới thanh tab để biết đang mở ca nào; nhãn tab bản ngắn để cả 4 tab lọt từ màn 360px |
+| Điện thoại | Header một hàng, các thao tác phụ (Thống kê, Thông báo, Sổ tay, Xuất/Nhập JSON, Đăng xuất) dồn vào menu **⋯**; dải mã ca dưới thanh tab để biết đang mở ca nào; nhãn tab bản ngắn để cả 4 tab lọt từ màn 360px |
+| Màn đăng nhập | Hai nửa: nửa navy giới thiệu (tool này làm gì và **không** làm gì, ba dòng chức năng, căn cứ pháp lý), nửa trắng là biểu mẫu có nhãn `<label>` cho từng ô. Điện thoại xếp dọc và ẩn phần giới thiệu phụ để ô nhập với nút Đăng nhập luôn nằm trong màn hình |
+| Vào thẳng chỗ có việc | Đăng nhập xong: đã có ca thì mở tab **Danh sách ca** (có Việc cần làm hôm nay), chưa có ca thì ở lại Dashboard vì việc đầu tiên là bấm "+ Ca mới" |
 
 **Đang tạm tắt** — công tắc `FEATURES` trong `src/js/config.js`, đổi `false`→`true` để bật lại.
 Code, modal, endpoint và dữ liệu đã lưu đều còn nguyên, không phải viết lại gì:
@@ -392,6 +400,7 @@ trong code. Nơi nên đọc trước:
 | Vì sao mỗi migration làm như vậy | comment đầu mỗi file trong `supabase/migrations/` — đặc biệt `0014` (lỗi phân quyền khi lưu ca), `0015` (lỗi ràng buộc `role` mà `0011` bỏ sót) và `0016` (bàn giao ca + gán vai trò) |
 | Việc cần làm dựng từ đâu | `main.js` gần `_collectTasks`, `renderTodo` |
 | Màn đăng nhập: vì sao hai nửa | comment đầu mục `MÀN ĐĂNG NHẬP` trong `src/css/main.css` — bản một cột căn giữa làm đoạn cam kết pháp lý khó đọc và để khung nhỏ trôi giữa nền xanh; điện thoại ẩn gạch đầu dòng để nút Đăng nhập không bị đẩy khỏi màn |
+| Danh bạ ở ngoài `docs/` thì kho tri thức có nạp không | `scripts/index-docs.js` gần `EXTRA_DIRS` — quét cả `nguon-luc/`, và `.github/workflows/index-docs.yml` chạy khi thư mục đó đổi |
 | Vì sao danh bạ và sổ tay không nằm trong `docs/` | `.vercelignore` (đầu file) — thư mục đó bị loại khỏi bản deploy, file nào trình duyệt phải tải lúc chạy mà để trong đó là 404 trên bản deploy dù chạy máy cá nhân vẫn thấy bình thường |
 | Sổ tay người dùng ở đâu, sửa thế nào | `docs/huong-dan-su-dung.README.md`; bản người dùng đọc là `huong-dan/index.html` (KHÔNG để trong `docs/` — `.vercelignore` loại thư mục đó khỏi bản deploy), link trên màn đăng nhập là `.login-guide` trong `index.html` |
 | Vì sao chỉ MỘT hàm dọn dải trạng thái | `main.js` ngay trên `applyClosedCaseUI()` trong `logoutUser` — mỗi chỗ tự xoá một dải là kiểu gì cũng có chỗ quên, đã gặp thật: nút Lưu kẹt ở trạng thái mờ sau khi đăng xuất |
