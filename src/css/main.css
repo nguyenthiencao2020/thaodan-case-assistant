@@ -1280,6 +1280,13 @@ body[data-stage="5"] { --sc:var(--s5); --sc-bg:var(--s5-bg); --sc-bd:var(--s5-bd
 .login-btn-google{background:#fff;color:#333;border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;gap:8px;}
 .login-btn-google:hover{background:#f8f8f8;border-color:#bbb;}
 .login-btn-google svg{width:18px;height:18px;}
+/* Câu mô tả tool trên màn đăng nhập: căn trái và có vạch cam bên cạnh để đọc như một lời giới
+   thiệu, không phải chữ trang trí giữa trang. */
+.login-what{
+  text-align:left;font-size:14px;line-height:1.55;color:#475569;
+  background:#f8fafc;border-left:3px solid #f07020;border-radius:0 7px 7px 0;
+  padding:10px 12px;margin:0 0 16px;
+}
 .login-err{color:#dc2626;font-size:15px;margin-top:8px;min-height:18px;}
 /* Link sổ tay trên màn đăng nhập: đủ rõ để người mới thấy, nhưng không cạnh tranh với nút
    Đăng nhập — nên là link viền mảnh, không phải nút màu. */

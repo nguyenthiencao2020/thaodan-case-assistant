@@ -1,6 +1,11 @@
 # Không public hóa các file/thư mục không cần cho runtime của app —
 # outputDirectory của Vercel là "." (serve thẳng thư mục gốc), nên bất cứ
 # thứ gì không nằm trong danh sách loại trừ này đều bị public.
+#
+# ⚠ MẶT SAU của việc loại docs/: file nào TRÌNH DUYỆT phải tải lúc chạy thì KHÔNG được
+# nằm trong docs/, nếu không nó 404 trên bản deploy (chạy máy cá nhân vẫn thấy bình
+# thường, nên lỗi rất dễ lọt). Đã gặp thật hai lần: danh bạ nguồn lực và sổ tay hướng
+# dẫn. Vì vậy hai thứ đó nay ở thư mục gốc: nguon-luc/ và huong-dan/.
 index.html.bak
 *.bak
 docs/
